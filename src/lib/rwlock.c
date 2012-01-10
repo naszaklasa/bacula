@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -32,8 +32,6 @@
  *  nested write lock calls.
  *
  *  Kern Sibbald, January MMI
- *
- *   Version $Id$
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
@@ -446,9 +444,9 @@ int main (int argc, char *argv[])
     int thread_writes = 0;
     int data_writes = 0;
 
-#ifdef sun
+#ifdef USE_THR_SETCONCURRENCY
     /*
-     * On Solaris 2.5, threads are not timesliced. To ensure
+     * On Solaris 2.5,2.6,7 and 8 threads are not timesliced. To ensure
      * that our threads can run concurrently, we need to
      * increase the concurrency level to THREADS.
      */
@@ -529,7 +527,7 @@ int main (int argc, char *argv[])
  *
  * Demonstrate use of non-blocking read-write locks.
  *
- * Special notes: On a Solaris system, call thr_setconcurrency()
+ * Special notes: On older Solaris system, call thr_setconcurrency()
  * to allow interleaved thread execution, since threads are not
  * timesliced.
  */
@@ -619,9 +617,9 @@ int main (int argc, char *argv[])
     int thread_updates = 0, data_updates = 0;
     int status;
 
-#ifdef sun
+#ifdef USE_THR_SETCONCURRENCY
     /*
-     * On Solaris 2.5, threads are not timesliced. To ensure
+     * On Solaris 2.5,2.6,7 and 8 threads are not timesliced. To ensure
      * that our threads can run concurrently, we need to
      * increase the concurrency level to THREADS.
      */

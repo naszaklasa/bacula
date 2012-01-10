@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -38,7 +38,6 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -46,7 +45,7 @@
 #include "ua.h"
 
 /* Commands sent to File daemon */
-static char backupcmd[] = "backup\n";
+static char backupcmd[] = "backup FileIndex=%ld\n";
 static char storaddr[]  = "storage address=%s port=%d ssl=%d\n";
 
 /* Responses received from File daemon */
@@ -65,7 +64,7 @@ static char OldEndJob[]  = "2800 End Job TermCode=%d JobFiles=%u "
 bool do_backup_init(JCR *jcr)
 {
 
-   if (jcr->getJobLevel() == L_VIRTUAL_FULL) {
+   if (jcr->is_JobLevel(L_VIRTUAL_FULL)) {
       return do_vbackup_init(jcr);
    }
    free_rstorage(jcr);                   /* we don't read so release */
@@ -137,7 +136,9 @@ static bool get_base_jobids(JCR *jcr, db_list_ctx *jobids)
 }
 
 /*
- * Foreach files in currrent list, send "/path/fname\0LStat\0MD5" to FD
+ * Foreach files in currrent list, send "/path/fname\0LStat\0MD5\0Delta" to FD
+ *      row[0]=Path, row[1]=Filename, row[2]=FileIndex
+ *      row[3]=JobId row[4]=LStat row[5]=DeltaSeq row[6]=MD5
  */
 static int accurate_list_handler(void *ctx, int num_fields, char **row)
 {
@@ -147,21 +148,21 @@ static int accurate_list_handler(void *ctx, int num_fields, char **row)
       return 1;
    }
    
-   if (row[2] == 0) {           /* discard when file_index == 0 */
+   if (row[2][0] == '0') {           /* discard when file_index == 0 */
       return 0;
    }
 
    /* sending with checksum */
    if (jcr->use_accurate_chksum 
-       && num_fields == 6 
-       && row[5][0] /* skip checksum = '0' */
-       && row[5][1])
+       && num_fields == 7 
+       && row[6][0] /* skip checksum = '0' */
+       && row[6][1])
    { 
-      jcr->file_bsock->fsend("%s%s%c%s%c%s", 
-                             row[0], row[1], 0, row[4], 0, row[5]); 
+      jcr->file_bsock->fsend("%s%s%c%s%c%s%c%s", 
+                             row[0], row[1], 0, row[4], 0, row[6], 0, row[5]); 
    } else {
-      jcr->file_bsock->fsend("%s%s%c%s", 
-                             row[0], row[1], 0, row[4]); 
+      jcr->file_bsock->fsend("%s%s%c%s%c%c%s", 
+                             row[0], row[1], 0, row[4], 0, 0, row[5]); 
    }
    return 0;
 }
@@ -198,7 +199,7 @@ static bool is_checksum_needed_by_fileset(JCR *jcr)
                have_basejob_option = in_block = jcr->HasBase;
                break;
             case 'C':           /* Accurate keyword */
-               in_block = (jcr->getJobLevel() != L_FULL);
+               in_block = !jcr->is_JobLevel(L_FULL);
                break;
             case ':':           /* End of keyword */
                in_block = false;
@@ -229,43 +230,41 @@ static bool is_checksum_needed_by_fileset(JCR *jcr)
 /*
  * Send current file list to FD
  *    DIR -> FD : accurate files=xxxx
- *    DIR -> FD : /path/to/file\0Lstat\0MD5
- *    DIR -> FD : /path/to/dir/\0Lstat\0MD5
+ *    DIR -> FD : /path/to/file\0Lstat\0MD5\0Delta
+ *    DIR -> FD : /path/to/dir/\0Lstat\0MD5\0Delta
  *    ...
  *    DIR -> FD : EOD
  */
 bool send_accurate_current_files(JCR *jcr)
 {
    POOL_MEM buf;
-   bool ret=true;
    db_list_ctx jobids;
    db_list_ctx nb;
 
-   if (!jcr->accurate || job_canceled(jcr)) {
+   /* In base level, no previous job is used and no restart incomplete jobs */
+   if (jcr->is_canceled() || jcr->is_JobLevel(L_BASE)) {
       return true;
    }
-   /* In base level, no previous job is used */
-   if (jcr->getJobLevel() == L_BASE) {
+   if (!jcr->accurate) {
       return true;
    }
-   
-   if (jcr->getJobLevel() == L_FULL) {
-      /* On Full mode, if no previous base job, no accurate things */
-      if (!get_base_jobids(jcr, &jobids)) {
-         goto bail_out;
-      }
-      jcr->HasBase = true;
-      Jmsg(jcr, M_INFO, 0, _("Using BaseJobId(s): %s\n"), jobids.list);
 
+   if (jcr->is_JobLevel(L_FULL)) {
+      /* On Full mode, if no previous base job, no accurate things */
+      if (get_base_jobids(jcr, &jobids)) {
+         jcr->HasBase = true;
+         Jmsg(jcr, M_INFO, 0, _("Using BaseJobId(s): %s\n"), jobids.list);
+      } else {
+         return true;
+      }
    } else {
       /* For Incr/Diff level, we search for older jobs */
       db_accurate_get_jobids(jcr, jcr->db, &jcr->jr, &jobids);
 
       /* We are in Incr/Diff, but no Full to build the accurate list... */
       if (jobids.count == 0) {
-         ret=false;
          Jmsg(jcr, M_FATAL, 0, _("Cannot find previous jobids.\n"));
-         goto bail_out;
+         return false;  /* fail */
       }
    }
 
@@ -284,26 +283,25 @@ bool send_accurate_current_files(JCR *jcr)
 
    if (!db_open_batch_connexion(jcr, jcr->db)) {
       Jmsg0(jcr, M_FATAL, 0, "Can't get batch sql connexion");
-      return false;
+      return false;  /* Fail */
    }
    
    if (jcr->HasBase) {
       jcr->nb_base_files = str_to_int64(nb.list);
       db_create_base_file_list(jcr, jcr->db, jobids.list);
-      db_get_base_file_list(jcr, jcr->db, 
+      db_get_base_file_list(jcr, jcr->db, jcr->use_accurate_chksum,
                             accurate_list_handler, (void *)jcr);
 
    } else {
-      db_get_file_list(jcr, jcr->db_batch, jobids.list, 
+      db_get_file_list(jcr, jcr->db_batch,
+                       jobids.list, jcr->use_accurate_chksum, false /* no delta */,
                        accurate_list_handler, (void *)jcr);
    } 
 
-   /* TODO: close the batch connexion ? (can be used very soon) */
+   /* TODO: close the batch connection ? (can be used very soon) */
 
    jcr->file_bsock->signal(BNET_EOD);
-
-bail_out:
-   return ret;
+   return true;
 }
 
 /*
@@ -319,8 +317,10 @@ bool do_backup(JCR *jcr)
    BSOCK   *fd;
    STORE *store;
    char ed1[100];
+   db_int64_ctx job;
+   POOL_MEM buf;
 
-   if (jcr->getJobLevel() == L_VIRTUAL_FULL) {
+   if (jcr->is_JobLevel(L_VIRTUAL_FULL)) {
       return do_vbackup(jcr);
    }
 
@@ -361,7 +361,7 @@ bool do_backup(JCR *jcr)
     * to avoid two threads from using the BSOCK structure at
     * the same time.
     */
-   if (!bnet_fsend(jcr->store_bsock, "run")) {
+   if (!jcr->store_bsock->fsend("run")) {
       return false;
    }
 
@@ -384,15 +384,15 @@ bool do_backup(JCR *jcr)
    jcr->setJobStatus(JS_Running);
    fd = jcr->file_bsock;
 
+   if (!send_level_command(jcr)) {
+      goto bail_out;
+   }
+
    if (!send_include_list(jcr)) {
       goto bail_out;
    }
 
    if (!send_exclude_list(jcr)) {
-      goto bail_out;
-   }
-
-   if (!send_level_command(jcr)) {
       goto bail_out;
    }
 
@@ -443,11 +443,12 @@ bool do_backup(JCR *jcr)
     * all files to FD.
     */
    if (!send_accurate_current_files(jcr)) {
-      goto bail_out;
+      goto bail_out;     /* error */
    }
 
    /* Send backup command */
-   fd->fsend(backupcmd);
+   fd->fsend(backupcmd, jcr->JobFiles);
+   Dmsg1(100, ">filed: %s", fd->msg);
    if (!response(jcr, fd, OKbackup, "backup", DISPLAY_ERROR)) {
       goto bail_out;
    }
@@ -456,10 +457,8 @@ bool do_backup(JCR *jcr)
    stat = wait_for_job_termination(jcr);
    db_write_batch_file_records(jcr);    /* used by bulk batch file insert */
 
-   if (jcr->HasBase && 
-       !db_commit_base_file_attributes_record(jcr, jcr->db)) 
-   {
-         Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
+   if (jcr->HasBase && !db_commit_base_file_attributes_record(jcr, jcr->db))  {
+      Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
    }
 
    if (stat == JS_Terminated) {
@@ -527,14 +526,26 @@ int wait_for_job_termination(JCR *jcr, int timeout)
       }
 
       if (is_bnet_error(fd)) {
+         int i = 0;
          Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
               job_type_to_str(jcr->getJobType()), fd->bstrerror());
+         while (i++ < 10 && jcr->job->RescheduleIncompleteJobs && jcr->is_canceled()) {
+            bmicrosleep(3, 0);
+         }
+            
       }
       fd->signal(BNET_TERMINATE);   /* tell Client we are terminating */
    }
 
-   /* Force cancel in SD if failing */
-   if (job_canceled(jcr) || !fd_ok) {
+   /*
+    * Force cancel in SD if failing, but not for Incomplete jobs
+    *  so that we let the SD despool.
+    */
+   Dmsg5(100, "cancel=%d fd_ok=%d FDJS=%d JS=%d SDJS=%d\n", jcr->is_canceled(), fd_ok, jcr->FDJobStatus,
+        jcr->JobStatus, jcr->SDJobStatus);
+   if (jcr->is_canceled() || (!jcr->job->RescheduleIncompleteJobs && !fd_ok)) {
+      Dmsg4(100, "fd_ok=%d FDJS=%d JS=%d SDJS=%d\n", fd_ok, jcr->FDJobStatus,
+           jcr->JobStatus, jcr->SDJobStatus);
       cancel_storage_daemon_job(jcr);
    }
 
@@ -587,7 +598,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
    utime_t RunTime;
    POOL_MEM base_info;
 
-   if (jcr->getJobLevel() == L_VIRTUAL_FULL) {
+   if (jcr->is_JobLevel(L_VIRTUAL_FULL)) {
       vbackup_cleanup(jcr, TermCode);
       return;
    }
@@ -633,6 +644,9 @@ void backup_cleanup(JCR *jcr, int TermCode)
          } else {
             term_msg = _("Backup OK");
          }
+         break;
+      case JS_Incomplete:
+         term_msg = _("Backup failed -- incomplete");
          break;
       case JS_Warnings:
          term_msg = _("Backup OK -- with warnings");
@@ -705,7 +719,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
    }
 // bmicrosleep(15, 0);                /* for debugging SIGHUP */
 
-   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s):\n"
 "  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
@@ -739,7 +753,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
 "  FD termination status:  %s\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        BACULA, my_name, VERSION, LSMDATE, edt,
+        BACULA, my_name, VERSION, LSMDATE,
         HOST_OS, DISTNAME, DISTVER,
         jcr->jr.JobId,
         jcr->jr.Job,
@@ -801,7 +815,7 @@ void update_bootstrap_file(JCR *jcr)
          fd = bpipe ? bpipe->wfd : NULL;
       } else {
          /* ***FIXME*** handle BASE */
-         fd = fopen(fname, jcr->getJobLevel()==L_FULL?"w+b":"a+b");
+         fd = fopen(fname, jcr->is_JobLevel(L_FULL)?"w+b":"a+b");
       }
       if (fd) {
          VolCount = db_get_job_volume_parameters(jcr, jcr->db, jcr->JobId,

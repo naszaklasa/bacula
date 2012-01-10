@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -149,17 +149,26 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
 
    changer = get_pool_memory(PM_FNAME);
    if (slot <= 0) {
-      Jmsg(jcr, M_INFO, 0, _("Invalid slot=%d defined in catalog for Volume \"%s\" "
-           "on %s. Manual load may be required.\n"), slot, dcr->getVolCatName(),
-           dev->print_name());
+      /* Suppress info when polling */
+      if (!dev->poll) {
+         Jmsg(jcr, M_INFO, 0, _("No slot defined in catalog (slot=%d) for Volume \"%s\" on %s.\n"), 
+              slot, dcr->getVolCatName(), dev->print_name());
+         Jmsg(jcr, M_INFO, 0, _("Cartridge change or \"update slots\" may be required.\n"));
+      }
       rtn_stat = 0;
    } else if (!dcr->device->changer_name) {
-      Jmsg(jcr, M_INFO, 0, _("No \"Changer Device\" for %s. Manual load of Volume may be required.\n"),
-           dev->print_name());
+      /* Suppress info when polling */
+      if (!dev->poll) {
+         Jmsg(jcr, M_INFO, 0, _("No \"Changer Device\" for %s. Manual load of Volume may be required.\n"),
+              dev->print_name());
+      }
       rtn_stat = 0;
   } else if (!dcr->device->changer_command) {
-      Jmsg(jcr, M_INFO, 0, _("No \"Changer Command\" for %s. Manual load of Volume may be requird.\n"),
-           dev->print_name());
+      /* Suppress info when polling */
+      if (!dev->poll) {
+         Jmsg(jcr, M_INFO, 0, _("No \"Changer Command\" for %s. Manual load of Volume may be requird.\n"),
+              dev->print_name());
+      }
       rtn_stat = 0;
   } else {
       /* Attempt to load the Volume */
@@ -266,8 +275,11 @@ int get_autochanger_loaded_slot(DCR *dcr)
    /* Find out what is loaded, zero means device is unloaded */
    changer = get_pool_memory(PM_FNAME);
    lock_changer(dcr);
-   Jmsg(jcr, M_INFO, 0, _("3301 Issuing autochanger \"loaded? drive %d\" command.\n"),
-        drive);
+   /* Suppress info when polling */
+   if (!dev->poll) {
+      Jmsg(jcr, M_INFO, 0, _("3301 Issuing autochanger \"loaded? drive %d\" command.\n"),
+           drive);
+   }
    changer = edit_device_codes(dcr, changer, dcr->device->changer_command, "loaded");
    Dmsg1(100, "Run program=%s\n", changer);
    status = run_program_full_output(changer, timeout, results.addr());
@@ -275,13 +287,23 @@ int get_autochanger_loaded_slot(DCR *dcr)
    if (status == 0) {
       loaded = str_to_int32(results.c_str());
       if (loaded > 0) {
-         Jmsg(jcr, M_INFO, 0, _("3302 Autochanger \"loaded? drive %d\", result is Slot %d.\n"),
-              drive, loaded);
+         /* Suppress info when polling */
+         if (!dev->poll) {
+            Jmsg(jcr, M_INFO, 0, _("3302 Autochanger \"loaded? drive %d\", result is Slot %d.\n"),
+                 drive, loaded);
+         }
          dev->set_slot(loaded);
       } else {
-         Jmsg(jcr, M_INFO, 0, _("3302 Autochanger \"loaded? drive %d\", result: nothing loaded.\n"),
-              drive);
-         dev->clear_slot();   /* unknown */
+         /* Suppress info when polling */
+         if (!dev->poll) {
+            Jmsg(jcr, M_INFO, 0, _("3302 Autochanger \"loaded? drive %d\", result: nothing loaded.\n"),
+                 drive);
+         }
+         if (loaded == 0) {      /* no slot loaded */
+            dev->set_slot(0);
+         } else {                /* probably some error */
+            dev->clear_slot();   /* unknown */
+         }
       }
    } else {
       berrno be;
@@ -299,8 +321,13 @@ static void lock_changer(DCR *dcr)
 {
    AUTOCHANGER *changer_res = dcr->device->changer_res;
    if (changer_res) {
+      int errstat;
       Dmsg1(200, "Locking changer %s\n", changer_res->hdr.name);
-      P(changer_res->changer_mutex);  /* Lock changer script */
+      if ((errstat=rwl_writelock(&changer_res->changer_lock)) != 0) {
+         berrno be;
+         Jmsg(dcr->jcr, M_ERROR_TERM, 0, _("Lock failure on autochanger. ERR=%s\n"),
+              be.bstrerror(errstat));
+      }
    }
 }
 
@@ -308,8 +335,13 @@ static void unlock_changer(DCR *dcr)
 {
    AUTOCHANGER *changer_res = dcr->device->changer_res;
    if (changer_res) {
+      int errstat;
       Dmsg1(200, "Unlocking changer %s\n", changer_res->hdr.name);
-      V(changer_res->changer_mutex);  /* Unlock changer script */
+      if ((errstat=rwl_writeunlock(&changer_res->changer_lock)) != 0) {
+         berrno be;
+         Jmsg(dcr->jcr, M_ERROR_TERM, 0, _("Unlock failure on autochanger. ERR=%s\n"),
+              be.bstrerror(errstat));
+      }
    }
 }
 
@@ -342,6 +374,7 @@ bool unload_autochanger(DCR *dcr, int loaded)
       return true;
    }
 
+   lock_changer(dcr);
    if (loaded < 0) {
       loaded = get_autochanger_loaded_slot(dcr);
    }
@@ -349,7 +382,6 @@ bool unload_autochanger(DCR *dcr, int loaded)
    if (loaded > 0) {
       POOL_MEM results(PM_MESSAGE);
       POOLMEM *changer = get_pool_memory(PM_FNAME);
-      lock_changer(dcr);
       Jmsg(jcr, M_INFO, 0,
            _("3307 Issuing autochanger \"unload slot %d, drive %d\" command.\n"),
            loaded, dev->drive_index);
@@ -372,11 +404,15 @@ bool unload_autochanger(DCR *dcr, int loaded)
       } else {
          dev->set_slot(0);         /* nothing loaded */
       }
-      unlock_changer(dcr);
 
-      free_volume(dev);            /* Free any volume associated with this drive */
       free_pool_memory(changer);
    }
+   unlock_changer(dcr);
+
+   if (loaded > 0) {           /* free_volume outside from changer lock */
+      free_volume(dev);        /* Free any volume associated with this drive */
+   }
+
    if (ok) {
       dev->clear_unload();
    }
@@ -524,7 +560,6 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
    POOLMEM *changer;
    BPIPE *bpipe;
    int len = sizeof_pool_memory(dir->msg) - 1;
-   bool ok = false;
    int stat;
 
    if (!dev->is_autochanger() || !dcr->device->changer_name ||
@@ -557,7 +592,7 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
    bpipe = open_bpipe(changer, timeout, "r");
    if (!bpipe) {
       dir->fsend(_("3996 Open bpipe failed.\n"));
-      goto bail_out;
+      goto bail_out;            /* TODO: check if we need to return false */
    }
    if (bstrcmp(cmd, "list") || bstrcmp(cmd, "listall")) {
       /* Get output from changer */
@@ -586,7 +621,6 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
       dir->fsend(_("Autochanger error: ERR=%s\n"), be.bstrerror());
    }
    bnet_sig(dir, BNET_EOD);
-   ok = true;
 
 bail_out:
    unlock_changer(dcr);
@@ -653,7 +687,15 @@ char *edit_device_codes(DCR *dcr, char *omsg, const char *imsg, const char *cmd)
             str = dcr->jcr->Job;
             break;
          case 'v':
-            str = NPRT(dcr->VolumeName);
+            if (dcr->VolCatInfo.VolCatName[0]) {
+               str = dcr->VolCatInfo.VolCatName;
+            } else if (dcr->VolumeName[0]) {
+               str = dcr->VolumeName;
+            } else if (dcr->dev->vol && dcr->dev->vol->vol_name) {
+               str = dcr->dev->vol->vol_name;
+            } else {
+               str = dcr->dev->VolHdr.VolumeName;
+            }
             break;
          case 'f':
             str = NPRT(dcr->jcr->client_name);

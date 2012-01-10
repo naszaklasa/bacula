@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -168,7 +168,7 @@ storage_group_node_t::startBackupFile(exchange_fd_context_t *context, struct sav
             {
                if (GetFileTime(handle, NULL, NULL, &modified_time) == 0)
                {
-                  //_JobMessage(M_WARNING, "Could check last modified date for '%S' (0x%08x), including anyway\n", tmp_logfile_ptr, GetLastError());
+                  //_JobMessage(M_WARNING, "Could not check last modified date for '%S' (0x%08x), including anyway\n", tmp_logfile_ptr, GetLastError());
                   include_file = true;
                }
             }
@@ -188,6 +188,8 @@ storage_group_node_t::startBackupFile(exchange_fd_context_t *context, struct sav
                logfile_ptr += wcslen(logfile_ptr) + 1;
                //_DebugMessage(100, "Including file %S\n", logfile_ptr);
             }
+#if 0
+/* this is handled via checkFile now */
             else
             {
                if (context->accurate) {
@@ -198,6 +200,7 @@ storage_group_node_t::startBackupFile(exchange_fd_context_t *context, struct sav
                   delete tmp;
                }
             }
+#endif
 
             if (handle != INVALID_HANDLE_VALUE)
                CloseHandle(handle);
@@ -306,11 +309,11 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
    HRESULT result;
    int len;
 
-   _DebugMessage(0, "createFile_STORAGE_GROUP state = %d\n", state);
+   _DebugMessage(100, "createFile_STORAGE_GROUP state = %d\n", state);
 
    if (strcmp(context->path_bits[level], name) != 0)
    {
-      _DebugMessage(0, "Different storage group - switching back to parent\n", state);
+      _DebugMessage(100, "Different storage group - switching back to parent\n", state);
       saved_log_path = new WCHAR[wcslen(restore_environment->m_wszRestoreLogPath) + 1];
       wcscpy(saved_log_path, restore_environment->m_wszRestoreLogPath);
       _DebugMessage(100, "Calling HrESERestoreSaveEnvironment\n");
@@ -336,7 +339,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
    }
    if (saved_log_path != NULL)
    {
-      _DebugMessage(0, "Calling HrESERestoreReopen\n");
+      _DebugMessage(100, "Calling HrESERestoreReopen\n");
       result = HrESERestoreReopen(context->computer_name, service_name, saved_log_path, &hccx);
       if (result != 0)
       {
@@ -346,7 +349,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          rp->create_status = CF_CREATED;
          return bRC_OK;
       }
-      _DebugMessage(0, "Calling HrESERestoreGetEnvironment\n");
+      _DebugMessage(100, "Calling HrESERestoreGetEnvironment\n");
       result = HrESERestoreGetEnvironment(hccx, &restore_environment);
       if (result != 0)
       {
@@ -374,7 +377,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          storage_group_name = new WCHAR[strlen(name) + 1];
          mbstowcs(service_name, parent->name, strlen(parent->name) + 1);
          mbstowcs(storage_group_name, name, strlen(name) + 1);
-         _DebugMessage(0, "Calling HrESERestoreOpen\n");
+         _DebugMessage(100, "Calling HrESERestoreOpen\n");
          result = HrESERestoreOpen(context->computer_name, service_name, storage_group_name, NULL, &hccx);
          if (result != 0)
          {
@@ -382,7 +385,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
             state = 999;
             break;
          }
-         _DebugMessage(0, "Calling HrESERestoreGetEnvironment\n");
+         _DebugMessage(100, "Calling HrESERestoreGetEnvironment\n");
          result = HrESERestoreGetEnvironment(hccx, &restore_environment);
          if (result != 0)
          {
@@ -487,7 +490,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
 bRC
 storage_group_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_STORAGE_GROUP state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_STORAGE_GROUP state = %d\n", state);
    switch (state)
    {
    case 0:

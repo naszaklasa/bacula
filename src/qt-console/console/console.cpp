@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -38,7 +38,7 @@
 #include "select.h"
 #include "run/run.h"
 
-Console::Console(QTabWidget *parent)
+Console::Console(QTabWidget *parent) : Pages()
 {
    QFont font;
    m_name = tr("Console");
@@ -78,7 +78,7 @@ void Console::startTimer()
 {
    m_timer = new QTimer(this);
    QWidget::connect(m_timer, SIGNAL(timeout()), this, SLOT(poll_messages()));
-   m_timer->start(mainWin->m_checkMessagesInterval*1000);
+   m_timer->start(mainWin->m_checkMessagesInterval*30000);
 }
 
 void Console::stopTimer()
@@ -97,6 +97,11 @@ void Console::poll_messages()
 {
    int conn;
 
+   /* Do not poll if notifier off */
+   if (!mainWin->m_notify) {
+      return;
+   }
+
    /*
     * Note if we call getDirComm here, we continuously consume
     *  file descriptors.
@@ -107,7 +112,6 @@ void Console::poll_messages()
 
    DirComm *dircomm = m_dircommHash.value(conn);
    if (mainWin->m_checkMessages && dircomm->m_at_main_prompt && hasFocus() && !mainWin->getWaitState()){
-      messagesPending(true);
       dircomm->write(".messages");
       displayToPrompt(conn);
       messagesPending(false);
@@ -148,9 +152,7 @@ void Console::populateLists(bool /*forcenew*/)
 {
    int conn;
    if (!getDirComm(conn)) {
-      if (mainWin->m_connDebug) {
-         Pmsg0(000, "call newDirComm\n");
-      }
+      if (mainWin->m_connDebug) Pmsg0(000, "call newDirComm\n");
       if (!newDirComm(conn)) {
          Emsg1(M_ABORT, 0, "Failed to connect to %s for populateLists.\n", m_dir->name());
          return;
@@ -162,6 +164,7 @@ void Console::populateLists(bool /*forcenew*/)
 void Console::populateLists(int conn)
 {
    job_list.clear();
+   restore_list.clear();
    client_list.clear();
    fileset_list.clear();
    messages_list.clear();
@@ -172,6 +175,7 @@ void Console::populateLists(int conn)
    volstatus_list.clear();
    mediatype_list.clear();
    dir_cmd(conn, ".jobs", job_list);
+   dir_cmd(conn, ".jobs type=R", restore_list);
    dir_cmd(conn, ".clients", client_list);
    dir_cmd(conn, ".filesets", fileset_list);  
    dir_cmd(conn, ".msgs", messages_list);
@@ -233,6 +237,7 @@ bool Console::dir_cmd(int conn, const char *cmd, QStringList &results)
    mainWin->waitEnter();
    DirComm *dircomm = m_dircommHash.value(conn);
    int stat;
+   bool prev_notify = mainWin->m_notify;
 
    if (mainWin->m_connDebug) {
       QString dbgmsg = QString("dir_cmd conn %1 %2 %3\n").arg(conn).arg(m_dir->name()).arg(cmd);
@@ -246,10 +251,12 @@ bool Console::dir_cmd(int conn, const char *cmd, QStringList &results)
       results << dircomm->msg();
    }
    if (stat > 0 && mainWin->m_displayAll) display_text(dircomm->msg());
-   notify(conn, true);
+   if (prev_notify) {
+      notify(conn, true);         /* turn it back on */
+   }
    discardToPrompt(conn);
    mainWin->waitExit();
-   return true;              /* ***FIXME*** return any command error */
+   return true;                  /* ***FIXME*** return any command error */
 }
 
 /*
@@ -287,15 +294,16 @@ bool Console::sql_cmd(int &conn, const char *query, QStringList &results, bool d
    DirComm *dircomm = m_dircommHash.value(conn);
    int stat;
    POOL_MEM cmd(PM_MESSAGE);
+   bool prev_notify = mainWin->m_notify;
 
    if (!is_connectedGui()) {
       return false;
    }
 
-   if (mainWin->m_connDebug)
-      Pmsg2(000, "sql_cmd conn %i %s\n", conn, query);
-   if (donotify)
+   if (mainWin->m_connDebug) Pmsg2(000, "sql_cmd conn %i %s\n", conn, query);
+   if (donotify) {
       dircomm->notify(false);
+   }
    mainWin->waitEnter();
    
    pm_strcpy(cmd, ".sql query=\"");
@@ -314,15 +322,17 @@ bool Console::sql_cmd(int &conn, const char *query, QStringList &results, bool d
          QString dum = dircomm->msg();
          if ((dum.left(6) == "*None*")) doappend = false;
       }
-      if (doappend)
+      if (doappend) {
          results << dircomm->msg();
+      }
       first = false;
    }
-   if (donotify)
+   if (donotify && prev_notify) {
       dircomm->notify(true);
+   }
    discardToPrompt(conn);
    mainWin->waitExit();
-   return true;              /* ***FIXME*** return any command error */
+   return !mainWin->isClosing();      /* return false if closing */
 }
 
 /* 
@@ -400,9 +410,12 @@ bool Console::get_job_defaults(int &conn, struct job_defaults &job_defs, bool do
    QString scmd;
    int stat;
    char *def;
+   bool prev_notify = mainWin->m_notify;
+   bool rtn = false;
 
-   if (donotify)
+   if (donotify) {
       conn = notifyOff();
+   }
    beginNewCommand(conn);
    DirComm *dircomm = m_dircommHash.value(conn);
    bool prevWaitState = mainWin->getWaitState();
@@ -469,19 +482,16 @@ bool Console::get_job_defaults(int &conn, struct job_defaults &job_defs, bool do
          continue;
       }
    }
-
-   if (donotify)
-      notify(conn, true);
-   if (!prevWaitState)
-      mainWin->waitExit();
-   return true;
-
+   rtn = true;
+   /* Fall through wanted */
 bail_out:
-   if (donotify)
+   if (donotify && prev_notify) {
       notify(conn, true);
-   if (!prevWaitState)
+   }
+   if (!prevWaitState) {
       mainWin->waitExit();
-   return false;
+   }
+   return rtn;
 }
 
 
@@ -572,21 +582,27 @@ void Console::display_textf(const char *fmt, ...)
 
 void Console::display_text(const QString buf)
 {
-   m_cursor->insertText(buf);
-   update_cursor();
+   if (buf.size() != 0) {
+      m_cursor->insertText(buf);
+      update_cursor();
+   }
 }
 
 
 void Console::display_text(const char *buf)
 {
-   m_cursor->insertText(buf);
-   update_cursor();
+   if (*buf != 0) {
+      m_cursor->insertText(buf);
+      update_cursor();
+   }
 }
 
 void Console::display_html(const QString buf)
 {
-   m_cursor->insertHtml(buf);
-   update_cursor();
+   if (buf.size() != 0) {
+      m_cursor->insertHtml(buf);
+      update_cursor();
+   }
 }
 
 /* Position cursor to end of screen */
@@ -603,7 +619,7 @@ void Console::beginNewCommand(int conn)
    for (int i=0; i < 3; i++) {
       dircomm->write(".");
       while (dircomm->read() > 0) {
-         Pmsg2(000, "begin new command loop %i %s\n", i, m_dir->name());
+         if (mainWin->m_commDebug) Pmsg2(000, "begin new command loop %i %s\n", i, m_dir->name());
          if (mainWin->m_displayAll) display_text(dircomm->msg());
       }
       if (dircomm->m_at_main_prompt) {
@@ -662,6 +678,8 @@ QString Console::returnFromPrompt(int conn)
 
    int stat = 0;
    text = "";
+   dircomm->read();
+   text += dircomm->msg();
    if (mainWin->m_commDebug) Pmsg1(000, "returnFromPrompt %s\n", m_dir->name());
    while (!dircomm->m_at_prompt) {
       if ((stat=dircomm->read()) > 0) {
@@ -836,9 +854,7 @@ bool Console::getDirComm(int &conn)
    if (findDirComm(conn)) {
       return true;
    }
-   if (mainWin->m_connDebug) {
-      Pmsg0(000, "call newDirComm\n");
-   }
+   if (mainWin->m_connDebug) Pmsg0(000, "call newDirComm\n");
    return newDirComm(conn);
 }
 

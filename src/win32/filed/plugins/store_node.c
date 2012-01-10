@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -131,11 +131,11 @@ store_node_t::endBackupFile(exchange_fd_context_t *context)
 bRC
 store_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 {
-   _DebugMessage(0, "createFile_STORE state = %d\n", state);
+   _DebugMessage(100, "createFile_STORE state = %d\n", state);
 
    if (strcmp(context->path_bits[level - 1], parent->name) != 0)
    {
-      _DebugMessage(0, "Different storage group - switching back to parent\n", state);
+      _DebugMessage(100, "Different storage group - switching back to parent\n", state);
       context->current_node = parent;
       return bRC_OK;
    }
@@ -190,7 +190,7 @@ store_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
       case 999:
          if (strcmp(context->path_bits[level], name) != 0)
          {
-            _DebugMessage(0, "End of Store when in error state - switching back to parent\n", state);
+            _DebugMessage(100, "End of Store when in error state - switching back to parent\n", state);
             context->current_node = parent;
             return bRC_OK;
          }
@@ -205,14 +205,14 @@ store_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
    HRESULT result;
 
-   _DebugMessage(0, "endRestoreFile_STORE state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_STORE state = %d\n", state);
    for (;;)
    {
       switch (state)
       {
       case 0:
          state = 1;
-         _DebugMessage(0, "Calling HrESERestoreAddDatabase\n");
+         _DebugMessage(100, "Calling HrESERestoreAddDatabase\n");
          result = HrESERestoreAddDatabase(hccx, dbi_node->restore_display_name, dbi_node->restore_guid, dbi_node->restore_input_streams, &dbi_node->restore_output_streams);
          if (result != 0)
          {

@@ -14,18 +14,26 @@ DEFINES := \
 	-DOUT_DIR=..\\release32 \
 	-DSRC_DIR=release32 \
 	-DBUILD_TOOLS=MinGW32 \
-	-DWINVER=32
+	-DWINVER=32 \
+	-DBUILD_BAT=$(BUILD_BAT)
 
 INSTALL_EXE := $(BUILDDIR)/release32/winbacula-$(VERSION).exe
 
-BACULA_BINARIES := \
+BACULABINARIES := \
 	bacula.dll \
 	exchange-fd.dll \
 	bacula-fd.exe \
 	bconsole.exe \
 	bsleep.exe \
 	bsmtp.exe \
-	bat.exe
+
+ifeq ($(bat),no)
+	BACULA_BINARIES=$(BACULABINARIES)
+	HELP=
+else
+	BACULA_BINARIES=$(BACULABINARIES) bat.exe bacula-tray-monitor.exe
+	HELP=help
+endif
 
 DEPKGS_BINARIES := \
 	libeay32.dll \
@@ -39,7 +47,8 @@ DEPKGS_BINARIES := \
 	mkisofs.exe \
 	growisofs.exe \
 	QtCore4.dll \
-	QtGui4.dll
+	QtGui4.dll \
+	libgcc_s_dw2-1.dll
 
 NONGCC_BINARIES :=
 
@@ -64,22 +73,26 @@ DOC_FILES := \
 	docs/manuals/en/problems/problems.pdf \
 	docs/manuals/en/utility/utility.pdf
 
-HELP_FILES := help/*
-
 ##########################################################################
 
 # Targets
 
 .PHONY: all clean installer
 
-all:		$(INSTALL_EXE)
+all:	      $(HELP) $(INSTALL_EXE)
 
-installer:	$(INSTALL_EXE)
+installer:    $(HELP) $(INSTALL_EXE)
 
 clean:
 	@echo "Cleaning `pwd`"
 	$(CMD_ECHO)-rm -f $(INSTALL_EXE)
 	$(CMD_ECHO)-rm -rf release32
+
+help:
+	rm -rf release32/help
+	mkdir -p release32/help
+	cp -f $(BINDIR)/help/* release32/help/
+
 
 #
 # Rules
@@ -127,10 +140,8 @@ $(foreach file,$(DOC_FILES),$(eval $(call Copy_Docs,$(file))))
 
 
 $(INSTALL_EXE): winbacula.nsi $(addprefix release32/,$(BACULA_BINARIES) $(SCRIPT_FILES) $(CAT_FILES) $(DEPKGS_BINARIES) $(NONGCC_BINARIES) $(NONGCC_LIBRARIES) $(MINGW_BINARIES) $(SSL_FILES) $(DIRD_FILES) $(DOC_FILES))
-	rm -rf release32/help
-	mkdir release32/help
-	cp -f $(BINDIR)/$(HELP_FILES) release32/help/
 	NSISDIR=$(NSIS_DIR) \
+	echo "$(NSIS_DIR)/makensis -V3 $(DEFINES) winbacula.nsi"
 	$(NSIS_DIR)/makensis -V3 $(DEFINES) winbacula.nsi
 
 include $(BUILDDIR)/Makefile.rules

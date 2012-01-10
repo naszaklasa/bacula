@@ -192,7 +192,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="layoutWidget" >
+     <widget class="QWidget" name="layoutWidget1" >
       <layout class="QVBoxLayout" >
        <item>
         <widget class="QLabel" name="terminatedLabel" >

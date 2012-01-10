@@ -8,7 +8,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -17,7 +17,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -60,6 +60,7 @@ private slots:
    void consoleListJobMedia();
    void consoleListJobTotals();
    void consoleDeleteJob();
+   void consoleRestartJob();
    void consolePurgeFiles();
    void preRestoreFromJob();
    void preRestoreFromTime();
@@ -76,6 +77,7 @@ private:
    void prepareFilterWidgets();
    void fillQueryString(QString &query);
    QSplitter *m_splitter;
+
    QString m_groupText;
    QString m_splitText;
    QString m_mediaName;
@@ -83,11 +85,17 @@ private:
    QString m_jobName;
    QString m_filesetName;
    QString m_currentJob;
+   QString m_levelName;
+
    bool m_populated;
    bool m_checkCurrentWidget;
    int m_jobIdIndex;
    int m_purgedIndex;
    int m_typeIndex;
+   int m_levelIndex;
+   int m_clientIndex;
+   int m_nameIndex;
+   int m_filesetIndex;
    int m_statusIndex;
    int m_startIndex;
    int m_bytesIndex;

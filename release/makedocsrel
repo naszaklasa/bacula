@@ -9,15 +9,20 @@
 #
 # Commit all changes, export the release, make a release tar.
 #
-cwd=`pwd`
-reltype=release
+# source ./config
+. ./config
+
 tagbase=Release-
 base_dir=docs
 base_pkg=bacula-$base_dir
-branch=$3
-if [ $# != 3 ] ; then
-  echo "Need $0 <bacula-source-directory> <docs-source-directory> <branch>"
-  echo "e.g. $0 bacula-source docs-source master"
+remote=$3
+branch=$4
+ver=$5
+fulltag=$tagbase$ver
+
+if [ $# != 5 ] ; then
+  echo "Need $0 <bacula-source-directory> <docs-source-directory> <remote-name> <branch> <version>"
+  echo "e.g. $0 bacula-source docs-source bee Branch-4.0 4.0.3"
   exit 1
 fi
 cd $1
@@ -30,12 +35,13 @@ if [ $?  -ne 0 ]; then
    echo "Directory: $1 does not exist"
    exit 1
 fi
+bcurrent=`git branch | awk '/*/ { print $2 }'`
 git checkout ${branch}
 if [ $? -ne 0 ]; then
    echo "Checkout of branch ${branch} in $1/bacula failed."
    exit 1
 fi
-git pull origin ${branch}
+git pull ${remote} ${branch}
 bsrc=`pwd` 
 cd ${cwd}
 cd $2
@@ -48,22 +54,21 @@ if [ $?  -ne 0 ]; then
    echo "Directory: $2 does not exist"
    exit 1
 fi
+current=`git branch | awk '/*/ { print $2 }'`
 src=`pwd` 
 git checkout ${branch}
 if [ $? -ne 0 ]; then
    echo "Checkout of branch ${branch} in ${src} failed."
    exit 1
 fi
-git pull origin ${branch}
-ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${bsrc}/src/version.h`
-fulltag=$tagbase$ver
+git pull ${remote} ${branch}
 echo " "
 echo "Making $reltype for $base_pkg-$ver ..."
 echo " "
-echo "OK?  ctl-c to stop"
-read a
+#echo "OK?  ctl-c to stop"
+#read a
 
-git tag -d ${fulltag}
+git tag -d ${fulltag}  2>/dev/null 1>/dev/null
 echo "Creating new tag -- $fulltag"
 git tag $fulltag
 if [ $? != 0 ] ; then
@@ -85,7 +90,6 @@ if [ $? != 0 ] ; then
   exit 1
 fi
 echo "Exported release into ${cwd}/$base_pkg-$ver.tar.gz"
-git checkout master
 cd ${cwd}
 tar xfz $base_pkg-$ver.tar.gz 
 cd $base_pkg-$ver/
@@ -93,8 +97,6 @@ mv docs $base_pkg-$ver
 cd $base_pkg-$ver
 ./configure --with-bacula=$bsrc
 make en
-cd ${bsrc}
-git checkout master
 cd ${cwd}
 echo "Tarring docs ..."
 tar cf $base_pkg-$ver.tar $base_pkg-$ver
@@ -106,6 +108,13 @@ ls -l $base_pkg-$ver.tar.*
 
 if [ a$push != ano ]; then
    cd ${src}
-   git push origin $branch
-   git push origin tag $fulltag
+   git push ${remote} ${branch}
+   git push ${remote} tag ${fulltag}
+   echo "Pushed ${remote} and push tag ${fulltag}"
 fi
+
+cd ${src}
+git checkout ${current}
+
+cd ${bsrc}
+git checkout ${bcurrent}

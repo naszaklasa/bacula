@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -35,6 +35,8 @@
 #include "bacula.h"
 #include "dird/dird.h"
 #include "findlib/find.h"
+#include "lib/mntent_cache.h"
+#include "ch.h"
 
 #if defined(HAVE_WIN32)
 #define isatty(fd) (fd==0)
@@ -239,6 +241,8 @@ main (int argc, char *const *argv)
 "Hard links     : %d\n"),
      num_files, max_file_len, max_path_len,
      trunc_fname, trunc_path, hard_links);
+
+   flush_mntent_cache();
 
    term_msg();
 
@@ -488,15 +492,15 @@ static bool copy_fileset(FF_PKT *ff, JCR *jcr)
             set_options(current_opts, fo->opts);
 
             for (k=0; k<fo->regex.size(); k++) {
-               // bnet_fsend(fd, "R %s\n", fo->regex.get(k));
+               // fd->fsend("R %s\n", fo->regex.get(k));
                current_opts->regex.append(bstrdup((const char *)fo->regex.get(k)));
             }
             for (k=0; k<fo->regexdir.size(); k++) {
-               // bnet_fsend(fd, "RD %s\n", fo->regexdir.get(k));
+               // fd->fsend("RD %s\n", fo->regexdir.get(k));
                current_opts->regexdir.append(bstrdup((const char *)fo->regexdir.get(k)));
             }
             for (k=0; k<fo->regexfile.size(); k++) {
-               // bnet_fsend(fd, "RF %s\n", fo->regexfile.get(k));
+               // fd->fsend("RF %s\n", fo->regexfile.get(k));
                current_opts->regexfile.append(bstrdup((const char *)fo->regexfile.get(k)));
             }
             for (k=0; k<fo->wild.size(); k++) {
@@ -629,10 +633,19 @@ static void set_options(findFOPTS *fo, const char *opts)
       case 'W':
          fo->flags |= FO_ENHANCEDWILD;
          break;
-      case 'Z':                 /* gzip compression */
-         fo->flags |= FO_GZIP;
-         fo->GZIP_level = *++p - '0';
-         Dmsg1(200, "Compression level=%d\n", fo->GZIP_level);
+      case 'Z':                 /* compression */
+         p++;                   /* skip Z */
+         if (*p >= '0' && *p <= '9') {
+            fo->flags |= FO_COMPRESS;
+            fo->Compress_algo = COMPRESS_GZIP;
+            fo->Compress_level = *p - '0';
+         }
+         else if (*p == 'o') {
+            fo->flags |= FO_COMPRESS;
+            fo->Compress_algo = COMPRESS_LZO1X;
+            fo->Compress_level = 1; /* not used with LZO */
+         }
+         Dmsg2(200, "Compression alg=%d level=%d\n", fo->Compress_algo, fo->Compress_level);
          break;
       case 'X':
          fo->flags |= FO_XATTR;

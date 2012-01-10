@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -379,10 +379,9 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       return true;
    }
    /* File Attributes stream */
-   if (rec->Stream == STREAM_UNIX_ATTRIBUTES ||
-       rec->Stream == STREAM_UNIX_ATTRIBUTES_EX) {
-
-      if (!unpack_attributes_record(jcr, rec->Stream, rec->data, attr)) {
+   if (rec->maskedStream == STREAM_UNIX_ATTRIBUTES ||
+       rec->maskedStream == STREAM_UNIX_ATTRIBUTES_EX) {
+      if (!unpack_attributes_record(jcr, rec->Stream, rec->data, rec->data_len, attr)) {
          if (!forge_on) {
             Emsg0(M_ERROR_TERM, 0, _("Cannot continue.\n"));
          } else {
@@ -392,7 +391,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          return true;
       }
 
-      attr->data_stream = decode_stat(attr->attr, &attr->statp, &attr->LinkFI);
+      attr->data_stream = decode_stat(attr->attr, &attr->statp, sizeof(attr->statp), &attr->LinkFI);
       build_attr_output_fnames(jcr, attr);
 
       if (file_is_included(ff, attr->fname) && !file_is_excluded(ff, attr->fname)) {
@@ -404,9 +403,12 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          num_files++;
       }
    } else if (rec->Stream == STREAM_PLUGIN_NAME) {
-      if (strncmp("0 0", rec->data, 3) != 0) {
-         Pmsg1(000, "Plugin data: %s\n", rec->data);
-      }
+      char data[100];
+      int len = MIN(rec->data_len+1, sizeof(data));
+      bstrncpy(data, rec->data, len);
+      Pmsg1(000, "Plugin data: %s\n", data);
+   } else if (rec->Stream == STREAM_RESTORE_OBJECT) {
+      Pmsg0(000, "Restore Object record\n");
    }
       
    return true;

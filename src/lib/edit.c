@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -30,7 +30,6 @@
  *
  *    Kern Sibbald, December MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -332,18 +331,13 @@ char *edit_utime(utime_t val, char *buf, int buf_len)
    return buf;
 }
 
-/*
- * Convert a size in bytes to uint64_t
- * Returns false: if error
-           true:  if OK, and value stored in value
- */
-bool size_to_uint64(char *str, int str_len, uint64_t *value)
+static bool strunit_to_uint64(char *str, int str_len, uint64_t *value, 
+                              const char **mod)
 {
    int i, mod_len;
    double val;
    char mod_str[20];
    char num_str[50];
-   static const char *mod[]  = {"*", "k", "kb", "m", "mb",  "g", "gb",  NULL}; /* first item * not used */
    const int64_t mult[] = {1,             /* byte */
                            1024,          /* kilobyte */
                            1000,          /* kb kilobyte */
@@ -377,6 +371,30 @@ bool size_to_uint64(char *str, int str_len, uint64_t *value)
    }
    *value = (utime_t)(val * mult[i]);
    return true;
+}
+
+/*
+ * Convert a size in bytes to uint64_t
+ * Returns false: if error
+           true:  if OK, and value stored in value
+ */
+bool size_to_uint64(char *str, int str_len, uint64_t *value)
+{
+   /* first item * not used */
+   static const char *mod[]  = {"*", "k", "kb", "m", "mb",  "g", "gb",  NULL};
+   return strunit_to_uint64(str, str_len, value, mod);
+}
+
+/*
+ * Convert a speed in bytes/s to uint64_t
+ * Returns false: if error
+           true:  if OK, and value stored in value
+ */
+bool speed_to_uint64(char *str, int str_len, uint64_t *value)
+{
+   /* first item * not used */
+   static const char *mod[]  = {"*", "k/s", "kb/s", "m/s", "mb/s",  NULL}; 
+   return strunit_to_uint64(str, str_len, value, mod);
 }
 
 /*
@@ -447,13 +465,20 @@ bool is_an_integer(const char *n)
  * Check if the Volume name has legal characters
  * If ua is non-NULL send the message
  */
-bool is_name_valid(char *name, POOLMEM **msg)
+bool is_name_valid(const char *name, POOLMEM **msg)
 {
    int len;
-   char *p;
+   const char *p;
    /* Special characters to accept */
    const char *accept = ":.-_ ";
 
+   /* No name is invalid */
+   if (!name) {
+      if (msg) {
+         Mmsg(msg, _("Empty name not allowed.\n"));
+      }
+      return false;
+   }
    /* Restrict the characters permitted in the Volume name */
    for (p=name; *p; p++) {
       if (B_ISALPHA(*p) || B_ISDIGIT(*p) || strchr(accept, (int)(*p))) {
@@ -464,7 +489,7 @@ bool is_name_valid(char *name, POOLMEM **msg)
       }
       return false;
    }
-   len = strlen(name);
+   len = p - name;
    if (len >= MAX_NAME_LENGTH) {
       if (msg) {
          Mmsg(msg, _("Name too long.\n"));

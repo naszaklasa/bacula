@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -34,7 +34,7 @@
 #include "bacula.h"
 #include "dird.h"
 
-const int dbglvl = 0;
+const int dbglvl = 100;
 const char *plugin_type = "-dir.so";
 
 
@@ -43,9 +43,9 @@ static bRC baculaGetValue(bpContext *ctx, brVariable var, void *value);
 static bRC baculaSetValue(bpContext *ctx, bwVariable var, void *value);
 static bRC baculaRegisterEvents(bpContext *ctx, ...);
 static bRC baculaJobMsg(bpContext *ctx, const char *file, int line,
-  int type, utime_t mtime, const char *msg);
+                        int type, utime_t mtime, const char *fmt, ...);
 static bRC baculaDebugMsg(bpContext *ctx, const char *file, int line,
-  int level, const char *msg);
+                          int level, const char *fmt, ...);
 
 
 /* Bacula info */
@@ -74,7 +74,7 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list || !jcr || !jcr->plugin_ctx_list) {
+   if (!bplugin_list || !jcr || !jcr->plugin_ctx_list) {
       return;
    }
 
@@ -83,7 +83,7 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
 
    Dmsg2(dbglvl, "plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
 
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       bRC rc;
       rc = plug_func(plugin)->handlePluginEvent(&plugin_ctx_list[i++], &event, value);
       if (rc != bRC_OK) {
@@ -115,7 +115,7 @@ void load_dir_plugins(const char *plugin_dir)
       return;
    }
 
-   plugin_list = New(alist(10, not_owned_by_alist));
+   bplugin_list = New(alist(10, not_owned_by_alist));
    load_plugins((void *)&binfo, (void *)&bfuncs, plugin_dir, plugin_type, NULL);
    dbg_plugin_add_hook(dump_dir_plugin);
 }
@@ -128,11 +128,11 @@ void new_plugins(JCR *jcr)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list) {
+   if (!bplugin_list) {
       return;
    }
 
-   int num = plugin_list->size();
+   int num = bplugin_list->size();
 
    if (num == 0) {
       return;
@@ -142,7 +142,7 @@ void new_plugins(JCR *jcr)
 
    bpContext *plugin_ctx_list = jcr->plugin_ctx_list;
    Dmsg2(dbglvl, "Instantiate plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       /* Start a new instance of each plugin */
       plugin_ctx_list[i].bContext = (void *)jcr;
       plugin_ctx_list[i].pContext = NULL;
@@ -158,13 +158,13 @@ void free_plugins(JCR *jcr)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list || !jcr->plugin_ctx_list) {
+   if (!bplugin_list || !jcr->plugin_ctx_list) {
       return;
    }
 
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
    Dmsg2(dbglvl, "Free instance plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       /* Free the plugin instance */
       plug_func(plugin)->freePlugin(&plugin_ctx_list[i]);
       plugin_ctx_list[i].bContext = NULL;
@@ -371,7 +371,7 @@ static bRC baculaSetValue(bpContext *ctx, bwVariable var, void *value)
          for (int i=0; ok && joblevels[i].level_name; i++) {
             if (strcasecmp(strval, joblevels[i].level_name) == 0) {
                if (joblevels[i].job_type == jcr->getJobType()) {
-                  jcr->set_JobLevel(joblevels[i].level);
+                  jcr->setJobLevel(joblevels[i].level);
                   jcr->jr.JobLevel = jcr->getJobLevel();
                   ok = false;
                }
@@ -403,18 +403,35 @@ static bRC baculaRegisterEvents(bpContext *ctx, ...)
 }
 
 static bRC baculaJobMsg(bpContext *ctx, const char *file, int line,
-  int type, utime_t mtime, const char *msg)
+                        int type, utime_t mtime, const char *fmt, ...)
 {
-   Dmsg5(dbglvl, "Job message: %s:%d type=%d time=%lld msg=%s\n",
-      file, line, type, mtime, msg);
+   va_list arg_ptr;
+   char buf[2000];
+   JCR *jcr;
+
+   if (ctx) {
+      jcr = (JCR *)ctx->bContext;
+   } else {
+      jcr = NULL;
+   }
+
+   va_start(arg_ptr, fmt);
+   bvsnprintf(buf, sizeof(buf), fmt, arg_ptr);
+   va_end(arg_ptr);
+   Jmsg(jcr, type, mtime, "%s", buf);
    return bRC_OK;
 }
 
 static bRC baculaDebugMsg(bpContext *ctx, const char *file, int line,
-  int level, const char *msg)
+                          int level, const char *fmt, ...)
 {
-   Dmsg4(dbglvl, "Debug message: %s:%d level=%d msg=%s\n",
-      file, line, level, msg);
+   va_list arg_ptr;
+   char buf[2000];
+
+   va_start(arg_ptr, fmt);
+   bvsnprintf(buf, sizeof(buf), fmt, arg_ptr);
+   va_end(arg_ptr);
+   d_msg(file, line, level, "%s", buf);
    return bRC_OK;
 }
 

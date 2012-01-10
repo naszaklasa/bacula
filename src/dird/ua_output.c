@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -288,15 +288,16 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
       ua->error_msg(_("Hey! DB is NULL\n"));
    }
 
+   /* Apply any limit */
+   j = find_arg_with_value(ua, NT_("limit"));
+   if (j >= 0) {
+      jr.limit = atoi(ua->argv[j]);
+   }
+
    /* Scan arguments looking for things to do */
    for (i=1; i<ua->argc; i++) {
       /* List JOBS */
       if (strcasecmp(ua->argk[i], NT_("jobs")) == 0) {
-         /* Apply any limit */
-         j = find_arg_with_value(ua, NT_("limit"));
-         if (j >= 0) {
-            jr.limit = atoi(ua->argv[j]);
-         }
          db_list_job_records(ua->jcr, ua->db, &jr, prtit, ua, llist);
 
          /* List JOBTOTALS */
@@ -582,8 +583,10 @@ static bool list_nextvol(UAContext *ua, int ndays)
    }
 
 get_out:
-   db_close_database(jcr, jcr->db);
-   jcr->db = NULL;
+   if (jcr->db) {
+      db_close_database(jcr, jcr->db);
+      jcr->db = NULL;
+   }
    free_jcr(jcr);
    if (!found) {
       ua->error_msg(_("Could not find next Volume for Job %s.\n"),
@@ -706,11 +709,12 @@ bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
    }
 
    Dmsg0(100, "complete_jcr open db\n");
-   jcr->db = jcr->db=db_init(jcr, jcr->catalog->db_driver, jcr->catalog->db_name, 
-                      jcr->catalog->db_user,
-                      jcr->catalog->db_password, jcr->catalog->db_address,
-                      jcr->catalog->db_port, jcr->catalog->db_socket,
-                      jcr->catalog->mult_db_connections);
+   jcr->db = db_init_database(jcr, jcr->catalog->db_driver, jcr->catalog->db_name, 
+                              jcr->catalog->db_user,
+                              jcr->catalog->db_password, jcr->catalog->db_address,
+                              jcr->catalog->db_port, jcr->catalog->db_socket,
+                              jcr->catalog->mult_db_connections, 
+                              jcr->catalog->disable_batch_insert);
    if (!jcr->db || !db_open_database(jcr, jcr->db)) {
       Jmsg(jcr, M_FATAL, 0, _("Could not open database \"%s\".\n"),
                  jcr->catalog->db_name);

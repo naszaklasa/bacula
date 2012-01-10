@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -32,7 +32,7 @@
 #include "mediainfo/mediainfo.h"
 #include "run/run.h"
 
-Job::Job(QString &jobId, QTreeWidgetItem *parentTreeWidgetItem)
+Job::Job(QString &jobId, QTreeWidgetItem *parentTreeWidgetItem) : Pages()
 {
    setupUi(this);
    pgInitialize(tr("Job"), parentTreeWidgetItem);
@@ -41,10 +41,12 @@ Job::Job(QString &jobId, QTreeWidgetItem *parentTreeWidgetItem)
    m_cursor = new QTextCursor(textJobLog->document());
 
    m_jobId = jobId;
+   m_timer = NULL;
    getFont();
 
    connect(pbRefresh, SIGNAL(clicked()), this, SLOT(populateAll()));
    connect(pbDelete, SIGNAL(clicked()), this, SLOT(deleteJob()));
+   connect(pbCancel, SIGNAL(clicked()), this, SLOT(cancelJob()));
    connect(pbRun, SIGNAL(clicked()), this, SLOT(rerun()));
    connect(list_Volume, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(showInfoVolume(QListWidgetItem *)));
 
@@ -92,6 +94,18 @@ void Job::deleteJob()
    closeStackPage();
 }
 
+void Job::cancelJob()
+{
+   if (QMessageBox::warning(this, "Bat",
+                            tr("Are you sure you want to cancel this job?"),
+                            QMessageBox::Ok | QMessageBox::Cancel)
+       == QMessageBox::Cancel) { return; }
+
+   QString cmd("cancel jobid=");
+   cmd += m_jobId;
+   consoleCommand(cmd, false);
+}
+
 void Job::getFont()
 {
    QFont font = textJobLog->font();
@@ -117,6 +131,7 @@ void Job::populateAll()
 
 /*
  * Populate the text in the window
+ * TODO: Just append new text instead of clearing the window
  */
 void Job::populateText()
 {
@@ -208,6 +223,117 @@ void Job::populateText()
   
 }
 
+
+void Job::updateRunInfo()
+{
+   QString cmd;
+   QStringList results;
+   QStringList lst;
+   bool parseit=false;
+   QChar equal = '=';
+
+   cmd = QString(".status client=\"" + m_client + "\" running");
+/*
+ *  JobId 5 Job backup.2010-12-21_09.28.17_03 is running.
+ *   VSS Full Backup Job started: 21-Dec-10 09:28
+ *   Files=4 Bytes=610,976 Bytes/sec=87,282 Errors=0
+ *   Files Examined=4
+ *   Processing file: /tmp/regress/build/po/de.po
+ *   SDReadSeqNo=5 fd=5
+ *
+ *  Or
+ *  JobId=5
+ *  Job=backup.2010-12-21_09.28.17_03
+ *  VSS=1
+ *  Files=4
+ *  Bytes=610976
+ *
+ */
+   QRegExp jobline("(JobId) (\\d+) Job ");
+   QRegExp itemline("([\\w /]+)[:=]\\s*(.+)");
+   QRegExp oldline("Files=([\\d,]+) Bytes=([\\d,]+) Bytes/sec=([\\d,]+) Errors=([\\d,]+)");
+   QString com(",");
+   QString empty("");
+   
+   if (m_console->dir_cmd(cmd, results)) {
+      foreach (QString mline, results) {
+         foreach (QString line, mline.split("\n")) { 
+            line = line.trimmed();
+            if (oldline.indexIn(line) >= 0) {
+               if (parseit) {
+                  lst = oldline.capturedTexts();
+                  label_JobErrors->setText(lst[4]);
+                  label_Speed->setText(convertBytesSI(lst[3].replace(com, empty).toULongLong())+"/s");
+                  label_JobFiles->setText(lst[1]);
+                  label_JobBytes->setText(convertBytesSI(lst[2].replace(com, empty).toULongLong()));
+               }
+               continue;
+
+            } else if (jobline.indexIn(line) >= 0) {
+               lst = jobline.capturedTexts();
+               lst.removeFirst();
+
+            } else if (itemline.indexIn(line) >= 0) {
+               lst = itemline.capturedTexts();
+               lst.removeFirst();
+
+            } else {
+               if (mainWin->m_miscDebug) 
+                  Pmsg1(0, "bad line=%s\n", line.toUtf8().data());
+               continue;
+            }
+            if (lst.count() < 2) {
+               if (mainWin->m_miscDebug) 
+                  Pmsg2(0, "bad line=%s count=%d\n", line.toUtf8().data(), lst.count());
+            }
+            if (lst[0] == "JobId") {
+               if (lst[1] == m_jobId) {
+                  parseit = true;
+               } else {
+                  parseit = false;
+               }
+            }
+            if (!parseit) {
+               continue;
+            }
+            
+//         } else if (lst[0] == "Job") {
+//            grpRun->setTitle(lst[1]);
+            
+//               
+//         } else if (lst[0] == "VSS") {
+
+//         } else if (lst[0] == "Level") {
+//            Info->setText(lst[1]);
+//
+//         } else if (lst[0] == "JobType") {
+//
+//         } else if (lst[0] == "JobStarted") {
+//            Started->setText(lst[1]);
+
+            if (lst[0] == "Errors") {
+               label_JobErrors->setText(lst[1]);
+               
+            } else if (lst[0] == "Bytes/sec") {
+               label_Speed->setText(convertBytesSI(lst[1].toULongLong())+"/s");
+               
+            } else if (lst[0] == "Files") {
+               label_JobFiles->setText(lst[1]);
+               
+            } else if (lst[0] == "Bytes") {
+               label_JobBytes->setText(convertBytesSI(lst[1].toULongLong()));
+               
+            } else if (lst[0] == "Files Examined") {
+               label_FilesExamined->setText(lst[1]);
+               
+            } else if (lst[0] == "Processing file") {
+               label_CurrentFile->setText(lst[1]);
+            }
+         }
+      }
+   }
+}
+
 /*
  * Populate the text in the window
  */
@@ -216,14 +342,16 @@ void Job::populateForm()
    QString stat, err;
    char buf[256];
    QString query = 
-      "SELECT JobId, Job.Name, Level, Client.Name, Pool.Name, FileSet, SchedTime, StartTime, EndTime, "
-      "EndTime-StartTime AS Duration, JobBytes, JobFiles, JobErrors, JobStatus, PurgedFiles "
-      "FROM Job JOIN Client USING (ClientId) LEFT JOIN Pool ON (Job.PoolId = Pool.PoolId) "
-      "LEFT JOIN FileSet ON (Job.FileSetId = FileSet.FileSetId)"
+      "SELECT JobId, Job.Name, Level, Client.Name, Pool.Name, FileSet,"
+      "SchedTime, StartTime, EndTime, EndTime-StartTime AS Duration, "
+      "JobBytes, JobFiles, JobErrors, JobStatus, PurgedFiles "
+      "FROM Job JOIN Client USING (ClientId) "
+        "LEFT JOIN Pool ON (Job.PoolId = Pool.PoolId) "
+        "LEFT JOIN FileSet ON (Job.FileSetId = FileSet.FileSetId)"
       "WHERE JobId=" + m_jobId; 
    QStringList results;
    if (m_console->sql_cmd(query, results)) {
-      QString resultline;
+      QString resultline, duration;
       QStringList fieldlist;
 
       foreach (resultline, results) { // should have only one result
@@ -234,22 +362,52 @@ void Job::populateForm()
          
          label_Level->setText(job_level_to_str(fld.next()[0].toAscii()));
 
-         label_Client->setText(fld.next());
+         m_client = fld.next();
+         label_Client->setText(m_client);
          label_Pool->setText(fld.next());
          label_FileSet->setText(fld.next());
          label_SchedTime->setText(fld.next());
          label_StartTime->setText(fld.next());
          label_EndTime->setText(fld.next());
-         label_Duration->setText(fld.next());
+         duration = fld.next();
+         /* 
+          * Note: if we have a negative duration, it is because the EndTime
+          *  is zero (i.e. the Job is still running).  We should use 
+          *  duration = StartTime - current_time
+          */
+         if (duration.left(1) == "-") {
+            duration = "0.0";
+         }
+         label_Duration->setText(duration);
 
          label_JobBytes->setText(convertBytesSI(fld.next().toULongLong()));
          label_JobFiles->setText(fld.next());
          err = fld.next();
          label_JobErrors->setText(err);
 
-         stat=fld.next();
+         stat = fld.next();
          if (stat == "T" && err.toInt() > 0) {
             stat = "W";
+         }
+         if (stat == "R") {
+            pbDelete->setVisible(false);
+            pbCancel->setVisible(true);
+            grpRun->setVisible(true);
+            if (!m_timer) {
+               m_timer = new QTimer(this);
+               connect(m_timer, SIGNAL(timeout()), this, SLOT(populateAll()));
+               m_timer->start(30000);
+            }
+            updateRunInfo();
+         } else {
+            pbDelete->setVisible(true);
+            pbCancel->setVisible(false);
+            grpRun->setVisible(false);
+            if (m_timer) {
+               m_timer->stop();
+               delete m_timer;
+               m_timer = NULL;
+            }
          }
          label_JobStatus->setPixmap(QPixmap(":/images/" + stat + ".png"));
          jobstatus_to_ascii_gui(stat[0].toAscii(), buf, sizeof(buf));

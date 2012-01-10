@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -47,7 +47,7 @@ extern "C" {
 
 static const int dbglvl = 150;
 
-#define PLUGIN_LICENSE      "Bacula GPLv2"
+#define PLUGIN_LICENSE      "Bacula AGPLv3"
 #define PLUGIN_AUTHOR       "Kern Sibbald"
 #define PLUGIN_DATE         "January 2008"
 #define PLUGIN_VERSION      "1"
@@ -218,6 +218,10 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
     *   what is really going on.
     */
    switch (event->eventType) {
+   case bEventPluginCommand:
+      bfuncs->DebugMessage(ctx, fi, li, dbglvl, 
+                           "bpipe-fd: PluginCommand=%s\n", (char *)value);
+      break;
    case bEventJobStart:
       bfuncs->DebugMessage(ctx, fi, li, dbglvl, "bpipe-fd: JobStart=%s\n", (char *)value);
       break;

@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -189,7 +189,7 @@ PyObject *job_getattr(PyObject *self, char *attrname)
          jcr->catalog->db_name, jcr->catalog->db_address, 
          jcr->catalog->db_user, jcr->catalog->db_password,
          jcr->catalog->db_socket, jcr->catalog->db_port,
-         db_get_type());
+         db_get_type(jcr->db));
    case 15:                           /* JobErrors */
       return Py_BuildValue((char *)getvars[i].fmt, jcr->JobErrors);
    case 16:                           /* JobFiles */
@@ -202,7 +202,7 @@ PyObject *job_getattr(PyObject *self, char *attrname)
       buf[1] = 0;
       buf[0] = jcr->FDJobStatus;
       return Py_BuildValue((char *)getvars[i].fmt, buf);
-   case 29:                           /* SDJobStatus */
+   case 20:                           /* SDJobStatus */
       buf[1] = 0;
       buf[0] = jcr->SDJobStatus;
       return Py_BuildValue((char *)getvars[i].fmt, buf);
@@ -294,7 +294,7 @@ int job_setattr(PyObject *self, char *attrname, PyObject *value)
          for (i=0; joblevels[i].level_name; i++) {
             if (strcmp(strval, joblevels[i].level_name) == 0) {
                if (joblevels[i].job_type == jcr->getJobType()) {
-                  jcr->set_JobLevel(joblevels[i].level);
+                  jcr->setJobLevel(joblevels[i].level);
                   jcr->jr.JobLevel = jcr->getJobLevel();
                   return 0;
                }

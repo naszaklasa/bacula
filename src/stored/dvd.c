@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -98,7 +98,7 @@ bool DEVICE::update_freespace()
    /* The device must be mounted in order to dvd-freespace to work */
    mount(1);
    
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(400);
    icmd = device->free_space_command;
    
    if (!icmd) {
@@ -165,7 +165,7 @@ bool DEVICE::update_freespace()
    free_pool_memory(results);
    Dmsg4(29, "leave update_freespace: free_space=%s freespace_ok=%d free_space_errno=%d have_media=%d\n", 
       edit_uint64(free_space, ed1), !!is_freespace_ok(), free_space_errno, !!have_media());
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(400);
    return ok;
 }
 
@@ -209,7 +209,7 @@ bool dvd_write_part(DCR *dcr)
       unlink(archive_name.c_str());
       dev->set_part_spooled(false);
       Dmsg1(29, "========= unlink(%s)\n", archive_name.c_str());
-      sm_check(__FILE__, __LINE__, false);
+      Dsm_check(400);
       return true;
    }
    
@@ -222,7 +222,7 @@ bool dvd_write_part(DCR *dcr)
    
    dev->clear_freespace_ok();             /* need to update freespace */
 
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(400);
    Dmsg3(29, "dvd_write_part: device is %s, part is %d, is_mounted=%d\n", dev->print_name(), dev->part, dev->is_mounted());
    icmd = dev->device->write_part_command;
    
@@ -267,7 +267,7 @@ bool dvd_write_part(DCR *dcr)
       if (!dev->truncating) {
          dcr->mark_volume_in_error();
       }
-      sm_check(__FILE__, __LINE__, false);
+      Dsm_check(400);
       return false;
    }
    Jmsg(dcr->jcr, M_INFO, 0, _("Part %d (%lld bytes) written to DVD.\n"), dev->part, dev->part_size);
@@ -284,14 +284,14 @@ bool dvd_write_part(DCR *dcr)
    unlink(archive_name.c_str());
    dev->set_part_spooled(false);
    Dmsg1(29, "========= unlink(%s)\n", archive_name.c_str());
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(400);
    
    /* growisofs umounted the device, so remount it (it will update the free space) */
    dev->clear_mounted();
    dev->mount(1);
    Jmsg(dcr->jcr, M_INFO, 0, _("Remaining free space %s on %s\n"), 
       edit_uint64_with_commas(dev->free_space, ed1), dev->print_name());
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(400);
    return true;
 }
 
@@ -430,9 +430,14 @@ static bool dvd_open_first_part(DCR *dcr, int mode)
  */
 boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
 {
-   DEVICE *dev = dcr->dev;
+   DEVICE *dev;
    boffset_t pos;
    char ed1[50], ed2[50];
+
+   if (!dcr) {                  /* can be NULL when called from rewind(NULL) */
+      return -1;
+   }
+   dev = dcr->dev;
    
    Dmsg5(400, "Enter lseek_dvd fd=%d off=%s w=%d part=%d nparts=%d\n", dev->fd(),
       edit_int64(offset, ed1), whence, dev->part, dev->num_dvd_parts);

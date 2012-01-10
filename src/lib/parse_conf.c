@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -57,7 +57,6 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id$
  */
 
 
@@ -212,6 +211,8 @@ static void init_resource(CONFIG *config, int type, RES_ITEM *items, int pass)
          } else if (items[i].handler == store_int64) {
             *(int64_t *)(items[i].value) = items[i].default_value;
          } else if (items[i].handler == store_size64) {
+            *(uint64_t *)(items[i].value) = (uint64_t)items[i].default_value;
+         } else if (items[i].handler == store_speed) {
             *(uint64_t *)(items[i].value) = (uint64_t)items[i].default_value;
          } else if (items[i].handler == store_time) {
             *(utime_t *)(items[i].value) = (utime_t)items[i].default_value;
@@ -627,14 +628,20 @@ void store_int64(LEX *lc, RES_ITEM *item, int index, int pass)
    set_bit(index, res_all.hdr.item_present);
 }
 
+enum store_unit_type {
+   STORE_SIZE,
+   STORE_SPEED
+} ;
+
 /* Store a size in bytes */
-static void store_size(LEX *lc, RES_ITEM *item, int index, int pass, bool size32)
+static void store_int_unit(LEX *lc, RES_ITEM *item, int index, int pass, 
+                           bool size32, enum store_unit_type type)
 {
    int token;
    uint64_t uvalue;
    char bsize[500];
 
-   Dmsg0(900, "Enter store_size\n");
+   Dmsg0(900, "Enter store_unit\n");
    token = lex_get_token(lc, T_SKIP_EOL);
    errno = 0;
    switch (token) {
@@ -653,9 +660,16 @@ static void store_size(LEX *lc, RES_ITEM *item, int index, int pass, bool size32
             break;
          }
       }
-      if (!size_to_uint64(bsize, strlen(bsize), &uvalue)) {
-         scan_err1(lc, _("expected a size number, got: %s"), lc->str);
-         return;
+      if (type == STORE_SIZE) {
+         if (!size_to_uint64(bsize, strlen(bsize), &uvalue)) {
+            scan_err1(lc, _("expected a size number, got: %s"), lc->str);
+            return;
+         }
+      } else {
+         if (!speed_to_uint64(bsize, strlen(bsize), &uvalue)) {
+            scan_err1(lc, _("expected a speed number, got: %s"), lc->str);
+            return;
+         }
       }
       if (size32) {
          *(uint32_t *)(item->value) = (uint32_t)uvalue;
@@ -664,28 +678,34 @@ static void store_size(LEX *lc, RES_ITEM *item, int index, int pass, bool size32
       }
       break;
    default:
-      scan_err1(lc, _("expected a size, got: %s"), lc->str);
+      scan_err2(lc, _("expected a %s, got: %s"), 
+                (type == STORE_SIZE)?_("size"):_("speed"), lc->str);
       return;
    }
    if (token != T_EOL) {
       scan_to_eol(lc);
    }
    set_bit(index, res_all.hdr.item_present);
-   Dmsg0(900, "Leave store_size\n");
+   Dmsg0(900, "Leave store_unit\n");
 }
 
 /* Store a size in bytes */
 void store_size32(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   store_size(lc, item, index, pass, true /* 32 bit */);
+   store_int_unit(lc, item, index, pass, true /* 32 bit */, STORE_SIZE);
 }
 
 /* Store a size in bytes */
 void store_size64(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   store_size(lc, item, index, pass, false /* not 32 bit */);
+   store_int_unit(lc, item, index, pass, false /* not 32 bit */, STORE_SIZE);
 }
 
+/* Store a speed in bytes/s */
+void store_speed(LEX *lc, RES_ITEM *item, int index, int pass)
+{
+   store_int_unit(lc, item, index, pass, false /* 64 bit */, STORE_SPEED);
+}
 
 /* Store a time period in seconds */
 void store_time(LEX *lc, RES_ITEM *item, int index, int pass)

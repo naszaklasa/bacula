@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -28,7 +28,6 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id$
  */
 
 #ifndef __LIBPROTOS_H
@@ -39,16 +38,17 @@ class JCR;
 /* attr.c */
 ATTR     *new_attr(JCR *jcr);
 void      free_attr(ATTR *attr);
-int       unpack_attributes_record(JCR *jcr, int32_t stream, char *rec, ATTR *attr);
+int       unpack_attributes_record(JCR *jcr, int32_t stream, char *rec, int32_t reclen, ATTR *attr);
 void      build_attr_output_fnames(JCR *jcr, ATTR *attr);
 void      print_ls_output(JCR *jcr, ATTR *attr);
 
 /* base64.c */
 void      base64_init            (void);
-int       to_base64              (intmax_t value, char *where);
-int       from_base64            (intmax_t *value, char *where);
+int       to_base64              (int64_t value, char *where);
+int       from_base64            (int64_t *value, char *where);
 int       bin_to_base64          (char *buf, int buflen, char *bin, int binlen, 
                                   int compatible);
+int       base64_to_bin(char *dest, int destlen, char *src, int srclen);
 
 /* bsys.c */
 char     *bstrncpy               (char *dest, const char *src, int maxlen);
@@ -79,6 +79,9 @@ long long int strtoll            (const char *ptr, char **endptr, int base);
 void      read_state_file(char *dir, const char *progname, int port);
 int       b_strerror(int errnum, char *buf, size_t bufsiz);
 char     *escape_filename(const char *file_path);
+int       Zdeflate(char *in, int in_len, char *out, int &out_len);
+int       Zinflate(char *in, int in_len, char *out, int &out_len);
+void      stack_trace();
 
 /* bnet.c */
 int32_t    bnet_recv             (BSOCK *bsock);
@@ -184,11 +187,12 @@ char *           edit_int64              (int64_t val, char *buf);
 char *           edit_int64_with_commas  (int64_t val, char *buf);
 bool             duration_to_utime       (char *str, utime_t *value);
 bool             size_to_uint64(char *str, int str_len, uint64_t *rtn_value);
+bool             speed_to_uint64(char *str, int str_len, uint64_t *rtn_value);
 char             *edit_utime             (utime_t val, char *buf, int buf_len);
 bool             is_a_number             (const char *num);
 bool             is_a_number_list        (const char *n);
 bool             is_an_integer           (const char *n);
-bool             is_name_valid           (char *name, POOLMEM **msg);
+bool             is_name_valid           (const char *name, POOLMEM **msg);
 
 /* jcr.c (most definitions are in src/jcr.h) */
 void     init_last_jobs_list();
@@ -204,8 +208,9 @@ void     unlock_jobs();
 JCR     *jcr_walk_start();
 JCR     *jcr_walk_next(JCR *prev_jcr);
 void     jcr_walk_end(JCR *jcr);
+int      job_count();
 JCR     *get_jcr_from_tsd();
-void     set_jcr_in_tsd(JCR *jcr, bool update_thread_info=true);
+void     set_jcr_in_tsd(JCR *jcr);
 void     remove_jcr_from_tsd(JCR *jcr);
 uint32_t get_jobid_from_tsd();             
 uint32_t get_jobid_from_tid(pthread_t tid);
@@ -234,6 +239,9 @@ void       init_console_msg      (const char *wd);
 void       free_msgs_res         (MSGS *msgs);
 void       dequeue_messages      (JCR *jcr);
 void       set_trace             (int trace_flag);
+bool       get_trace             (void);
+void       set_hangup            (int hangup_value);
+int        get_hangup            (void);
 void       set_db_type           (const char *name);
 void       register_message_callback(void msg_callback(int type, char *msg));
 
@@ -320,7 +328,7 @@ void             jobstatus_to_ascii      (int JobStatus, char *msg, int maxlen);
 void             jobstatus_to_ascii_gui  (int JobStatus, char *msg, int maxlen);
 int              run_program             (char *prog, int wait, POOLMEM *&results);
 int              run_program_full_output (char *prog, int wait, POOLMEM *&results);
-char *           aop_to_str              (int aop, POOL_MEM &ret);
+char *           action_on_purge_to_string(int aop, POOL_MEM &ret);
 const char *     job_type_to_str         (int type);
 const char *     job_status_to_str       (int stat);
 const char *     job_level_to_str        (int level);
@@ -339,6 +347,7 @@ int stop_watchdog(void);
 watchdog_t *new_watchdog(void);
 bool register_watchdog(watchdog_t *wd);
 bool unregister_watchdog(watchdog_t *wd);
+bool is_watchdog();
 
 /* timers.c */
 btimer_t *start_child_timer(JCR *jcr, pid_t pid, uint32_t wait);

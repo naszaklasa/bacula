@@ -56,10 +56,14 @@
 #define RANGE_NOMATCH   0
 #define RANGE_ERROR     (-1)
 
+/* Limit of recursion during matching attempts. */
+#define FNM_MAX_RECUR 64
+
 #define ISSET(x, y) ((x) & (y))
 #define FOLD(c) ((flags & FNM_CASEFOLD) && B_ISUPPER(c) ? tolower(c) : (c))
 
 static int rangematch(const char *, char, int, char **);
+static int r_fnmatch(const char *, const char *, int, int);
 
 #ifdef SYS 
 int xfnmatch(const char *pattern, const char *string, int flags)
@@ -67,9 +71,26 @@ int xfnmatch(const char *pattern, const char *string, int flags)
 int fnmatch(const char *pattern, const char *string, int flags)
 #endif
 {
+   int e;
+
+   e = r_fnmatch(pattern, string, flags, FNM_MAX_RECUR);
+   if (e == -1) {               /* Too much recursion */
+      e = FNM_NOMATCH;
+   }
+   return (e);
+}
+
+static 
+int r_fnmatch(const char *pattern, const char *string, int flags, int recur)
+{
    const char *stringstart;
    char *newp;
    char c, test;
+   int e;
+
+   if (recur-- <= 0) {
+      return (-1);
+   }
 
    stringstart = string;
    for ( ;; ) {
@@ -118,8 +139,9 @@ int fnmatch(const char *pattern, const char *string, int flags)
 
          /* General case, use recursion. */
          while ((test = *string) != EOS) {
-            if (!fnmatch(pattern, string, flags & ~FNM_PERIOD)) {
-               return (0);
+            e = r_fnmatch(pattern, string, flags & ~FNM_PERIOD, recur);
+            if (e != FNM_NOMATCH) { /* can be NOMATCH, -1 or MATCH */
+               return (e);
             }
             if (test == '/' && ISSET(flags, FNM_PATHNAME)) {
                break;

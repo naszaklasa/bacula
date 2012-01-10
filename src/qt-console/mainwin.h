@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -61,6 +61,7 @@ public:
    void hashRemove(QTreeWidgetItem *, Pages *);
    void setMessageIcon();
    bool getWaitState() {return m_waitState; };
+   bool isClosing() {return m_isClosing; };
    Console *currentConsole();
    QTreeWidgetItem *currentTopItem();
    Pages* getFromHash(QTreeWidgetItem *);
@@ -104,6 +105,9 @@ public:
    bool m_openPlot;
    bool m_openDirStat;
 
+   /* Global */
+   bool m_notify;                     /* global flag to turn on/off all notifiers */
+
 public slots:
    void input_line();
    void about();
@@ -120,7 +124,8 @@ public slots:
    void treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
    void stackItemChanged(int);
    void toggleDockContextWindow();
-   void closePage();
+   void closePage(int item);
+   void closeCurrentPage();
    void setPreferences();
    void readPreferences();
    void waitEnter();

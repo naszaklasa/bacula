@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -32,7 +32,6 @@
  *
  * Written for Bacula by Kern E. Sibbald, May MMI.
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -72,21 +71,21 @@ bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int
    if (compatible) {
       Dmsg2(dbglvl, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
       if (!bs->fsend("auth cram-md5 %s ssl=%d\n", chal, tls_local_need)) {
-         Dmsg1(dbglvl, "Bnet send challenge error.\n", bs->bstrerror());
+         Dmsg1(dbglvl, "Bnet send challenge comm error. ERR=%s\n", bs->bstrerror());
          return false;
       }
    } else {
       /* Old non-compatible system */
       Dmsg2(dbglvl, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
       if (!bs->fsend("auth cram-md5 %s ssl=%d\n", chal, tls_local_need)) {
-         Dmsg1(dbglvl, "Bnet send challenge error.\n", bs->bstrerror());
+         Dmsg1(dbglvl, "Bnet send challenge comm error. ERR=%s\n", bs->bstrerror());
          return false;
       }
    }
 
    /* Read hashed response to challenge */
    if (bs->wait_data(180) <= 0 || bs->recv() <= 0) {
-      Dmsg1(dbglvl, "Bnet receive challenge response error.\n", bs->bstrerror());
+      Dmsg1(dbglvl, "Bnet receive challenge response comm error. ERR=%s\n", bs->bstrerror());
       bmicrosleep(5, 0);
       return false;
    }

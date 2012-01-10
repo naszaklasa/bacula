@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -317,7 +317,7 @@ default_path:
 
    dev->clear_append();
    dev->set_read();
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
    Jmsg(jcr, M_INFO, 0, _("Ready to read from volume \"%s\" on device %s.\n"),
       dcr->VolumeName, dev->print_name());
@@ -531,7 +531,8 @@ bool release_device(DCR *dcr)
       char line[MAXSTRING];
       alert = get_pool_memory(PM_FNAME);
       alert = edit_device_codes(dcr, alert, dcr->device->alert_command, "");
-      bpipe = open_bpipe(alert, 0, "r");
+      /* Wait maximum 5 minutes */
+      bpipe = open_bpipe(alert, 60 * 5, "r");
       if (bpipe) {
          while (fgets(line, sizeof(line), bpipe->rfd)) {
             Jmsg(jcr, M_ALERT, 0, _("Alert: %s"), line);
@@ -681,8 +682,11 @@ static void attach_dcr_to_dev(DCR *dcr)
    dev = dcr->dev;
    jcr = dcr->jcr;
    if (jcr) Dmsg1(500, "JobId=%u enter attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
+   /* ***FIXME*** return error if dev not initiated */
    if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->getJobType() != JT_SYSTEM) {
+      dev->dlock();
       dev->attached_dcrs->append(dcr);  /* attach dcr to device */
+      dev->dunlock();
       dcr->attached_to_dev = true;
       Dmsg1(500, "JobId=%u attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
    }

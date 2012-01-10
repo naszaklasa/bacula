@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -32,8 +32,6 @@
  *
  *   Split from reserve.c October 2008
  *
- *   Version $Id: reserve.c 7380 2008-07-14 10:42:59Z kerns $
- *
  */
 
 #include "bacula.h"
@@ -44,7 +42,7 @@ const int dbglvl =  150;
 static dlist *vol_list = NULL;
 static brwlock_t vol_list_lock;
 static dlist *read_vol_list = NULL;
-static pthread_mutex_t read_vol_lock = PTHREAD_MUTEX_INITIALIZER;
+static bthread_mutex_t read_vol_lock = BTHREAD_MUTEX_PRIORITY(PRIO_SD_READ_VOL_LIST);
 
 /* Forward referenced functions */
 static void free_vol_item(VOLRES *vol);
@@ -611,20 +609,17 @@ bool free_volume(DEVICE *dev)
 {
    VOLRES *vol;
 
-   if (dev->vol == NULL) {
-      Dmsg1(dbglvl, "No vol on dev %s\n", dev->print_name());
-      return false;
-   }
    lock_volumes();
    vol = dev->vol;
+   if (vol == NULL) {
+      Dmsg1(dbglvl, "No vol on dev %s\n", dev->print_name());
+      unlock_volumes();
+      return false;
+   }
    /* Don't free a volume while it is being swapped */
    if (!vol->is_swapping()) {
       Dmsg1(dbglvl, "=== clear in_use vol=%s\n", vol->vol_name);
       dev->vol = NULL;
-      if (!dev->num_reserved()) {
-         dev->pool_name[0] = 0;
-         dev->pool_type[0] = 0;
-      }
       vol_list->remove(vol);
       Dmsg2(dbglvl, "=== remove volume %s dev=%s\n", vol->vol_name, dev->print_name());
       free_vol_item(vol);

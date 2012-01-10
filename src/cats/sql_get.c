@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -25,7 +25,7 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-/*
+/** 
  * Bacula Catalog Database Get record interface routines
  *  Note, these routines generally get a record by id or
  *        by name.  If more logic is involved, the routine
@@ -35,16 +35,13 @@
  *
  */
 
-
-/* The following is necessary so that we do not include
- * the dummy external definition of DB.
- */
-#define __SQL_C                       /* indicate that this is sql.c */
-
 #include "bacula.h"
-#include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
+#if HAVE_SQLITE3 || HAVE_MYSQL || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
+
+#include "cats.h"
+#include "bdb_priv.h"
+#include "sql_glue.h"
 
 /* -----------------------------------------------------------------------
  *
@@ -58,7 +55,7 @@ static int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr);
 static int db_get_filename_record(JCR *jcr, B_DB *mdb);
 
 
-/*
+/**
  * Given a full filename (with path), look up the File record
  * (with attributes) in the database.
  *
@@ -85,7 +82,7 @@ int db_get_file_attributes_record(JCR *jcr, B_DB *mdb, char *fname, JOB_DBR *jr,
 }
 
 
-/*
+/**
  * Get a File record
  * Returns: 0 on failure
  *          1 on success
@@ -104,7 +101,7 @@ int db_get_file_attributes_record(JCR *jcr, B_DB *mdb, char *fname, JOB_DBR *jr,
  *    use includes the directory twice.  In this case, Verify 
  *    VolumeToCatalog fails because we have two copies in the catalog, 
  *    and only the first one is marked (twice).  So, when calling from Verify, 
- *    jr is not NULL and we know jr->FileIndex is the fileindex
+ *    VolumeToCatalog jr is not NULL and we know jr->FileIndex is the fileindex
  *    of the version of the directory/file we actually want and do
  *    a more explicit SQL search.
  */
@@ -114,6 +111,7 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
    SQL_ROW row;
    int stat = 0;
    char ed1[50], ed2[50], ed3[50];
+   int num_rows;
 
    if (jcr->getJobLevel() == L_VERIFY_DISK_TO_CATALOG) {
       Mmsg(mdb->cmd,
@@ -124,6 +122,14 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
       edit_int64(fdbr->PathId, ed1), 
       edit_int64(fdbr->FilenameId, ed2), 
       edit_int64(jr->ClientId,ed3));
+   } else if (jcr->getJobLevel() == L_VERIFY_VOLUME_TO_CATALOG) {
+      Mmsg(mdb->cmd,
+           "SELECT FileId, LStat, MD5 FROM File WHERE File.JobId=%s AND File.PathId=%s AND "
+           "File.FilenameId=%s AND File.FileIndex=%u", 
+           edit_int64(fdbr->JobId, ed1), 
+           edit_int64(fdbr->PathId, ed2), 
+           edit_int64(fdbr->FilenameId,ed3),
+           jr->FileIndex);
    } else {
       Mmsg(mdb->cmd,
 "SELECT FileId, LStat, MD5 FROM File WHERE File.JobId=%s AND File.PathId=%s AND "
@@ -138,9 +144,9 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
    Dmsg1(100, "Query=%s\n", mdb->cmd);
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      Dmsg1(050, "get_file_record num_rows=%d\n", (int)mdb->num_rows);
-      if (mdb->num_rows >= 1) {
+      num_rows = sql_num_rows(mdb);
+      Dmsg1(050, "get_file_record num_rows=%d\n", num_rows);
+      if (num_rows >= 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("Error fetching row: %s\n"), sql_strerror(mdb));
          } else {
@@ -148,9 +154,9 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
             bstrncpy(fdbr->LStat, row[1], sizeof(fdbr->LStat));
             bstrncpy(fdbr->Digest, row[2], sizeof(fdbr->Digest));
             stat = 1;
-            if (mdb->num_rows > 1) {
+            if (num_rows > 1) {
                Mmsg3(mdb->errmsg, _("get_file_record want 1 got rows=%d PathId=%s FilenameId=%s\n"),
-                  mdb->num_rows, 
+                  num_rows, 
                   edit_int64(fdbr->PathId, ed1), 
                   edit_int64(fdbr->FilenameId, ed2));
                Dmsg1(000, "=== Problem!  %s", mdb->errmsg);
@@ -169,7 +175,8 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
 
 }
 
-/* Get Filename record
+/**
+ * Get Filename record
  * Returns: 0 on failure
  *          FilenameId on success
  *
@@ -179,6 +186,7 @@ static int db_get_filename_record(JCR *jcr, B_DB *mdb)
 {
    SQL_ROW row;
    int FilenameId = 0;
+   int num_rows;
 
    mdb->esc_name = check_pool_memory_size(mdb->esc_name, 2*mdb->fnl+2);
    db_escape_string(jcr, mdb, mdb->esc_name, mdb->fname, mdb->fnl);
@@ -186,13 +194,13 @@ static int db_get_filename_record(JCR *jcr, B_DB *mdb)
    Mmsg(mdb->cmd, "SELECT FilenameId FROM Filename WHERE Name='%s'", mdb->esc_name);
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       char ed1[30];
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
+      num_rows = sql_num_rows(mdb);
+      if (num_rows > 1) {
          Mmsg2(mdb->errmsg, _("More than one Filename!: %s for file: %s\n"),
-            edit_uint64(mdb->num_rows, ed1), mdb->fname);
+            edit_uint64(num_rows, ed1), mdb->fname);
          Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
       }
-      if (mdb->num_rows >= 1) {
+      if (num_rows >= 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
          } else {
@@ -213,7 +221,8 @@ static int db_get_filename_record(JCR *jcr, B_DB *mdb)
    return FilenameId;
 }
 
-/* Get path record
+/**
+ * Get path record
  * Returns: 0 on failure
  *          PathId on success
  *
@@ -223,6 +232,7 @@ int db_get_path_record(JCR *jcr, B_DB *mdb)
 {
    SQL_ROW row;
    uint32_t PathId = 0;
+   int num_rows;
 
    mdb->esc_name = check_pool_memory_size(mdb->esc_name, 2*mdb->pnl+2);
    db_escape_string(jcr, mdb, mdb->esc_name, mdb->path, mdb->pnl);
@@ -236,14 +246,14 @@ int db_get_path_record(JCR *jcr, B_DB *mdb)
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       char ed1[30];
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
+      num_rows = sql_num_rows(mdb);
+      if (num_rows > 1) {
          Mmsg2(mdb->errmsg, _("More than one Path!: %s for path: %s\n"),
-            edit_uint64(mdb->num_rows, ed1), mdb->path);
+            edit_uint64(num_rows, ed1), mdb->path);
          Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
       }
       /* Even if there are multiple paths, take the first one */
-      if (mdb->num_rows >= 1) {
+      if (num_rows >= 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
          } else {
@@ -272,7 +282,7 @@ int db_get_path_record(JCR *jcr, B_DB *mdb)
 }
 
 
-/*
+/**
  * Get Job record for given JobId or Job name
  * Returns: false on failure
  *          true  on success
@@ -281,19 +291,21 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
    SQL_ROW row;
    char ed1[50];
+   char esc[MAX_ESCAPE_NAME_LENGTH];
 
    db_lock(mdb);
    if (jr->JobId == 0) {
+      mdb->db_escape_string(jcr, esc, jr->Job, strlen(jr->Job));
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
 "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
-"SchedTime,RealEndTime,ReadBytes,HasBase "
-"FROM Job WHERE Job='%s'", jr->Job);
+"SchedTime,RealEndTime,ReadBytes,HasBase,PurgedFiles "
+"FROM Job WHERE Job='%s'", esc);
     } else {
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
 "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
-"SchedTime,RealEndTime,ReadBytes,HasBase "
+"SchedTime,RealEndTime,ReadBytes,HasBase,PurgedFiles "
 "FROM Job WHERE JobId=%s", 
           edit_int64(jr->JobId, ed1));
     }
@@ -337,13 +349,14 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    jr->EndTime = str_to_utime(jr->cEndTime);
    jr->RealEndTime = str_to_utime(jr->cRealEndTime);
    jr->HasBase = str_to_int64(row[21]);
+   jr->PurgedFiles = str_to_int64(row[22]);
    sql_free_result(mdb);
 
    db_unlock(mdb);
    return true;
 }
 
-/*
+/**
  * Find VolumeNames for a given JobId
  *  Returns: 0 on error or no Volumes found
  *           number of volumes on success
@@ -359,6 +372,7 @@ int db_get_job_volume_names(JCR *jcr, B_DB *mdb, JobId_t JobId, POOLMEM **Volume
    char ed1[50];
    int stat = 0;
    int i;
+   int num_rows;
 
    db_lock(mdb);
    /* Get one entry per VolumeName, but "sort" by VolIndex */
@@ -371,13 +385,13 @@ int db_get_job_volume_names(JCR *jcr, B_DB *mdb, JobId_t JobId, POOLMEM **Volume
    Dmsg1(130, "VolNam=%s\n", mdb->cmd);
    *VolumeNames[0] = 0;
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      Dmsg1(130, "Num rows=%d\n", mdb->num_rows);
-      if (mdb->num_rows <= 0) {
+      num_rows = sql_num_rows(mdb);
+      Dmsg1(130, "Num rows=%d\n", num_rows);
+      if (num_rows <= 0) {
          Mmsg1(mdb->errmsg, _("No volumes found for JobId=%d\n"), JobId);
          stat = 0;
       } else {
-         stat = mdb->num_rows;
+         stat = num_rows;
          for (i=0; i < stat; i++) {
             if ((row = sql_fetch_row(mdb)) == NULL) {
                Mmsg2(mdb->errmsg, _("Error fetching row %d: ERR=%s\n"), i, sql_strerror(mdb));
@@ -400,7 +414,7 @@ int db_get_job_volume_names(JCR *jcr, B_DB *mdb, JobId_t JobId, POOLMEM **Volume
    return stat;
 }
 
-/*
+/**
  * Find Volume parameters for a give JobId
  *  Returns: 0 on error or no Volumes found
  *           number of volumes on success
@@ -415,6 +429,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
    int stat = 0;
    int i;
    VOL_PARAMS *Vols = NULL;
+   int num_rows;
 
    db_lock(mdb);
    Mmsg(mdb->cmd,
@@ -427,13 +442,13 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
 
    Dmsg1(130, "VolNam=%s\n", mdb->cmd);
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      Dmsg1(200, "Num rows=%d\n", mdb->num_rows);
-      if (mdb->num_rows <= 0) {
+      num_rows = sql_num_rows(mdb);
+      Dmsg1(200, "Num rows=%d\n", num_rows);
+      if (num_rows <= 0) {
          Mmsg1(mdb->errmsg, _("No volumes found for JobId=%d\n"), JobId);
          stat = 0;
       } else {
-         stat = mdb->num_rows;
+         stat = num_rows;
          DBId_t *SId = NULL;
          if (stat > 0) {
             *VolParams = Vols = (VOL_PARAMS *)malloc(stat * sizeof(VOL_PARAMS));
@@ -488,7 +503,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
 
 
 
-/*
+/**
  * Get the number of pool records
  *
  * Returns: -1 on failure
@@ -505,7 +520,7 @@ int db_get_num_pool_records(JCR *jcr, B_DB *mdb)
    return stat;
 }
 
-/*
+/**
  * This function returns a list of all the Pool record ids.
  *  The caller must free ids if non-NULL.
  *
@@ -542,7 +557,7 @@ int db_get_pool_ids(JCR *jcr, B_DB *mdb, int *num_ids, uint32_t *ids[])
    return stat;
 }
 
-/*
+/**
  * This function returns a list of all the Client record ids.
  *  The caller must free ids if non-NULL.
  *
@@ -581,7 +596,8 @@ int db_get_client_ids(JCR *jcr, B_DB *mdb, int *num_ids, uint32_t *ids[])
 
 
 
-/* Get Pool Record
+/**
+ * Get Pool Record
  * If the PoolId is non-zero, we get its record,
  *  otherwise, we search on the PoolName
  *
@@ -593,6 +609,8 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
    SQL_ROW row;
    bool ok = false;
    char ed1[50];
+   int num_rows;
+   char esc[MAX_ESCAPE_NAME_LENGTH];
 
    db_lock(mdb);
    if (pdbr->PoolId != 0) {               /* find by id */
@@ -603,21 +621,21 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
 "ActionOnPurge FROM Pool WHERE Pool.PoolId=%s", 
          edit_int64(pdbr->PoolId, ed1));
    } else {                           /* find by name */
+      mdb->db_escape_string(jcr, esc, pdbr->Name, strlen(pdbr->Name));
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
 "MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId,"
-"ActionOnPurge FROM Pool WHERE Pool.Name='%s'", 
-         pdbr->Name);
+"ActionOnPurge FROM Pool WHERE Pool.Name='%s'", esc);
    }
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
+      num_rows = sql_num_rows(mdb);
+      if (num_rows > 1) {
          char ed1[30];
          Mmsg1(mdb->errmsg, _("More than one Pool!: %s\n"),
-            edit_uint64(mdb->num_rows, ed1));
+            edit_uint64(num_rows, ed1));
          Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
-      } else if (mdb->num_rows == 1) {
+      } else if (num_rows == 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
             Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
@@ -664,7 +682,8 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
    return ok;
 }
 
-/* Get Client Record
+/**
+ * Get Client Record
  * If the ClientId is non-zero, we get its record,
  *  otherwise, we search on the Client Name
  *
@@ -676,6 +695,8 @@ int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr)
    SQL_ROW row;
    int stat = 0;
    char ed1[50];
+   int num_rows;
+   char esc[MAX_ESCAPE_NAME_LENGTH];
 
    db_lock(mdb);
    if (cdbr->ClientId != 0) {               /* find by id */
@@ -684,18 +705,19 @@ int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr)
 "FROM Client WHERE Client.ClientId=%s", 
         edit_int64(cdbr->ClientId, ed1));
    } else {                           /* find by name */
+      mdb->db_escape_string(jcr, esc, cdbr->Name, strlen(cdbr->Name));
       Mmsg(mdb->cmd,
 "SELECT ClientId,Name,Uname,AutoPrune,FileRetention,JobRetention "
-"FROM Client WHERE Client.Name='%s'", cdbr->Name);
+"FROM Client WHERE Client.Name='%s'", esc);
    }
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
+      num_rows = sql_num_rows(mdb);
+      if (num_rows > 1) {
          Mmsg1(mdb->errmsg, _("More than one Client!: %s\n"),
-            edit_uint64(mdb->num_rows, ed1));
+            edit_uint64(num_rows, ed1));
          Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
-      } else if (mdb->num_rows == 1) {
+      } else if (num_rows == 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
             Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
@@ -719,7 +741,7 @@ int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr)
    return stat;
 }
 
-/*
+/**
  * Get Counter Record
  *
  * Returns: 0 on failure
@@ -728,20 +750,24 @@ int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr)
 int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
 {
    SQL_ROW row;
+   int num_rows;
+   char esc[MAX_ESCAPE_NAME_LENGTH];
 
    db_lock(mdb);
-   Mmsg(mdb->cmd, "SELECT MinValue,MaxValue,CurrentValue,WrapCounter "
-      "FROM Counters WHERE Counter='%s'", cr->Counter);
+   mdb->db_escape_string(jcr, esc, cr->Counter, strlen(cr->Counter));
+
+   Mmsg(mdb->cmd, "SELECT \"MinValue\",\"MaxValue\",CurrentValue,WrapCounter "
+      "FROM Counters WHERE Counter='%s'", esc);
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
+      num_rows = sql_num_rows(mdb);
 
       /* If more than one, report error, but return first row */
-      if (mdb->num_rows > 1) {
-         Mmsg1(mdb->errmsg, _("More than one Counter!: %d\n"), (int)(mdb->num_rows));
+      if (num_rows > 1) {
+         Mmsg1(mdb->errmsg, _("More than one Counter!: %d\n"), num_rows);
          Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
       }
-      if (mdb->num_rows >= 1) {
+      if (num_rows >= 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("error fetching Counter row: %s\n"), sql_strerror(mdb));
             Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
@@ -770,7 +796,8 @@ int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
 }
 
 
-/* Get FileSet Record
+/**
+ * Get FileSet Record
  * If the FileSetId is non-zero, we get its record,
  *  otherwise, we search on the name
  *
@@ -782,6 +809,8 @@ int db_get_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
    SQL_ROW row;
    int stat = 0;
    char ed1[50];
+   int num_rows;
+   char esc[MAX_ESCAPE_NAME_LENGTH];
 
    db_lock(mdb);
    if (fsr->FileSetId != 0) {               /* find by id */
@@ -790,18 +819,19 @@ int db_get_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
            "WHERE FileSetId=%s", 
            edit_int64(fsr->FileSetId, ed1));
    } else {                           /* find by name */
+      mdb->db_escape_string(jcr, esc, fsr->FileSet, strlen(fsr->FileSet));
       Mmsg(mdb->cmd,
            "SELECT FileSetId,FileSet,MD5,CreateTime FROM FileSet "
-           "WHERE FileSet='%s' ORDER BY CreateTime DESC LIMIT 1", fsr->FileSet);
+           "WHERE FileSet='%s' ORDER BY CreateTime DESC LIMIT 1", esc);
    }
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
+      num_rows = sql_num_rows(mdb);
+      if (num_rows > 1) {
          char ed1[30];
          Mmsg1(mdb->errmsg, _("Error got %s FileSets but expected only one!\n"),
-            edit_uint64(mdb->num_rows, ed1));
-         sql_data_seek(mdb, mdb->num_rows-1);
+            edit_uint64(num_rows, ed1));
+         sql_data_seek(mdb, num_rows-1);
       }
       if ((row = sql_fetch_row(mdb)) == NULL) {
          Mmsg1(mdb->errmsg, _("FileSet record \"%s\" not found.\n"), fsr->FileSet);
@@ -821,7 +851,7 @@ int db_get_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
 }
 
 
-/*
+/**
  * Get the number of Media records
  *
  * Returns: -1 on failure
@@ -838,7 +868,7 @@ int db_get_num_media_records(JCR *jcr, B_DB *mdb)
    return stat;
 }
 
-/*
+/**
  * This function returns a list of all the Media record ids for
  *     the current Pool, the correct Media Type, Recyle, Enabled, StorageId, VolBytes
  *     VolumeName if specified
@@ -919,7 +949,7 @@ bool db_get_media_ids(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr, int *num_ids, uint32_t
 }
 
 
-/*
+/**
  * This function returns a list of all the DBIds that are returned
  *   for the query.
  *
@@ -956,7 +986,8 @@ bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids)
    return ok;
 }
 
-/* Get Media Record
+/**
+ * Get Media Record
  *
  * Returns: false: on failure
  *          true:  on success
@@ -966,6 +997,8 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    SQL_ROW row;
    char ed1[50];
    bool ok = false;
+   int num_rows;
+   char esc[MAX_ESCAPE_NAME_LENGTH];
 
    db_lock(mdb);
    if (mr->MediaId == 0 && mr->VolumeName[0] == 0) {
@@ -985,6 +1018,7 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          "FROM Media WHERE MediaId=%s", 
          edit_int64(mr->MediaId, ed1));
    } else {                           /* find by name */
+      mdb->db_escape_string(jcr, esc, mr->VolumeName, strlen(mr->VolumeName));
       Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolJobs,VolFiles,VolBlocks,"
          "VolBytes,VolMounts,VolErrors,VolWrites,MaxVolBytes,VolCapacityBytes,"
          "MediaType,VolStatus,PoolId,VolRetention,VolUseDuration,MaxVolJobs,"
@@ -992,17 +1026,17 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
          "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime,ActionOnPurge "
-         "FROM Media WHERE VolumeName='%s'", mr->VolumeName);
+         "FROM Media WHERE VolumeName='%s'", esc);
    }
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       char ed1[50];
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
+      num_rows = sql_num_rows(mdb);
+      if (num_rows > 1) {
          Mmsg1(mdb->errmsg, _("More than one Volume!: %s\n"),
-            edit_uint64(mdb->num_rows, ed1));
+            edit_uint64(num_rows, ed1));
          Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
-      } else if (mdb->num_rows == 1) {
+      } else if (num_rows == 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
             Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
@@ -1075,7 +1109,16 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    return ok;
 }
 
-/*
+/* Remove all MD5 from a query (can save lot of memory with many files) */
+static void strip_md5(char *q)
+{
+   char *p = q;
+   while ((p = strstr(p, ", MD5"))) {
+      memset(p, ' ', 5 * sizeof(char));
+   }
+}
+
+/**
  * Find the last "accurate" backup state (that can take deleted files in
  * account)
  * 1) Get all files with jobid in list (F subquery)
@@ -1086,7 +1129,8 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
  *
  * TODO: See if we can do the SORT only if needed (as an argument)
  */
-bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids, 
+bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids,
+                      bool use_md5, bool use_delta,
                       DB_RESULT_HANDLER *result_handler, void *ctx)
 {
    if (!*jobids) {
@@ -1096,33 +1140,40 @@ bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids,
       return false;
    }
    POOL_MEM buf(PM_MESSAGE);
-         
-#define new_db_get_file_list
-#ifdef new_db_get_file_list
    POOL_MEM buf2(PM_MESSAGE);
-   Mmsg(buf2, select_recent_version_with_basejob[db_type], 
-        jobids, jobids, jobids, jobids);
-   Mmsg(buf,
-"SELECT Path.Path, Filename.Name, Temp.FileIndex, Temp.JobId, LStat, MD5 "
- "FROM ( %s ) AS Temp "
- "JOIN Filename ON (Filename.FilenameId = Temp.FilenameId) "
- "JOIN Path ON (Path.PathId = Temp.PathId) "
-"WHERE FileIndex > 0 "
-"ORDER BY Temp.JobId, FileIndex ASC",/* Return sorted by JobId, */
-                                     /* FileIndex for restore code */ 
-        buf2.c_str());
-#else
-   /*  
-    * I am not sure that this works the same as the code in ua_restore.c but it
-    *  is very similar. The accurate-test fails in a restore. Bad file count.
-    */
-   Mmsg(buf, uar_sel_files, jobids);
-#endif
+   if (use_delta) {
+      Mmsg(buf2, select_recent_version_with_basejob_and_delta[db_get_type_index(mdb)], 
+           jobids, jobids, jobids, jobids);
 
-   return db_sql_query(mdb, buf.c_str(), result_handler, ctx);
+   } else {
+      Mmsg(buf2, select_recent_version_with_basejob[db_get_type_index(mdb)], 
+           jobids, jobids, jobids, jobids);
+   }
+
+   /* bsr code is optimized for JobId sorted, with Delta, we need to get
+    * them ordered by date. JobTDate and JobId can be mixed if using Copy
+    * or Migration
+    */
+   Mmsg(buf,
+"SELECT Path.Path, Filename.Name, T1.FileIndex, T1.JobId, LStat, DeltaSeq, MD5 "
+ "FROM ( %s ) AS T1 "
+ "JOIN Filename ON (Filename.FilenameId = T1.FilenameId) "
+ "JOIN Path ON (Path.PathId = T1.PathId) "
+"WHERE FileIndex > 0 "
+"ORDER BY T1.JobTDate, FileIndex ASC",/* Return sorted by JobTDate */
+                                      /* FileIndex for restore code */ 
+        buf2.c_str());
+
+   if (!use_md5) {
+      strip_md5(buf.c_str());
+   }
+
+   Dmsg1(100, "q=%s\n", buf.c_str());
+
+   return db_big_sql_query(mdb, buf.c_str(), result_handler, ctx);
 }
 
-/*
+/**
  * This procedure gets the base jobid list used by jobids,
  */
 bool db_get_used_base_jobids(JCR *jcr, B_DB *mdb, 
@@ -1137,7 +1188,8 @@ bool db_get_used_base_jobids(JCR *jcr, B_DB *mdb,
    return db_sql_query(mdb, buf.c_str(), db_list_handler, result);
 }
 
-/* The decision do change an incr/diff was done before
+/**
+ * The decision do change an incr/diff was done before
  * Full : do nothing
  * Differential : get the last full id
  * Incremental : get the last full + last diff + last incr(s) ids
@@ -1159,19 +1211,10 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
    utime_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
 
    bstrutime(date, sizeof(date),  StartTime + 1);
-   jobids->list[0] = 0;
-   jobids->count = 0;
+   jobids->reset();
 
    /* First, find the last good Full backup for this job/client/fileset */
-   Mmsg(query, 
-"CREATE TABLE btemp3%s AS "
- "SELECT JobId, StartTime, EndTime, JobTDate, PurgedFiles "
-   "FROM Job JOIN FileSet USING (FileSetId) "
-  "WHERE ClientId = %s "
-    "AND Level='F' AND JobStatus IN ('T','W') AND Type='B' "
-    "AND StartTime<'%s' "
-    "AND FileSet.FileSet=(SELECT FileSet FROM FileSet WHERE FileSetId = %s) "
-  "ORDER BY Job.JobTDate DESC LIMIT 1",
+   Mmsg(query, create_temp_accurate_jobids[db_get_type_index(mdb)], 
         edit_uint64(jcr->JobId, jobid),
         edit_uint64(jr->ClientId, clientid),
         date,
@@ -1237,16 +1280,19 @@ bail_out:
    return ret;
 }
 
-bool db_get_base_file_list(JCR *jcr, B_DB *mdb,
+bool db_get_base_file_list(JCR *jcr, B_DB *mdb, bool use_md5,
                            DB_RESULT_HANDLER *result_handler, void *ctx)
 {
    POOL_MEM buf(PM_MESSAGE);
          
    Mmsg(buf,
- "SELECT Path, Name, FileIndex, JobId, LStat, MD5 "
+ "SELECT Path, Name, FileIndex, JobId, LStat, 0 As DeltaSeq, MD5 "
    "FROM new_basefile%lld ORDER BY JobId, FileIndex ASC",
         (uint64_t) jcr->JobId);
-
+   
+   if (!use_md5) {
+      strip_md5(buf.c_str());
+   }
    return db_sql_query(mdb, buf.c_str(), result_handler, ctx);
 }
 
@@ -1256,14 +1302,17 @@ bool db_get_base_jobid(JCR *jcr, B_DB *mdb, JOB_DBR *jr, JobId_t *jobid)
    utime_t StartTime;
    db_int64_ctx lctx;
    char date[MAX_TIME_LENGTH];
+   char esc[MAX_ESCAPE_NAME_LENGTH];
    bool ret=false;
-   *jobid = 0;
-
 // char clientid[50], filesetid[50];
+   *jobid = 0;
+   lctx.count = 0;
+   lctx.value = 0;
 
    StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
    bstrutime(date, sizeof(date),  StartTime + 1);
-
+   mdb->db_escape_string(jcr, esc, jr->Name, strlen(jr->Name));
+   
    /* we can take also client name, fileset, etc... */
 
    Mmsg(query,
@@ -1276,7 +1325,7 @@ bool db_get_base_jobid(JCR *jcr, B_DB *mdb, JOB_DBR *jr, JobId_t *jobid)
 //    "AND Client.Name = '%s' "
     "AND StartTime<'%s' "
   "ORDER BY Job.JobTDate DESC LIMIT 1",
-        jr->Name,
+        esc,
 //      edit_uint64(jr->ClientId, clientid),
 //      edit_uint64(jr->FileSetId, filesetid));
         date);
@@ -1294,4 +1343,19 @@ bail_out:
    return ret;
 }
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI */
+/* Get JobIds associated with a volume */
+bool db_get_volume_jobids(JCR *jcr, B_DB *mdb, 
+                         MEDIA_DBR *mr, db_list_ctx *lst)
+{
+   char ed1[50];
+   bool ret=false;
+
+   db_lock(mdb);
+   Mmsg(mdb->cmd, "SELECT DISTINCT JobId FROM JobMedia WHERE MediaId=%s", 
+        edit_int64(mr->MediaId, ed1));
+   ret = db_sql_query(mdb, mdb->cmd, db_list_handler, lst);
+   db_unlock(mdb);
+   return ret;
+}
+
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI */

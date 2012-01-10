@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -25,18 +25,17 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-/*
+/**
  *  Bacula File Daemon  backup.c  send file attributes and data
  *   to the Storage daemon.
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id$
- *
  */
 
 #include "bacula.h"
 #include "filed.h"
+#include "ch.h"
 
 #ifdef HAVE_DARWIN_OS
 const bool have_darwin_os = true;
@@ -63,8 +62,9 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream);
 static bool crypto_session_start(JCR *jcr);
 static void crypto_session_end(JCR *jcr);
 static bool crypto_session_send(JCR *jcr, BSOCK *sd);
+static void close_vss_backup_session(JCR *jcr);
 
-/*
+/**
  * Find all the requested files and send them
  * to the Storage daemon.
  *
@@ -84,7 +84,7 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
 
    sd = jcr->store_bsock;
 
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    Dmsg1(300, "bfiled: opened data connection %d to stored\n", sd->m_fd);
 
@@ -98,24 +98,35 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
       buf_size = 0;                   /* use default */
    }
    if (!sd->set_buffer_size(buf_size, BNET_SETBUF_WRITE)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       Jmsg(jcr, M_FATAL, 0, _("Cannot set buffer size FD->SD.\n"));
       return false;
    }
 
    jcr->buf_size = sd->msglen;
-   /* Adjust for compression so that output buffer is
+   /**
+    * Adjust for compression so that output buffer is
     *  12 bytes + 0.1% larger than input buffer plus 18 bytes.
     *  This gives a bit extra plus room for the sparse addr if any.
     *  Note, we adjust the read size to be smaller so that the
     *  same output buffer can be used without growing it.
     *
+    *  For LZO1X compression the recommended value is :
+    *                  output_block_size = input_block_size + (input_block_size / 16) + 64 + 3 + sizeof(comp_stream_header)
+    *
     * The zlib compression workset is initialized here to minimize
     *  the "per file" load. The jcr member is only set, if the init 
     *  was successful.
+    *
+    *  For the same reason, lzo compression is initialized here.
     */
+#ifdef HAVE_LZO
+   jcr->compress_buf_size = MAX(jcr->buf_size + (jcr->buf_size / 16) + 67 + (int)sizeof(comp_stream_header), jcr->buf_size + ((jcr->buf_size+999) / 1000) + 30);
+   jcr->compress_buf = get_memory(jcr->compress_buf_size);
+#else
    jcr->compress_buf_size = jcr->buf_size + ((jcr->buf_size+999) / 1000) + 30;
    jcr->compress_buf = get_memory(jcr->compress_buf_size);
+#endif
    
 #ifdef HAVE_LIBZ
    z_stream *pZlibStream = (z_stream*)malloc(sizeof(z_stream));  
@@ -133,13 +144,24 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
    }
 #endif
 
+#ifdef HAVE_LZO
+   lzo_voidp pLzoMem = (lzo_voidp) malloc(LZO1X_1_MEM_COMPRESS);
+   if (pLzoMem) {
+      if (lzo_init() == LZO_E_OK) {
+         jcr->LZO_compress_workset = pLzoMem;
+      } else {
+         free (pLzoMem);
+      }
+   }
+#endif
+
    if (!crypto_session_start(jcr)) {
       return false;
    }
 
    set_find_options((FF_PKT *)jcr->ff, jcr->incremental, jcr->mtime);
 
-   /* in accurate mode, we overwrite the find_one check function */
+   /** in accurate mode, we overload the find_one check function */
    if (jcr->accurate) {
       set_find_changed_function((FF_PKT *)jcr->ff, accurate_check_file);
    } 
@@ -158,20 +180,22 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
       jcr->xattr_data->content = get_pool_memory(PM_MESSAGE);
    }
 
-   /* Subroutine save_file() is called for each file */
+   /** Subroutine save_file() is called for each file */
    if (!find_files(jcr, (FF_PKT *)jcr->ff, save_file, plugin_save)) {
       ok = false;                     /* error */
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
 
    if (have_acl && jcr->acl_data->nr_errors > 0) {
-      Jmsg(jcr, M_ERROR, 0, _("Encountered %ld acl errors while doing backup\n"),
+      Jmsg(jcr, M_WARNING, 0, _("Encountered %ld acl errors while doing backup\n"),
            jcr->acl_data->nr_errors);
    }
    if (have_xattr && jcr->xattr_data->nr_errors > 0) {
-      Jmsg(jcr, M_ERROR, 0, _("Encountered %ld xattr errors while doing backup\n"),
+      Jmsg(jcr, M_WARNING, 0, _("Encountered %ld xattr errors while doing backup\n"),
            jcr->xattr_data->nr_errors);
    }
+
+   close_vss_backup_session(jcr);
 
    accurate_finish(jcr);              /* send deleted or base file list to SD */
 
@@ -205,6 +229,11 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
       free (jcr->pZLIB_compress_workset);
       jcr->pZLIB_compress_workset = NULL;
    }
+   if (jcr->LZO_compress_workset) {
+      free (jcr->LZO_compress_workset);
+      jcr->LZO_compress_workset = NULL;
+   }
+
    crypto_session_end(jcr);
 
 
@@ -216,7 +245,7 @@ static bool crypto_session_start(JCR *jcr)
 {
    crypto_cipher_t cipher = CRYPTO_CIPHER_AES_128_CBC;
 
-   /*
+   /**
     * Create encryption session data and a cached, DER-encoded session data
     * structure. We use a single session key for each backup, so we'll encode
     * the session data only once.
@@ -224,28 +253,28 @@ static bool crypto_session_start(JCR *jcr)
    if (jcr->crypto.pki_encrypt) {
       uint32_t size = 0;
 
-      /* Create per-job session encryption context */
+      /** Create per-job session encryption context */
       jcr->crypto.pki_session = crypto_session_new(cipher, jcr->crypto.pki_recipients);
 
-      /* Get the session data size */
+      /** Get the session data size */
       if (!crypto_session_encode(jcr->crypto.pki_session, (uint8_t *)0, &size)) {
          Jmsg(jcr, M_FATAL, 0, _("An error occurred while encrypting the stream.\n"));
          return false;
       }
 
-      /* Allocate buffer */
+      /** Allocate buffer */
       jcr->crypto.pki_session_encoded = get_memory(size);
 
-      /* Encode session data */
+      /** Encode session data */
       if (!crypto_session_encode(jcr->crypto.pki_session, (uint8_t *)jcr->crypto.pki_session_encoded, &size)) {
          Jmsg(jcr, M_FATAL, 0, _("An error occurred while encrypting the stream.\n"));
          return false;
       }
 
-      /* ... and store the encoded size */
+      /** ... and store the encoded size */
       jcr->crypto.pki_session_encoded_size = size;
 
-      /* Allocate the encryption/decryption buffer */
+      /** Allocate the encryption/decryption buffer */
       jcr->crypto.crypto_buf = get_memory(CRYPTO_CIPHER_MAX_BLOCK_SIZE);
    }
    return true;
@@ -270,7 +299,7 @@ static bool crypto_session_send(JCR *jcr, BSOCK *sd)
 {
    POOLMEM *msgsave;
 
-   /* Send our header */
+   /** Send our header */
    Dmsg2(100, "Send hdr fi=%ld stream=%d\n", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
    sd->fsend("%ld %d 0", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
 
@@ -287,7 +316,7 @@ static bool crypto_session_send(JCR *jcr, BSOCK *sd)
 }
 
 
-/*
+/**
  * Called here by find() for each file included.
  *   This is a callback. The original is find_files() above.
  *
@@ -300,6 +329,7 @@ static bool crypto_session_send(JCR *jcr, BSOCK *sd)
 int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 {
    bool do_read = false;
+   bool plugin_started = false;
    int stat, data_stream; 
    int rtnstat = 0;
    DIGEST *digest = NULL;
@@ -315,7 +345,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 #endif
    BSOCK *sd = jcr->store_bsock;
 
-   if (job_canceled(jcr)) {
+   if (jcr->is_canceled() || jcr->is_incomplete()) {
       return 0;
    }
 
@@ -336,6 +366,9 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    case FT_LNK:
       Dmsg2(130, "FT_LNK saving: %s -> %s\n", ff_pkt->fname, ff_pkt->link);
       break;
+   case FT_RESTORE_FIRST:
+      Dmsg1(100, "FT_RESTORE_FIRST saving: %s\n", ff_pkt->fname);
+      break;
    case FT_DIRBEGIN:
       jcr->num_files_examined--;      /* correct file count */
       return 1;                       /* not used */
@@ -347,8 +380,8 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    case FT_NOFSCHG:
       /* Suppress message for /dev filesystems */
       if (!is_in_fileset(ff_pkt)) {
-         Jmsg(jcr, M_INFO, 1, _("     %s is a different filesystem. Will not descend from %s into %s\n"),
-              ff_pkt->fname, ff_pkt->top_fname, ff_pkt->fname);
+         Jmsg(jcr, M_INFO, 1, _("     %s is a different filesystem. Will not descend from %s into it.\n"),
+              ff_pkt->fname, ff_pkt->top_fname);
       }
       ff_pkt->type = FT_DIREND;       /* Backup only the directory entry */
       break;
@@ -362,6 +395,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
            ff_pkt->fname);
       break;
    case FT_REPARSE:
+   case FT_JUNCTION:
    case FT_DIREND:
       Dmsg1(130, "FT_DIREND: %s\n", ff_pkt->link);
       break;
@@ -423,9 +457,9 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 
    Dmsg1(130, "bfiled: sending %s to stored\n", ff_pkt->fname);
 
-   /* Digests and encryption are only useful if there's file data */
+   /** Digests and encryption are only useful if there's file data */
    if (has_file_data) {
-      /*
+      /**
        * Setup for digest handling. If this fails, the digest will be set to NULL
        * and not used. Note, the digest (file hash) can be any one of the four
        * algorithms below.
@@ -453,13 +487,13 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          digest_stream = STREAM_SHA512_DIGEST;
       }
 
-      /* Did digest initialization fail? */
+      /** Did digest initialization fail? */
       if (digest_stream != STREAM_NONE && digest == NULL) {
          Jmsg(jcr, M_WARNING, 0, _("%s digest initialization failed\n"),
             stream_to_ascii(digest_stream));
       }
 
-      /*
+      /**
        * Set up signature digest handling. If this fails, the signature digest
        * will be set to NULL and not used.
        */
@@ -469,7 +503,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       if (jcr->crypto.pki_sign) {
          signing_digest = crypto_digest_new(jcr, signing_algorithm);
 
-         /* Full-stop if a failure occurred initializing the signature digest */
+         /** Full-stop if a failure occurred initializing the signature digest */
          if (signing_digest == NULL) {
             Jmsg(jcr, M_NOTSAVED, 0, _("%s signature digest initialization failed\n"),
                stream_to_ascii(signing_algorithm));
@@ -478,37 +512,43 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          }
       }
 
-      /* Enable encryption */
+      /** Enable encryption */
       if (jcr->crypto.pki_encrypt) {
          ff_pkt->flags |= FO_ENCRYPT;
       }
    }
 
-   /* Initialize the file descriptor we use for data and other streams. */
+   /** Initialize the file descriptor we use for data and other streams. */
    binit(&ff_pkt->bfd);
    if (ff_pkt->flags & FO_PORTABLE) {
       set_portable_backup(&ff_pkt->bfd); /* disable Win32 BackupRead() */
    }
    if (ff_pkt->cmd_plugin) {
+      /* Tell bfile that it needs to call plugin */
       if (!set_cmd_plugin(&ff_pkt->bfd, jcr)) {
          goto bail_out;
       }
       send_plugin_name(jcr, sd, true);      /* signal start of plugin data */
+      plugin_started = true;
    }
 
-   /* Send attributes -- must be done after binit() */
+   /** Send attributes -- must be done after binit() */
    if (!encode_and_send_attributes(jcr, ff_pkt, data_stream)) {
       goto bail_out;
    }
+   /** Meta data only for restore object */
+   if (ff_pkt->type == FT_RESTORE_FIRST) {
+      goto good_rtn;
+   }
 
-   /* Set up the encryption context and send the session data to the SD */
+   /** Set up the encryption context and send the session data to the SD */
    if (has_file_data && jcr->crypto.pki_encrypt) {
       if (!crypto_session_send(jcr, sd)) {
          goto bail_out;
       }
    }
 
-   /*
+   /**
     * Open any file with data that we intend to save, then save it.
     *
     * Note, if is_win32_backup, we must open the Directory so that
@@ -521,15 +561,16 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       do_read = ff_pkt->statp.st_size > 0;  
 #endif
    } else if (ff_pkt->type == FT_RAW || ff_pkt->type == FT_FIFO ||
-              ff_pkt->type == FT_REPARSE ||
+              ff_pkt->type == FT_REPARSE || ff_pkt->type == FT_JUNCTION ||
          (!is_portable_backup(&ff_pkt->bfd) && ff_pkt->type == FT_DIREND)) {
       do_read = true;
    }
+
    if (ff_pkt->cmd_plugin) {
       do_read = true;
    }
 
-   Dmsg1(400, "do_read=%d\n", do_read);
+   Dmsg2(150, "type=%d do_read=%d\n", ff_pkt->type, do_read);
    if (do_read) {
       btimer_t *tid;
 
@@ -539,7 +580,8 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          tid = NULL;
       }
       int noatime = ff_pkt->flags & FO_NOATIME ? O_NOATIME : 0;
-      ff_pkt->bfd.reparse_point = ff_pkt->type == FT_REPARSE;
+      ff_pkt->bfd.reparse_point = (ff_pkt->type == FT_REPARSE || 
+                                   ff_pkt->type == FT_JUNCTION);
       if (bopen(&ff_pkt->bfd, ff_pkt->fname, O_RDONLY | O_BINARY | noatime, 0) < 0) {
          ff_pkt->ff_errno = errno;
          berrno be;
@@ -571,7 +613,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    }
 
    if (have_darwin_os) {
-      /* Regular files can have resource forks and Finder Info */
+      /** Regular files can have resource forks and Finder Info */
       if (ff_pkt->type != FT_LNKSAVED && (S_ISREG(ff_pkt->statp.st_mode) &&
           ff_pkt->flags & FO_HFSPLUS)) {
          if (ff_pkt->hfsinfo.rsrclength > 0) {
@@ -589,7 +631,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
                goto good_rtn;
             }
             flags = ff_pkt->flags;
-            ff_pkt->flags &= ~(FO_GZIP|FO_SPARSE);
+            ff_pkt->flags &= ~(FO_COMPRESS|FO_SPARSE|FO_OFFSETS);
             if (flags & FO_ENCRYPT) {
                rsrc_stream = STREAM_ENCRYPTED_MACOS_FORK_DATA;
             } else {
@@ -619,7 +661,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       }
    }
 
-   /*
+   /**
     * Save ACLs when requested and available for anything not being a symlink and not being a plugin.
     */
    if (have_acl) {
@@ -628,12 +670,12 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          case bacl_exit_fatal:
             goto bail_out;
          case bacl_exit_error:
-            /*
+            /**
              * Non-fatal errors, count them and when the number is under ACL_REPORT_ERR_MAX_PER_JOB
              * print the error message set by the lower level routine in jcr->errmsg.
              */
             if (jcr->acl_data->nr_errors < ACL_REPORT_ERR_MAX_PER_JOB) {
-               Jmsg(jcr, M_ERROR, 0, "%s", jcr->errmsg);
+               Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
             }
             jcr->acl_data->nr_errors++;
             break;
@@ -643,7 +685,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       }
    }
 
-   /*
+   /**
     * Save Extended Attributes when requested and available for all files not being a plugin.
     */
    if (have_xattr) {
@@ -652,12 +694,12 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          case bxattr_exit_fatal:
             goto bail_out;
          case bxattr_exit_error:
-            /*
+            /**
              * Non-fatal errors, count them and when the number is under XATTR_REPORT_ERR_MAX_PER_JOB
              * print the error message set by the lower level routine in jcr->errmsg.
              */
             if (jcr->xattr_data->nr_errors < XATTR_REPORT_ERR_MAX_PER_JOB) {
-               Jmsg(jcr, M_ERROR, 0, "%s", jcr->errmsg);
+               Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
             }
             jcr->xattr_data->nr_errors++;
             break;
@@ -667,7 +709,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       }
    }
 
-   /* Terminate the signing digest and send it to the Storage daemon */
+   /** Terminate the signing digest and send it to the Storage daemon */
    if (signing_digest) {
       uint32_t size = 0;
 
@@ -681,22 +723,22 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          goto bail_out;
       }
 
-      /* Get signature size */
+      /** Get signature size */
       if (!crypto_sign_encode(sig, NULL, &size)) {
          Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
          goto bail_out;
       }
 
-      /* Grow the bsock buffer to fit our message if necessary */
+      /** Grow the bsock buffer to fit our message if necessary */
       if (sizeof_pool_memory(sd->msg) < (int32_t)size) {
          sd->msg = realloc_pool_memory(sd->msg, size);
       }
 
-      /* Send our header */
+      /** Send our header */
       sd->fsend("%ld %ld 0", jcr->JobFiles, STREAM_SIGNED_DIGEST);
       Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
 
-      /* Encode signature data */
+      /** Encode signature data */
       if (!crypto_sign_encode(sig, (uint8_t *)sd->msg, &size)) {
          Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
          goto bail_out;
@@ -707,7 +749,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       sd->signal(BNET_EOD);              /* end of checksum */
    }
 
-   /* Terminate any digest and send it to Storage daemon */
+   /** Terminate any digest and send it to Storage daemon */
    if (digest) {
       uint32_t size;
 
@@ -716,7 +758,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 
       size = CRYPTO_DIGEST_MAX_SIZE;
 
-      /* Grow the bsock buffer to fit our message if necessary */
+      /** Grow the bsock buffer to fit our message if necessary */
       if (sizeof_pool_memory(sd->msg) < (int32_t)size) {
          sd->msg = realloc_pool_memory(sd->msg, size);
       }
@@ -726,18 +768,39 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          goto bail_out;
       }
 
+      /* Keep the checksum if this file is a hardlink */
+      if (ff_pkt->linked) {
+         ff_pkt_set_link_digest(ff_pkt, digest_stream, sd->msg, size);
+      }
+
       sd->msglen = size;
       sd->send();
       sd->signal(BNET_EOD);              /* end of checksum */
    }
-   if (ff_pkt->cmd_plugin) {
-      send_plugin_name(jcr, sd, false); /* signal end of plugin data */
+
+   /* Check if original file has a digest, and send it */
+   if (ff_pkt->type == FT_LNKSAVED && ff_pkt->digest) {
+      Dmsg2(300, "Link %s digest %d\n", ff_pkt->fname, ff_pkt->digest_len);
+      sd->fsend("%ld %d 0", jcr->JobFiles, ff_pkt->digest_stream);
+
+      sd->msg = check_pool_memory_size(sd->msg, ff_pkt->digest_len);
+      memcpy(sd->msg, ff_pkt->digest, ff_pkt->digest_len);
+      sd->msglen = ff_pkt->digest_len;
+      sd->send();
+
+      sd->signal(BNET_EOD);              /* end of hardlink record */
    }
 
 good_rtn:
-   rtnstat = 1;                       /* good return */
+   rtnstat = jcr->is_canceled() ? 0 : 1; /* good return if not canceled */
 
 bail_out:
+   if (jcr->is_incomplete()) {
+      rtnstat = 0;
+   }
+   if (ff_pkt->cmd_plugin && plugin_started) {
+      send_plugin_name(jcr, sd, false); /* signal end of plugin data */
+   }
    if (digest) {
       crypto_digest_free(digest);
    }
@@ -750,7 +813,7 @@ bail_out:
    return rtnstat;
 }
 
-/*
+/**
  * Send data read from an already open file descriptor.
  *
  * We return 1 on sucess and 0 on errors.
@@ -785,16 +848,17 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
 
    Dmsg1(300, "Saving data, type=%d\n", ff_pkt->type);
 
-#ifdef HAVE_LIBZ
+#if defined(HAVE_LIBZ) || defined(HAVE_LZO)
    uLong compress_len = 0;
    uLong max_compress_len = 0;
    const Bytef *cbuf = NULL;
+ #ifdef HAVE_LIBZ
    int zstat;
 
-   if (ff_pkt->flags & FO_GZIP) {
-      if (ff_pkt->flags & FO_SPARSE) {
-         cbuf = (Bytef *)jcr->compress_buf + SPARSE_FADDR_SIZE;
-         max_compress_len = jcr->compress_buf_size - SPARSE_FADDR_SIZE;
+   if ((ff_pkt->flags & FO_COMPRESS) && ff_pkt->Compress_algo == COMPRESS_GZIP) {
+      if ((ff_pkt->flags & FO_SPARSE) || (ff_pkt->flags & FO_OFFSETS)) {
+         cbuf = (Bytef *)jcr->compress_buf + OFFSET_FADDR_SIZE;
+         max_compress_len = jcr->compress_buf_size - OFFSET_FADDR_SIZE;
       } else {
          cbuf = (Bytef *)jcr->compress_buf;
          max_compress_len = jcr->compress_buf_size; /* set max length */
@@ -802,32 +866,57 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       wbuf = jcr->compress_buf;    /* compressed output here */
       cipher_input = (uint8_t *)jcr->compress_buf; /* encrypt compressed data */
 
-      /* 
+      /**
        * Only change zlib parameters if there is no pending operation.
        * This should never happen as deflatereset is called after each
        * deflate.
        */
 
       if (((z_stream*)jcr->pZLIB_compress_workset)->total_in == 0) {
-         /* set gzip compression level - must be done per file */
+         /** set gzip compression level - must be done per file */
          if ((zstat=deflateParams((z_stream*)jcr->pZLIB_compress_workset, 
-              ff_pkt->GZIP_level, Z_DEFAULT_STRATEGY)) != Z_OK) {
+              ff_pkt->Compress_level, Z_DEFAULT_STRATEGY)) != Z_OK) {
             Jmsg(jcr, M_FATAL, 0, _("Compression deflateParams error: %d\n"), zstat);
-            set_jcr_job_status(jcr, JS_ErrorTerminated);
+            jcr->setJobStatus(JS_ErrorTerminated);
             goto err;
          }
       }
    }
+ #endif
+ #ifdef HAVE_LZO
+   Bytef *cbuf2;
+   int lzores;
+   comp_stream_header ch;
+
+   memset(&ch, 0, sizeof(comp_stream_header));
+   cbuf2 = NULL;
+
+   if ((ff_pkt->flags & FO_COMPRESS) && ff_pkt->Compress_algo == COMPRESS_LZO1X) {
+      if ((ff_pkt->flags & FO_SPARSE) || (ff_pkt->flags & FO_OFFSETS)) {
+         cbuf = (Bytef *)jcr->compress_buf + OFFSET_FADDR_SIZE;
+         cbuf2 = (Bytef *)jcr->compress_buf + OFFSET_FADDR_SIZE + sizeof(comp_stream_header);
+         max_compress_len = jcr->compress_buf_size - OFFSET_FADDR_SIZE;
+      } else {
+         cbuf = (Bytef *)jcr->compress_buf;
+         cbuf2 = (Bytef *)jcr->compress_buf + sizeof(comp_stream_header);
+         max_compress_len = jcr->compress_buf_size; /* set max length */
+      }
+      ch.magic = COMPRESS_LZO1X;
+      ch.version = COMP_HEAD_VERSION;
+      wbuf = jcr->compress_buf;    /* compressed output here */
+      cipher_input = (uint8_t *)jcr->compress_buf; /* encrypt compressed data */
+   }
+ #endif
 #else
    const uint32_t max_compress_len = 0;
 #endif
 
    if (ff_pkt->flags & FO_ENCRYPT) {
-      if (ff_pkt->flags & FO_SPARSE) {
-         Jmsg0(jcr, M_FATAL, 0, _("Encrypting sparse data not supported.\n"));
+      if ((ff_pkt->flags & FO_SPARSE) || (ff_pkt->flags & FO_OFFSETS)) {
+         Jmsg0(jcr, M_FATAL, 0, _("Encrypting sparse or offset data not supported.\n"));
          goto err;
       }
-      /* Allocate the cipher context */
+      /** Allocate the cipher context */
       if ((cipher_ctx = crypto_cipher_new(jcr->crypto.pki_session, true, 
            &cipher_block_size)) == NULL) {
          /* Shouldn't happen! */
@@ -835,7 +924,7 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
          goto err;
       }
 
-      /*
+      /**
        * Grow the crypto buffer, if necessary.
        * crypto_cipher_update() will buffer up to (cipher_block_size - 1).
        * We grow crypto_buf to the maximum number of blocks that
@@ -849,12 +938,12 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       wbuf = jcr->crypto.crypto_buf; /* Encrypted, possibly compressed output here. */
    }
 
-   /*
+   /**
     * Send Data header to Storage daemon
     *    <file-index> <stream> <info>
     */
    if (!sd->fsend("%ld %d 0", jcr->JobFiles, stream)) {
-      if (!job_canceled(jcr)) {
+      if (!jcr->is_job_canceled()) {
          Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
                sd->bstrerror());
       }
@@ -862,15 +951,15 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
    }
    Dmsg1(300, ">stored: datahdr %s\n", sd->msg);
 
-   /*
+   /**
     * Make space at beginning of buffer for fileAddr because this
     *   same buffer will be used for writing if compression is off.
     */
-   if (ff_pkt->flags & FO_SPARSE) {
-      rbuf += SPARSE_FADDR_SIZE;
-      rsize -= SPARSE_FADDR_SIZE;
+   if ((ff_pkt->flags & FO_SPARSE) || (ff_pkt->flags & FO_OFFSETS)) {
+      rbuf += OFFSET_FADDR_SIZE;
+      rsize -= OFFSET_FADDR_SIZE;
 #ifdef HAVE_FREEBSD_OS
-      /*
+      /**
        * To read FreeBSD partitions, the read size must be
        *  a multiple of 512.
        */
@@ -878,18 +967,18 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
 #endif
    }
 
-   /* a RAW device read on win32 only works if the buffer is a multiple of 512 */
+   /** a RAW device read on win32 only works if the buffer is a multiple of 512 */
 #ifdef HAVE_WIN32
    if (S_ISBLK(ff_pkt->statp.st_mode))
       rsize = (rsize/512) * 512;
 #endif
    
-   /*
+   /**
     * Read the file data
     */
    while ((sd->msglen=(uint32_t)bread(&ff_pkt->bfd, rbuf, rsize)) > 0) {
 
-      /* Check for sparse blocks */
+      /** Check for sparse blocks */
       if (ff_pkt->flags & FO_SPARSE) {
          ser_declare;
          bool allZeros = false;
@@ -900,35 +989,39 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
             allZeros = is_buf_zero(rbuf, rsize);
          }
          if (!allZeros) {
-            /* Put file address as first data in buffer */
-            ser_begin(wbuf, SPARSE_FADDR_SIZE);
+            /** Put file address as first data in buffer */
+            ser_begin(wbuf, OFFSET_FADDR_SIZE);
             ser_uint64(fileAddr);     /* store fileAddr in begin of buffer */
          }
          fileAddr += sd->msglen;      /* update file address */
-         /* Skip block of all zeros */
+         /** Skip block of all zeros */
          if (allZeros) {
             continue;                 /* skip block of zeros */
          }
+      } else if (ff_pkt->flags & FO_OFFSETS) {
+         ser_declare;
+         ser_begin(wbuf, OFFSET_FADDR_SIZE);
+         ser_uint64(ff_pkt->bfd.offset);     /* store offset in begin of buffer */
       }
 
       jcr->ReadBytes += sd->msglen;         /* count bytes read */
 
-      /* Uncompressed cipher input length */
+      /** Uncompressed cipher input length */
       cipher_input_len = sd->msglen;
 
-      /* Update checksum if requested */
+      /** Update checksum if requested */
       if (digest) {
          crypto_digest_update(digest, (uint8_t *)rbuf, sd->msglen);
       }
 
-      /* Update signing digest if requested */
+      /** Update signing digest if requested */
       if (signing_digest) {
          crypto_digest_update(signing_digest, (uint8_t *)rbuf, sd->msglen);
       }
 
 #ifdef HAVE_LIBZ
-      /* Do compression if turned on */
-      if (ff_pkt->flags & FO_GZIP && jcr->pZLIB_compress_workset) {
+      /** Do compression if turned on */
+      if (ff_pkt->flags & FO_COMPRESS && ff_pkt->Compress_algo == COMPRESS_GZIP && jcr->pZLIB_compress_workset) {
          Dmsg3(400, "cbuf=0x%x rbuf=0x%x len=%u\n", cbuf, rbuf, sd->msglen);
          
          ((z_stream*)jcr->pZLIB_compress_workset)->next_in   = (Bytef *)rbuf;
@@ -938,25 +1031,57 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
 
          if ((zstat=deflate((z_stream*)jcr->pZLIB_compress_workset, Z_FINISH)) != Z_STREAM_END) {
             Jmsg(jcr, M_FATAL, 0, _("Compression deflate error: %d\n"), zstat);
-            set_jcr_job_status(jcr, JS_ErrorTerminated);
+            jcr->setJobStatus(JS_ErrorTerminated);
             goto err;
          }
          compress_len = ((z_stream*)jcr->pZLIB_compress_workset)->total_out;
-         /* reset zlib stream to be able to begin from scratch again */
+         /** reset zlib stream to be able to begin from scratch again */
          if ((zstat=deflateReset((z_stream*)jcr->pZLIB_compress_workset)) != Z_OK) {
             Jmsg(jcr, M_FATAL, 0, _("Compression deflateReset error: %d\n"), zstat);
-            set_jcr_job_status(jcr, JS_ErrorTerminated);
+            jcr->setJobStatus(JS_ErrorTerminated);
             goto err;
          }
 
-         Dmsg2(400, "compressed len=%d uncompressed len=%d\n", compress_len, 
+         Dmsg2(400, "GZIP compressed len=%d uncompressed len=%d\n", compress_len, 
                sd->msglen);
 
          sd->msglen = compress_len;      /* set compressed length */
          cipher_input_len = compress_len;
       }
 #endif
-      /* 
+#ifdef HAVE_LZO
+      /** Do compression if turned on */
+      if (ff_pkt->flags & FO_COMPRESS && ff_pkt->Compress_algo == COMPRESS_LZO1X && jcr->LZO_compress_workset) {
+         ser_declare;
+         ser_begin(cbuf, sizeof(comp_stream_header));
+
+         Dmsg3(400, "cbuf=0x%x rbuf=0x%x len=%u\n", cbuf, rbuf, sd->msglen);
+
+         lzores = lzo1x_1_compress((const unsigned char*)rbuf, sd->msglen, cbuf2, &compress_len, jcr->LZO_compress_workset);
+         if (lzores == LZO_E_OK && compress_len <= max_compress_len)
+         {
+            /* complete header */
+            ser_uint32(COMPRESS_LZO1X);
+            ser_uint32(compress_len);
+            ser_uint16(ch.level);
+            ser_uint16(ch.version);
+         } else {
+            /** this should NEVER happen */
+            Jmsg(jcr, M_FATAL, 0, _("Compression LZO error: %d\n"), lzores);
+            jcr->setJobStatus(JS_ErrorTerminated);
+            goto err;
+         }
+
+         Dmsg2(400, "LZO compressed len=%d uncompressed len=%d\n", compress_len, 
+               sd->msglen);
+
+         compress_len += sizeof(comp_stream_header); /* add size of header */
+         sd->msglen = compress_len;      /* set compressed length */
+         cipher_input_len = compress_len;
+      }
+#endif
+
+      /**
        * Note, here we prepend the current record length to the beginning
        *  of the encrypted data. This is because both sparse and compression
        *  restore handling want records returned to them with exactly the
@@ -973,11 +1098,11 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
          uint32_t initial_len = 0;
          ser_declare;
 
-         if (ff_pkt->flags & FO_SPARSE) {
-            cipher_input_len += SPARSE_FADDR_SIZE;
+         if ((ff_pkt->flags & FO_SPARSE) || (ff_pkt->flags & FO_OFFSETS)) {
+            cipher_input_len += OFFSET_FADDR_SIZE;
          }
 
-         /* Encrypt the length of the input block */
+         /** Encrypt the length of the input block */
          uint8_t packet_len[sizeof(uint32_t)];
 
          ser_begin(packet_len, sizeof(uint32_t));
@@ -986,35 +1111,35 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
 
          if (!crypto_cipher_update(cipher_ctx, packet_len, sizeof(packet_len),
              (uint8_t *)jcr->crypto.crypto_buf, &initial_len)) {
-            /* Encryption failed. Shouldn't happen. */
+            /** Encryption failed. Shouldn't happen. */
             Jmsg(jcr, M_FATAL, 0, _("Encryption error\n"));
             goto err;
          }
 
-         /* Encrypt the input block */
+         /** Encrypt the input block */
          if (crypto_cipher_update(cipher_ctx, cipher_input, cipher_input_len, 
              (uint8_t *)&jcr->crypto.crypto_buf[initial_len], &encrypted_len)) {
             if ((initial_len + encrypted_len) == 0) {
-               /* No full block of data available, read more data */
+               /** No full block of data available, read more data */
                continue;
             }
             Dmsg2(400, "encrypted len=%d unencrypted len=%d\n", encrypted_len, 
                   sd->msglen);
             sd->msglen = initial_len + encrypted_len; /* set encrypted length */
          } else {
-            /* Encryption failed. Shouldn't happen. */
+            /** Encryption failed. Shouldn't happen. */
             Jmsg(jcr, M_FATAL, 0, _("Encryption error\n"));
             goto err;
          }
       }
 
       /* Send the buffer to the Storage daemon */
-      if (ff_pkt->flags & FO_SPARSE) {
-         sd->msglen += SPARSE_FADDR_SIZE; /* include fileAddr in size */
+      if ((ff_pkt->flags & FO_SPARSE) || (ff_pkt->flags & FO_OFFSETS)) {
+         sd->msglen += OFFSET_FADDR_SIZE; /* include fileAddr in size */
       }
       sd->msg = wbuf;              /* set correct write buffer */
       if (!sd->send()) {
-         if (!job_canceled(jcr)) {
+         if (!jcr->is_job_canceled()) {
             Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
                   sd->bstrerror());
          }
@@ -1035,7 +1160,7 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
          Jmsg(jcr, M_FATAL, 0, _("Too many errors. JobErrors=%d.\n"), jcr->JobErrors);
       }
    } else if (ff_pkt->flags & FO_ENCRYPT) {
-      /* 
+      /** 
        * For encryption, we must call finalize to push out any
        *  buffered data.
        */
@@ -1046,12 +1171,12 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
          goto err;
       }
 
-      /* Note, on SSL pre-0.9.7, there is always some output */
+      /** Note, on SSL pre-0.9.7, there is always some output */
       if (encrypted_len > 0) {
          sd->msglen = encrypted_len;      /* set encrypted length */
          sd->msg = jcr->crypto.crypto_buf;       /* set correct write buffer */
          if (!sd->send()) {
-            if (!job_canceled(jcr)) {
+            if (!jcr->is_job_canceled()) {
                Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
                      sd->bstrerror());
             }
@@ -1064,21 +1189,21 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
    }
 
    if (!sd->signal(BNET_EOD)) {        /* indicate end of file data */
-      if (!job_canceled(jcr)) {
+      if (!jcr->is_job_canceled()) {
          Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
                sd->bstrerror());
       }
       goto err;
    }
 
-   /* Free the cipher context */
+   /** Free the cipher context */
    if (cipher_ctx) {
       crypto_cipher_free(cipher_ctx);
    }
    return 1;
 
 err:
-   /* Free the cipher context */
+   /** Free the cipher context */
    if (cipher_ctx) {
       crypto_cipher_free(cipher_ctx);
    }
@@ -1092,24 +1217,32 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
 {
    BSOCK *sd = jcr->store_bsock;
    char attribs[MAXSTRING];
-   char attribsEx[MAXSTRING];
+   char attribsExBuf[MAXSTRING];
+   char *attribsEx = NULL;
    int attr_stream;
-   int stat;
+   int comp_len;
+   bool stat;
+   int hangup = get_hangup();
 #ifdef FD_NO_SEND_TEST
    return true;
 #endif
 
    Dmsg1(300, "encode_and_send_attrs fname=%s\n", ff_pkt->fname);
-   /* Find what data stream we will use, then encode the attributes */
+   /** Find what data stream we will use, then encode the attributes */
    if ((data_stream = select_data_stream(ff_pkt)) == STREAM_NONE) {
       /* This should not happen */
       Jmsg0(jcr, M_FATAL, 0, _("Invalid file flags, no supported data stream type.\n"));
       return false;
    }
-   encode_stat(attribs, &ff_pkt->statp, ff_pkt->LinkFI, data_stream);
+   encode_stat(attribs, &ff_pkt->statp, sizeof(ff_pkt->statp), ff_pkt->LinkFI, data_stream);
 
-   /* Now possibly extend the attributes */
-   attr_stream = encode_attribsEx(jcr, attribsEx, ff_pkt);
+   /** Now possibly extend the attributes */
+   if (ff_pkt->type == FT_RESTORE_FIRST) {
+      attr_stream = STREAM_RESTORE_OBJECT;
+   } else {
+      attribsEx = attribsExBuf;
+      attr_stream = encode_attribsEx(jcr, attribsEx, ff_pkt);
+   }
 
    Dmsg3(300, "File %s\nattribs=%s\nattribsEx=%s\n", ff_pkt->fname, attribs, attribsEx);
 
@@ -1119,12 +1252,20 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
    pm_strcpy(jcr->last_fname, ff_pkt->fname);
    jcr->unlock();
 
-   /*
+   /* Debug code: check if we must hangup */
+   if (hangup && (jcr->JobFiles > (uint32_t)hangup)) {
+      jcr->setJobStatus(JS_Incomplete);
+      Jmsg1(jcr, M_FATAL, 0, "Debug hangup requested after %d files.\n", hangup);
+      set_hangup(0);
+      return false;
+   }
+
+   /**
     * Send Attributes header to Storage daemon
     *    <file-index> <stream> <info>
     */
    if (!sd->fsend("%ld %d 0", jcr->JobFiles, attr_stream)) {
-      if (!job_canceled(jcr)) {
+      if (!jcr->is_canceled() && !jcr->is_incomplete()) {
          Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
                sd->bstrerror());
       }
@@ -1132,7 +1273,7 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
    }
    Dmsg1(300, ">stored: attrhdr %s\n", sd->msg);
 
-   /*
+   /**
     * Send file attributes to Storage daemon
     *   File_index
     *   File type
@@ -1141,42 +1282,95 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
     *   Link name (if type==FT_LNK or FT_LNKSAVED)
     *   Encoded extended-attributes (for Win32)
     *
+    * or send Restore Object to Storage daemon
+    *   File_index
+    *   File_type
+    *   Object_index
+    *   Object_len  (possibly compressed)
+    *   Object_full_len (not compressed)
+    *   Object_compression
+    *   Plugin_name
+    *   Object_name
+    *   Binary Object data
+    *
     * For a directory, link is the same as fname, but with trailing
     * slash. For a linked file, link is the link.
     */
    if (ff_pkt->type != FT_DELETED) { /* already stripped */
       strip_path(ff_pkt);
    }
-   if (ff_pkt->type == FT_LNK || ff_pkt->type == FT_LNKSAVED) {
-      Dmsg2(300, "Link %s to %s\n", ff_pkt->fname, ff_pkt->link);
-      stat = sd->fsend("%ld %d %s%c%s%c%s%c%s%c", jcr->JobFiles,
-               ff_pkt->type, ff_pkt->fname, 0, attribs, 0, ff_pkt->link, 0,
-               attribsEx, 0);
-   } else if (ff_pkt->type == FT_DIREND || ff_pkt->type == FT_REPARSE) {
+   switch (ff_pkt->type) {
+   case FT_LNK:
+   case FT_LNKSAVED:
+      Dmsg3(300, "Link %d %s to %s\n", jcr->JobFiles, ff_pkt->fname, ff_pkt->link);
+      stat = sd->fsend("%ld %d %s%c%s%c%s%c%s%c%u%c", jcr->JobFiles,
+                       ff_pkt->type, ff_pkt->fname, 0, attribs, 0, 
+                       ff_pkt->link, 0, attribsEx, 0, ff_pkt->delta_seq, 0);
+      break;
+   case FT_DIREND:
+   case FT_REPARSE:
+   case FT_JUNCTION:
       /* Here link is the canonical filename (i.e. with trailing slash) */
-      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c", jcr->JobFiles,
-               ff_pkt->type, ff_pkt->link, 0, attribs, 0, 0, attribsEx, 0);
-   } else {
-      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c", jcr->JobFiles,
-               ff_pkt->type, ff_pkt->fname, 0, attribs, 0, 0, attribsEx, 0);
+      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c%u%c", jcr->JobFiles,
+                       ff_pkt->type, ff_pkt->link, 0, attribs, 0, 0, 
+                       attribsEx, 0, ff_pkt->delta_seq, 0);
+      break;
+   case FT_RESTORE_FIRST:
+      comp_len = ff_pkt->object_len;
+      ff_pkt->object_compression = 0;
+      if (ff_pkt->object_len > 1000) {
+         /* Big object, compress it */
+         int stat;
+         comp_len = ff_pkt->object_len + 1000;
+         POOLMEM *comp_obj = get_memory(comp_len);
+         stat = Zdeflate(ff_pkt->object, ff_pkt->object_len, comp_obj, comp_len);
+         if (comp_len < ff_pkt->object_len) {
+            ff_pkt->object = comp_obj;
+            ff_pkt->object_compression = 1;    /* zlib level 9 compression */
+         } else {
+            /* Uncompressed object smaller, use it */
+            comp_len = ff_pkt->object_len;
+         }
+         Dmsg2(100, "Object compressed from %d to %d bytes\n", ff_pkt->object_len, comp_len);
+      }
+      sd->msglen = Mmsg(sd->msg, "%d %d %d %d %d %d %s%c%s%c",
+                        jcr->JobFiles, ff_pkt->type, ff_pkt->object_index,
+                        comp_len, ff_pkt->object_len, ff_pkt->object_compression,
+                        ff_pkt->fname, 0, ff_pkt->object_name, 0);
+      sd->msg = check_pool_memory_size(sd->msg, sd->msglen + comp_len + 2);
+      memcpy(sd->msg + sd->msglen, ff_pkt->object, comp_len);
+      /* Note we send one extra byte so Dir can store zero after object */
+      sd->msglen += comp_len + 1;
+      stat = sd->send();
+      if (ff_pkt->object_compression) {
+         free_and_null_pool_memory(ff_pkt->object);
+      }
+      break;
+   case FT_REG:
+      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c%d%c", jcr->JobFiles,
+               ff_pkt->type, ff_pkt->fname, 0, attribs, 0, 0, attribsEx, 0,
+               ff_pkt->delta_seq, 0);
+      break;
+   default:
+      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c%u%c", jcr->JobFiles,
+                       ff_pkt->type, ff_pkt->fname, 0, attribs, 0, 0,
+                       attribsEx, 0, ff_pkt->delta_seq, 0);
+      break;
    }
    if (ff_pkt->type != FT_DELETED) {
       unstrip_path(ff_pkt);
    }
 
    Dmsg2(300, ">stored: attr len=%d: %s\n", sd->msglen, sd->msg);
-   if (!stat) {
-      if (!job_canceled(jcr)) {
-         Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-               sd->bstrerror());
-      }
-      return false;
+   if (!stat && !jcr->is_job_canceled()) {
+      Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+            sd->bstrerror());
    }
    sd->signal(BNET_EOD);            /* indicate end of attributes data */
-   return true;
+   return stat;
 }
 
-/* 
+/**
  * Do in place strip of path
  */
 static bool do_strip(int count, char *in)
@@ -1185,7 +1379,7 @@ static bool do_strip(int count, char *in)
    int stripped;
    int numsep = 0;
 
-   /* Copy to first path separator -- Win32 might have c: ... */
+   /** Copy to first path separator -- Win32 might have c: ... */
    while (*in && !IsPathSeparator(*in)) {    
       out++; in++;
    }
@@ -1213,7 +1407,7 @@ static bool do_strip(int count, char *in)
    return stripped==count && numsep>count;
 }
 
-/*
+/**
  * If requested strip leading components of the path so that we can
  *   save file as if it came from a subdirectory.  This is most useful
  *   for dealing with snapshots, by removing the snapshot directory, or
@@ -1235,10 +1429,10 @@ void strip_path(FF_PKT *ff_pkt)
       pm_strcpy(ff_pkt->link_save, ff_pkt->link);
       Dmsg2(500, "strcpy link_save=%d link=%d\n", strlen(ff_pkt->link_save),
          strlen(ff_pkt->link));
-      sm_check(__FILE__, __LINE__, true);
+      Dsm_check(200);
    }
 
-   /* 
+   /**
     * Strip path.  If it doesn't succeed put it back.  If
     *  it does, and there is a different link string,
     *  attempt to strip the link. If it fails, back them
@@ -1250,7 +1444,7 @@ void strip_path(FF_PKT *ff_pkt)
       unstrip_path(ff_pkt);
       goto rtn;
    } 
-   /* Strip links but not symlinks */
+   /** Strip links but not symlinks */
    if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
       if (!do_strip(ff_pkt->strip_path, ff_pkt->link)) {
          unstrip_path(ff_pkt);
@@ -1274,6 +1468,39 @@ void unstrip_path(FF_PKT *ff_pkt)
       strcpy(ff_pkt->link, ff_pkt->link_save);
       Dmsg2(500, "strcpy link=%d link_save=%d\n", strlen(ff_pkt->link),
           strlen(ff_pkt->link_save));
-      sm_check(__FILE__, __LINE__, true);
+      Dsm_check(200);
    }
+}
+
+static void close_vss_backup_session(JCR *jcr)
+{
+#if defined(WIN32_VSS)
+   /* STOP VSS ON WIN32 */
+   /* tell vss to close the backup session */
+   if (jcr->VSS) {
+      if (g_pVSSClient->CloseBackup()) {             
+         /* inform user about writer states */
+         for (int i=0; i<(int)g_pVSSClient->GetWriterCount(); i++) {
+            int msg_type = M_INFO;
+            if (g_pVSSClient->GetWriterState(i) < 1) {
+               msg_type = M_WARNING;
+               jcr->JobErrors++;
+            }
+            Jmsg(jcr, msg_type, 0, _("VSS Writer (BackupComplete): %s\n"), g_pVSSClient->GetWriterInfo(i));
+         }
+      }
+      WCHAR *metadata = g_pVSSClient->GetMetadata();
+      if (metadata) {
+         FF_PKT *ff_pkt = jcr->ff;
+         ff_pkt->fname = (char *)"job";
+         ff_pkt->type = FT_RESTORE_FIRST;
+         ff_pkt->LinkFI = 0;
+         ff_pkt->object_name = (char *)"job_metadata.xml";
+         ff_pkt->object = (char *)metadata;
+         ff_pkt->object_len = (wcslen(metadata) + 1) * sizeof(WCHAR);
+         ff_pkt->object_index = (int)time(NULL);
+         save_file(jcr, ff_pkt, true);
+     }
+   }
+#endif
 }

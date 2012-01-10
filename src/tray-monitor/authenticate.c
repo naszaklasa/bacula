@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -87,7 +87,7 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
       stop_bsock_timer(tid);
       Jmsg0(jcr, M_FATAL, 0, _("Director authorization problem.\n"
             "Most likely the passwords do not agree.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+       "Please see " MANUAL_AUTH_URL " for help.\n"));
       return 0;
    }
 
@@ -129,14 +129,14 @@ int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store)
    btimer_t *tid = start_bsock_timer(sd, 60 * 5);
    if (!sd->fsend(SDFDhello, dirname)) {
       stop_bsock_timer(tid);
-      Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to Storage daemon. ERR=%s\n"), bnet_strerror(sd));
+      Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to Storage daemon. ERR=%s\n"), sd->bstrerror());
       return 0;
    }
    if (!cram_md5_respond(sd, store->password, &tls_remote_need, &compatible) ||
        !cram_md5_challenge(sd, store->password, tls_local_need, compatible)) {
       stop_bsock_timer(tid);
       Jmsg0(jcr, M_FATAL, 0, _("Director and Storage daemon passwords or names not the same.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+       "Please see " MANUAL_AUTH_URL " for help.\n"));
       return 0;
    }
    Dmsg1(116, ">stored: %s", sd->msg);
@@ -175,14 +175,14 @@ int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client)
    btimer_t *tid = start_bsock_timer(fd, 60 * 5);
    if (!fd->fsend(SDFDhello, dirname)) {
       stop_bsock_timer(tid);
-      Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to File daemon. ERR=%s\n"), bnet_strerror(fd));
+      Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to File daemon. ERR=%s\n"), fd->bstrerror());
       return 0;
    }
    if (!cram_md5_respond(fd, client->password, &tls_remote_need, &compatible) ||
        !cram_md5_challenge(fd, client->password, tls_local_need, compatible)) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Director and File daemon passwords or names not the same.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+       "Please see " MANUAL_AUTH_URL " for help.\n"));
       return 0;
    }
    Dmsg1(116, ">filed: %s", fd->msg);

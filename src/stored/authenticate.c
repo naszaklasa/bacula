@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -91,7 +91,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
       Dmsg2(dbglvl, "Connection from unknown Director %s at %s rejected.\n",
             dirname, bs->who());
       Jmsg2(jcr, M_FATAL, 0, _("Connection from unknown Director %s at %s rejected.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+       "Please see " MANUAL_AUTH_URL " for help.\n"),
             dirname, bs->who());
       free_pool_memory(dirname);
       return 0;
@@ -128,7 +128,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
 
    if (!auth_success) {
       Jmsg0(jcr, M_FATAL, 0, _("Incorrect password given by Director.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+       "Please see " MANUAL_AUTH_URL " for help.\n"));
       auth_success = false;
       goto auth_fatal;
    }
@@ -238,7 +238,7 @@ int authenticate_filed(JCR *jcr)
 
    if (!auth_success) {
       Jmsg(jcr, M_FATAL, 0, _("Incorrect authorization key from File daemon at %s rejected.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+       "Please see " MANUAL_AUTH_URL " for help.\n"),
            fd->who());
       auth_success = false;
       goto auth_fatal;
@@ -278,7 +278,7 @@ auth_fatal:
    stop_bsock_timer(tid);
    if (!auth_success) {
       Jmsg(jcr, M_FATAL, 0, _("Incorrect authorization key from File daemon at %s rejected.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+       "Please see " MANUAL_AUTH_URL " for help.\n"),
            fd->who());
    }
    jcr->authenticated = auth_success;

@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -947,7 +947,6 @@ bool read_block_from_dev(DCR *dcr, bool check_block_numbers)
    if (job_canceled(jcr)) {
       return false;
    }
-   ASSERT(dev->is_open());
    
    if (dev->at_eot()) {
       return false;
@@ -955,6 +954,9 @@ bool read_block_from_dev(DCR *dcr, bool check_block_numbers)
    looping = 0;
    Dmsg1(250, "Full read in read_block_from_device() len=%d\n",
          block->buf_len);
+
+// ASSERT(dev->is_open());
+
 reread:
    if (looping > 1) {
       dev->dev_errno = EIO;
@@ -965,22 +967,6 @@ reread:
       return false;
    }
    
-// #define lots_of_debug
-#ifdef lots_of_debug
-   if (dev->at_eof() && dev->is_dvd()) {
-      Dmsg1(100, "file_size=%u\n",(unsigned int)dev->file_size);
-      Dmsg1(100, "file_addr=%u\n",(unsigned int)dev->file_addr);
-      Dmsg1(100, "lseek=%u\n",(unsigned int)lseek(dev->fd(), 0, SEEK_CUR));
-      Dmsg1(100, "part_start=%u\n",(unsigned int)dev->part_start);
-      Dmsg1(100, "part_size=%u\n", (unsigned int)dev->part_size);
-      Dmsg2(100, "part=%u num_dvd_parts=%u\n", dev->part, dev->num_dvd_parts);
-      Dmsg1(100, "VolCatInfo.VolCatParts=%u\n", (unsigned int)dev->VolCatInfo.VolCatParts);
-      Dmsg3(100, "Tests : %d %d %d\n", (dev->VolCatInfo.VolCatParts > 0), 
-         ((dev->file_addr-dev->part_start) == dev->part_size), 
-         (dev->part <= dev->VolCatInfo.VolCatParts));
-  }
-#endif
-
    /* Check for DVD part file end */
    if (dev->at_eof() && dev->is_dvd() && dev->num_dvd_parts > 0 &&
         dev->part <= dev->num_dvd_parts) {

@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -30,7 +30,6 @@
  *
  *     Kern Sibbald, May MMIII
  *
- *   Version $Id$
  *
  */
 
@@ -223,10 +222,9 @@ static void list_status_header(STATUS_PKT *sp)
    bstrftime_nc(dt, sizeof(dt), daemon_start_time);
 
 
-   len = Mmsg(msg, _("Daemon started %s, %d Job%s run since started.\n"),
-        dt, num_jobs_run, num_jobs_run == 1 ? "" : "s");
+   len = Mmsg(msg, _("Daemon started %s. Jobs: run=%d, running=%d.\n"),
+        dt, num_jobs_run, job_count());
    sendit(msg, len, sp);
-
    len = Mmsg(msg, _(" Heap: heap=%s smbytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
          edit_uint64_with_commas((char *)sbrk(0)-(char *)start_heap, b1),
          edit_uint64_with_commas(sm_bytes, b2),
@@ -234,9 +232,10 @@ static void list_status_header(STATUS_PKT *sp)
          edit_uint64_with_commas(sm_buffers, b4),
          edit_uint64_with_commas(sm_max_buffers, b5));
    sendit(msg, len, sp);
-   len = Mmsg(msg, "Sizes: boffset_t=%d size_t=%d int32_t=%d int64_t=%d\n", 
-         (int)sizeof(boffset_t), (int)sizeof(size_t), (int)sizeof(int32_t),
-         (int)sizeof(int64_t));
+   len = Mmsg(msg, " Sizes: boffset_t=%d size_t=%d int32_t=%d int64_t=%d "
+              "mode=%d,%d\n", 
+              (int)sizeof(boffset_t), (int)sizeof(size_t), (int)sizeof(int32_t),
+              (int)sizeof(int64_t), (int)DEVELOPER_MODE, (int)BEEF);
    sendit(msg, len, sp);
 }
 

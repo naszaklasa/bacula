@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -86,7 +86,7 @@ dbi_node_t::endBackupFile(exchange_fd_context_t *context)
 bRC
 dbi_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 {
-   _DebugMessage(0, "createFile_DBI state = %d\n", state);
+   _DebugMessage(100, "createFile_DBI state = %d\n", state);
 
    rp->create_status = CF_EXTRACT;
 
@@ -96,7 +96,7 @@ dbi_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 bRC
 dbi_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_DBI state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_DBI state = %d\n", state);
 
    context->current_node = parent;
 

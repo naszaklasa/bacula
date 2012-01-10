@@ -2,7 +2,7 @@
 #
 # shell script to delete Bacula tables for PostgreSQL
 
-bindir=@SQL_BINDIR@
+bindir=@POSTGRESQL_BINDIR@
 db_name=@db_name@
 
 $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
@@ -31,6 +31,7 @@ drop table Location;
 drop table locationlog;
 drop table PathVisibility;
 drop table PathHierarchy;
+drop table RestoreObject;
 END-OF-DATA
 pstat=$?
 if test $pstat = 0; 

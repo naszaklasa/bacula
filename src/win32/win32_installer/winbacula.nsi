@@ -57,7 +57,7 @@
 ; Basics
 ;
 Name "Bacula"
-OutFile "${OUT_DIR}\win${WINVER}bacula-${VERSION}.exe"
+OutFile "${OUT_DIR}\bacula-win${WINVER}-${VERSION}.exe"
 SetCompressor lzma
 
 InstallDir "C:\Program Files\Bacula"
@@ -182,6 +182,7 @@ Var NewComponents
 ;     5 = wxWidgits Console
 ;     6 = Documentation (PDF)
 ;     7 = Documentation (HTML)
+;    10 = Tray Monitor
 
 !define ComponentFile                   1
 !define ComponentStorage                2
@@ -191,6 +192,7 @@ Var NewComponents
 !define ComponentGUIConsole             32
 !define ComponentPDFDocs                64
 !define ComponentHTMLDocs               128
+!define ComponentTrayMonitor            1024
 
 !define ComponentsRequiringUserConfig           63
 !define ComponentsFileAndStorage                3
@@ -499,9 +501,11 @@ Section "Bat Console" SecBatConsole
 
   SetOutPath "$INSTDIR"
 
+!if "${BUILD_BAT}" == "yes"
   Call InstallCommonFiles
   File "${SRC_DIR}\QtCore4.dll"
   File "${SRC_DIR}\QtGui4.dll"
+  File "${SRC_DIR}\libgcc_s_dw2-1.dll"
 
   File "${SRC_DIR}\bat.exe"
 
@@ -518,8 +522,34 @@ Section "Bat Console" SecBatConsole
   ; Create Start Menu entry
   CreateShortCut "$SMPROGRAMS\Bacula\Bat.lnk" "$INSTDIR\bat.exe" '-c "$INSTDIR\bat.conf"' "$INSTDIR\bat.exe" 0
   CreateShortCut "$SMPROGRAMS\Bacula\Configuration\Edit Bat Configuration.lnk" "write.exe" '"$INSTDIR\bat.conf"'
+!endif
+
 SectionEnd
 
+Section "Bacula Tray Monitor" SecTrayMonitor
+  SectionIn 1 2 3
+
+  SetOutPath "$INSTDIR"
+
+!if "${BUILD_BAT}" == "yes"
+  Call InstallCommonFiles
+  File "${SRC_DIR}\QtCore4.dll"
+  File "${SRC_DIR}\QtGui4.dll"
+  File "${SRC_DIR}\libgcc_s_dw2-1.dll"
+
+  File "${SRC_DIR}\bacula-tray-monitor.exe"
+
+  File "/oname=$PLUGINSDIR\tray-monitor.conf" "tray-monitor.conf.in"
+  StrCpy $0 "$INSTDIR"
+  StrCpy $1 tray-monitor.conf
+  Call ConfigEditAndCopy
+
+  ; Create Start Menu entry
+  CreateShortCut "$SMPROGRAMS\Bacula\TrayMonitor.lnk" "$INSTDIR\bacula-tray-monitor.exe" '-c "$INSTDIR\tray-monitor.conf"' "$INSTDIR\bacula-tray-monitor.exe" 0
+  CreateShortCut "$SMPROGRAMS\Bacula\Configuration\Edit Tray Monitor Configuration.lnk" "write.exe" '"$INSTDIR\tray-monitor.conf"'
+!endif
+
+SectionEnd
 
 ; Deleted because wxconsole is deprecated
 ;Section "Graphical Console" SecWxConsole
@@ -597,6 +627,7 @@ SectionEnd
 LangString DESC_SecFileDaemon ${LANG_ENGLISH} "Install Bacula File Daemon on this system."
 LangString DESC_SecConsole ${LANG_ENGLISH} "Install command console program on this system."
 LangString DESC_SecBatConsole ${LANG_ENGLISH} "Install Bat graphical console program on this system."
+LangString DESC_SecTrayMonitor ${LANG_ENGLISH} "Install Tray Monitor graphical program on this system."
 
 LangString TITLE_ConfigPage1 ${LANG_ENGLISH} "Configuration"
 LangString SUBTITLE_ConfigPage1 ${LANG_ENGLISH} "Set installation configuration."
@@ -614,6 +645,7 @@ LangString SUBTITLE_WriteTemplates ${LANG_ENGLISH} "Create a resource template f
   !InsertMacro MUI_DESCRIPTION_TEXT ${SecFileDaemon} $(DESC_SecFileDaemon)
   !InsertMacro MUI_DESCRIPTION_TEXT ${SecConsole} $(DESC_SecConsole)
   !InsertMacro MUI_DESCRIPTION_TEXT ${SecBatConsole} $(DESC_SecBatConsole)
+  !InsertMacro MUI_DESCRIPTION_TEXT ${SecTrayMonitor} $(DESC_SecTrayMonitor)
 !InsertMacro MUI_FUNCTION_DESCRIPTION_END
 
 ; Uninstall section
@@ -645,8 +677,11 @@ Section "Uninstall"
   Delete /REBOOTOK "$INSTDIR\help\*"
 
   ; Check for existing installation
-  MessageBox MB_YESNO|MB_ICONQUESTION \
-  "Would you like to delete the current configuration files and the working state file?" IDNO NoDel
+  IfSilent +2
+    MessageBox MB_YESNO|MB_ICONQUESTION \
+    "Would you like to delete the current configuration files and the working state file?" IDNO NoDel
+
+
     Delete /REBOOTOK "$INSTDIR\*"
     Delete /REBOOTOK "$INSTDIR\working\*"
     Delete /REBOOTOK "$INSTDIR\plugins\*"
@@ -813,6 +848,9 @@ Function GetSelectedComponents
   ${If} ${SectionIsSelected} ${SecBatConsole}
     IntOp $R0 $R0 | ${ComponentBatConsole}
   ${EndIf}
+  ${If} ${SectionIsSelected} ${SecTrayMonitor}
+    IntOp $R0 $R0 | ${ComponentTrayMonitor}
+  ${EndIf}
   ${If} ${SectionIsSelected} ${SecDocPdf}
     IntOp $R0 $R0 | ${ComponentPDFDocs}
   ${EndIf}
@@ -911,6 +949,14 @@ Function SelectPreviousComponents
       !InsertMacro UnselectSection ${SecBatConsole}
       !InsertMacro ClearSectionFlag ${SecBatConsole} ${SF_RO}
     ${EndIf}
+    IntOp $R1 $PreviousComponents & ${ComponentTrayMonitor}
+    ${If} $R1 <> 0
+      !InsertMacro SelectSection ${SecTrayMonitor}
+      !InsertMacro SetSectionFlag ${SecTrayMonitor} ${SF_RO}
+    ${Else}
+      !InsertMacro UnselectSection ${SecTrayMonitor}
+      !InsertMacro ClearSectionFlag ${SecTrayMonitor} ${SF_RO}
+    ${EndIf}
     ${If} $R1 <> 0
       !InsertMacro SelectSection ${SecDocPdf}
       !InsertMacro SetSectionFlag ${SecDocPdf} ${SF_RO}
@@ -949,6 +995,12 @@ Function UpdateComponentUI
       !InsertMacro SetSectionFlag ${SecBatConsole} ${SF_BOLD}
     ${Else}
       !InsertMacro ClearSectionFlag ${SecBatConsole} ${SF_BOLD}
+    ${EndIf}
+    IntOp $R1 $NewComponents & ${ComponentTrayMonitor}
+    ${If} $R1 <> 0
+      !InsertMacro SetSectionFlag ${SecTrayMonitor} ${SF_BOLD}
+    ${Else}
+      !InsertMacro ClearSectionFlag ${SecTrayMonitor} ${SF_BOLD}
     ${EndIf}
     IntOp $R1 $NewComponents & ${ComponentPDFDocs}
     ${If} $R1 <> 0

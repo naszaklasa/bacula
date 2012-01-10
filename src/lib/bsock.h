@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -86,6 +86,7 @@ private:
    int m_port;                        /* desired port */
    btimer_t *m_tid;                   /* timer id */
    boffset_t m_data_end;              /* offset of last valid data written */
+   int32_t m_FileIndex;               /* last valid attr spool FI */
    volatile bool m_timed_out: 1;      /* timed out in read/write */
    volatile bool m_terminated: 1;     /* set when BNET_TERMINATE arrives */
    bool m_duped: 1;                   /* set if duped BSOCK */
@@ -121,7 +122,7 @@ public:
    int wait_data(int sec, int usec=0);
    int wait_data_intr(int sec, int usec=0);
    bool authenticate_director(const char *name, const char *password,
-                  TLS_CONTEXT *tls_ctx, char *msg, int msglen);
+                  TLS_CONTEXT *tls_ctx, char *response, int response_len);
    bool set_locking();                /* in bsock.c */
    void clear_locking();              /* in bsock.c */
    void set_source_address(dlist *src_addr_list);
@@ -142,7 +143,14 @@ public:
    bool is_timed_out() { return m_timed_out; };
    bool is_stop() { return errors || is_terminated(); }
    bool is_error() { errno = b_errno; return errors; }
-   void set_data_end() { if (m_spool) m_data_end = ftello(m_spool_fd); };
+   void set_data_end(int32_t FileIndex) { 
+          if (m_spool && FileIndex > m_FileIndex) {
+              m_FileIndex = FileIndex - 1;
+              m_data_end = ftello(m_spool_fd);
+           }
+        };
+   boffset_t get_data_end() { return m_data_end; };
+   int32_t get_FileIndex() { return m_FileIndex; };
    void set_spooling() { m_spool = true; };
    void clear_spooling() { m_spool = false; };
    void set_duped() { m_duped = true; };
@@ -166,7 +174,7 @@ enum {
    BNET_POLL           = -5,          /* Poll request, I'm hanging on a read */
    BNET_HEARTBEAT      = -6,          /* Heartbeat Response requested */
    BNET_HB_RESPONSE    = -7,          /* Only response permited to HB */
-   BNET_PROMPT         = -8,          /* Prompt for subcommand */
+   BNET_xxxxxxPROMPT   = -8,          /* No longer used -- Prompt for subcommand */
    BNET_BTIME          = -9,          /* Send UTC btime */
    BNET_BREAK          = -10,         /* Stop current command -- ctl-c */
    BNET_START_SELECT   = -11,         /* Start of a selection list */
@@ -184,7 +192,9 @@ enum {
    BNET_RUN_CMD        = -23,         /* Run command follows */
    BNET_YESNO          = -24,         /* Request yes no response */
    BNET_START_RTREE    = -25,         /* Start restore tree mode */
-   BNET_END_RTREE      = -26          /* End restore tree mode */ 
+   BNET_END_RTREE      = -26,         /* End restore tree mode */ 
+   BNET_SUB_PROMPT     = -27,         /* Indicate we are at a subprompt */
+   BNET_TEXT_INPUT     = -28          /* Get text input from user */
 };
 
 #define BNET_SETBUF_READ  1           /* Arg for bnet_set_buffer_size */

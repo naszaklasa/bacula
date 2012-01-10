@@ -13,12 +13,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation plus additions
    that are listed in the file LICENSE.
 
@@ -27,7 +27,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -57,9 +57,7 @@ static char SDFDhello[]    = "Hello Director %s calling\n";
 /* Response from SD */
 static char SDOKhello[]   = "3000 OK Hello\n";
 /* Response from FD */
-static char FDOKhello[] = "2000 OK Hello\n";
-static char FD3OKhello[] = "2000 OK Hello 1\n";
-static char FD31OKhello[] = "2000 OK Hello 2\n";
+static char FDOKhello[] = "2000 OK Hello";
 
 /* Forward referenced functions */
 
@@ -171,9 +169,7 @@ int authenticate_file_daemon(BSOCK *fd, char *fdname, char *password)
    }
    Dmsg1(110, "<stored: %s", fd->msg);
    stop_bsock_timer(tid);
-   if ((strncmp(fd->msg, FDOKhello, sizeof(FDOKhello)) != 0) &&
-       (strncmp(fd->msg, FD3OKhello, sizeof(FD3OKhello)) != 0) &&
-       (strncmp(fd->msg, FD31OKhello, sizeof(FD31OKhello)) != 0) ) {
+   if ((strncmp(fd->msg, FDOKhello, strlen(FDOKhello)) != 0)) {
       return 0;
    }
    return 1;

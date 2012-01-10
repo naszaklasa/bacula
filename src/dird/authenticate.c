@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -116,7 +116,7 @@ bool authenticate_storage_daemon(JCR *jcr, STORE *store)
             "Passwords or names not the same or\n"
             "Maximum Concurrent Jobs exceeded on the SD or\n"
             "SD networking messed up (restart daemon).\n"
-            "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+            "Please see " MANUAL_AUTH_URL " for help.\n"),
             sd->host(), sd->port());
       return 0;
    }
@@ -225,7 +225,7 @@ int authenticate_file_daemon(JCR *jcr)
             "Passwords or names not the same or\n"
             "Maximum Concurrent Jobs exceeded on the FD or\n"
             "FD networking messed up (restart daemon).\n"
-            "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+            "Please see " MANUAL_AUTH_URL " for help.\n"),
             fd->host(), fd->port());
       return 0;
    }

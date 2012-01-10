@@ -216,6 +216,9 @@ then
 elif test -f /etc/engarde-version
 then
         DISTNAME=engarde
+elif test -f /etc/arch-release
+then
+        DISTNAME=archlinux
 elif test "$CYGWIN" = yes
 then
         DISTNAME=cygwin

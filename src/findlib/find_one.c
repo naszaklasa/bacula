@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -33,8 +33,6 @@
       Kern Sibbald, MM
 
    Thanks to the TAR programmers.
-
-     Version $Id$
 
  */
 
@@ -61,6 +59,9 @@ struct f_link {
     dev_t dev;                        /* device */
     ino_t ino;                        /* inode with device is unique */
     uint32_t FileIndex;               /* Bacula FileIndex of this file */
+    int32_t digest_stream;            /* Digest type if needed */
+    uint32_t digest_len;              /* Digest len if needed */
+    char *digest;                     /* Checksum of the file if needed */
     char name[1];                     /* The name */
 };
 
@@ -276,7 +277,7 @@ bool has_file_changed(JCR *jcr, FF_PKT *ff_pkt)
  * For incremental/diffential or accurate backups, we
  *   determine if the current file has changed.
  */
-static bool check_changes(JCR *jcr, FF_PKT *ff_pkt)
+bool check_changes(JCR *jcr, FF_PKT *ff_pkt)
 {
    /* in special mode (like accurate backup), the programmer can 
     * choose his comparison function.
@@ -326,6 +327,22 @@ static bool have_ignoredir(FF_PKT *ff_pkt)
       } 
    }
    return false;
+}
+
+/* 
+ * When the current file is a hardlink, the backup code can compute
+ * the checksum and store it into the link_t structure.
+ */
+void
+ff_pkt_set_link_digest(FF_PKT *ff_pkt,
+                       int32_t digest_stream, const char *digest, uint32_t len)
+{
+   if (ff_pkt->linked && !ff_pkt->linked->digest) {     /* is a hardlink */
+      ff_pkt->linked->digest = (char *) bmalloc(len);
+      memcpy(ff_pkt->linked->digest, digest, len);
+      ff_pkt->linked->digest_len = len;
+      ff_pkt->linked->digest_stream = digest_stream;
+   }
 }
 
 /*
@@ -475,6 +492,9 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
              ff_pkt->type = FT_LNKSAVED;       /* Handle link, file already saved */
              ff_pkt->LinkFI = lp->FileIndex;
              ff_pkt->linked = 0;
+             ff_pkt->digest = lp->digest;
+             ff_pkt->digest_stream = lp->digest_stream;
+             ff_pkt->digest_len = lp->digest_len;
              rtn_stat = handle_file(jcr, ff_pkt, top_level);
              Dmsg3(400, "FT_LNKSAVED FI=%d LinkFI=%d file=%s\n", 
                 ff_pkt->FileIndex, lp->FileIndex, lp->name);
@@ -484,6 +504,9 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       /* File not previously dumped. Chain it into our list. */
       len = strlen(fname) + 1;
       lp = (struct f_link *)bmalloc(sizeof(struct f_link) + len);
+      lp->digest = NULL;                /* set later */
+      lp->digest_stream = 0;            /* set later */
+      lp->digest_len = 0;               /* set later */
       lp->ino = ff_pkt->statp.st_ino;
       lp->dev = ff_pkt->statp.st_dev;
       lp->FileIndex = 0;                  /* set later */
@@ -588,8 +611,27 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        *  if st_rdev is 2, it is a mount point 
        */
 #if defined(HAVE_WIN32)
+      /*
+       * A reparse point (WIN32_REPARSE_POINT)
+       *  is something special like one of the following: 
+       *  IO_REPARSE_TAG_DFS              0x8000000A
+       *  IO_REPARSE_TAG_DFSR             0x80000012
+       *  IO_REPARSE_TAG_HSM              0xC0000004
+       *  IO_REPARSE_TAG_HSM2             0x80000006
+       *  IO_REPARSE_TAG_SIS              0x80000007
+       *  IO_REPARSE_TAG_SYMLINK          0xA000000C
+       *
+       * A junction point is a:
+       *  IO_REPARSE_TAG_MOUNT_POINT      0xA0000003
+       * which can be either a link to a Volume (WIN32_MOUNT_POINT)
+       * or a link to a directory (WIN32_JUNCTION_POINT)
+       *
+       * Ignore WIN32_REPARSE_POINT and WIN32_JUNCTION_POINT
+       */
       if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
          ff_pkt->type = FT_REPARSE;
+      } else if (ff_pkt->statp.st_rdev == WIN32_JUNCTION_POINT) {
+         ff_pkt->type = FT_JUNCTION;
       }
 #endif 
       /*
@@ -601,7 +643,8 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        * in the directory is seen (i.e. the FT_DIREND).
        */
       rtn_stat = handle_file(jcr, ff_pkt, top_level);
-      if (rtn_stat < 1 || ff_pkt->type == FT_REPARSE) {   /* ignore or error status */
+      if (rtn_stat < 1 || ff_pkt->type == FT_REPARSE ||
+          ff_pkt->type == FT_JUNCTION) {   /* ignore or error status */
          free(link);
          return rtn_stat;
       }
@@ -790,16 +833,19 @@ int term_find_one(FF_PKT *ff)
 
    for (i =0 ; i < LINK_HASHTABLE_SIZE; i ++) {
    /* Free up list of hard linked files */
-       lp = ff->linkhash[i];
-       while (lp) {
-      lc = lp;
-      lp = lp->next;
-      if (lc) {
-         free(lc);
-         count++;
+      lp = ff->linkhash[i];
+      while (lp) {
+         lc = lp;
+         lp = lp->next;
+         if (lc) {
+            if (lc->digest) {
+               free(lc->digest);
+            }
+            free(lc);
+            count++;
+         }
       }
-   }
-       ff->linkhash[i] = NULL;
+      ff->linkhash[i] = NULL;
    }
    free(ff->linkhash);
    ff->linkhash = NULL;

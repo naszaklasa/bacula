@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -79,8 +79,10 @@ bool is_win32_stream(int stream)
    switch (stream) {
    case STREAM_WIN32_DATA:
    case STREAM_WIN32_GZIP_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
    case STREAM_ENCRYPTED_WIN32_DATA:
    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
       return true;
    }
    return false;
@@ -90,7 +92,7 @@ const char *stream_to_ascii(int stream)
 {
    static char buf[20];
 
-   switch (stream) {
+   switch (stream & STREAMMASK_TYPE) {
    case STREAM_UNIX_ATTRIBUTES:
       return _("Unix attributes");
    case STREAM_FILE_DATA:
@@ -99,12 +101,16 @@ const char *stream_to_ascii(int stream)
       return _("MD5 digest");
    case STREAM_GZIP_DATA:
       return _("GZIP data");
+   case STREAM_COMPRESSED_DATA:
+      return _("Compressed data");
    case STREAM_UNIX_ATTRIBUTES_EX:
       return _("Extended attributes");
    case STREAM_SPARSE_DATA:
       return _("Sparse data");
    case STREAM_SPARSE_GZIP_DATA:
       return _("GZIP sparse data");
+   case STREAM_SPARSE_COMPRESSED_DATA:
+      return _("Compressed sparse data");
    case STREAM_PROGRAM_NAMES:
       return _("Program names");
    case STREAM_PROGRAM_DATA:
@@ -115,6 +121,8 @@ const char *stream_to_ascii(int stream)
       return _("Win32 data");
    case STREAM_WIN32_GZIP_DATA:
       return _("Win32 GZIP data");
+   case STREAM_WIN32_COMPRESSED_DATA:
+      return _("Win32 compressed data");
    case STREAM_MACOS_FORK_DATA:
       return _("MacOS Fork data");
    case STREAM_HFSPLUS_ATTRIBUTES:
@@ -137,8 +145,12 @@ const char *stream_to_ascii(int stream)
       return _("Encrypted session data");
    case STREAM_ENCRYPTED_FILE_GZIP_DATA:
       return _("Encrypted GZIP data");
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+      return _("Encrypted compressed data");
    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
       return _("Encrypted Win32 GZIP data");
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
+      return _("Encrypted Win32 Compressed data");
    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
       return _("Encrypted MacOS fork data");
    case STREAM_ACL_AIX_TEXT:
@@ -160,13 +172,27 @@ const char *stream_to_ascii(int stream)
    case STREAM_ACL_LINUX_ACCESS_ACL:
       return _("Linux Specific Access ACL attribs");
    case STREAM_ACL_TRU64_DEFAULT_ACL:
-      return _("OSF1 Specific Default ACL attribs");
+      return _("TRU64 Specific Default ACL attribs");
    case STREAM_ACL_TRU64_ACCESS_ACL:
-      return _("OSF1 Specific Access ACL attribs");
+      return _("TRU64 Specific Access ACL attribs");
    case STREAM_ACL_SOLARIS_ACLENT:
-      return _("Solaris Specific ACL attribs");
+      return _("Solaris Specific POSIX ACL attribs");
    case STREAM_ACL_SOLARIS_ACE:
-      return _("Solaris Specific ACL attribs");
+      return _("Solaris Specific NFSv4/ZFS ACL attribs");
+   case STREAM_ACL_AFS_TEXT:
+      return _("AFS Specific ACL attribs");
+   case STREAM_ACL_AIX_AIXC:
+      return _("AIX Specific POSIX ACL attribs");
+   case STREAM_ACL_AIX_NFS4:
+      return _("AIX Specific NFSv4 ACL attribs");
+   case STREAM_ACL_FREEBSD_NFS4_ACL:
+      return _("FreeBSD Specific NFSv4/ZFS ACL attribs");
+   case STREAM_XATTR_IRIX:
+      return _("IRIX Specific Extended attribs");
+   case STREAM_XATTR_TRU64:
+      return _("TRU64 Specific Extended attribs");
+   case STREAM_XATTR_AIX:
+      return _("AIX Specific Extended attribs");
    case STREAM_XATTR_OPENBSD:
       return _("OpenBSD Specific Extended attribs");
    case STREAM_XATTR_SOLARIS_SYS:
@@ -187,7 +213,9 @@ const char *stream_to_ascii(int stream)
    }
 }
 
-   
+/**   
+ *  Convert a 64 bit little endian to a big endian
+ */
 void int64_LE2BE(int64_t* pBE, const int64_t v)
 {
    /* convert little endian to big endian */
@@ -205,7 +233,9 @@ void int64_LE2BE(int64_t* pBE, const int64_t v)
    }    
 }
 
-
+/**
+ *  Convert a 32 bit little endian to a big endian
+ */
 void int32_LE2BE(int32_t* pBE, const int32_t v)
 {
    /* convert little endian to big endian */
@@ -224,6 +254,9 @@ void int32_LE2BE(int32_t* pBE, const int32_t v)
 }
 
 
+/**
+ *  Read a BackupRead block and pull out the file data
+ */
 bool processWin32BackupAPIBlock (BFILE *bfd, void *pBuffer, ssize_t dwSize)
 {
    /* pByte contains the buffer 
@@ -401,6 +434,13 @@ bool is_restore_stream_supported(int stream)
    case STREAM_SPARSE_GZIP_DATA:
    case STREAM_WIN32_GZIP_DATA:
 #endif
+#ifndef HAVE_LZO
+   case STREAM_COMPRESSED_DATA:
+   case STREAM_SPARSE_COMPRESSED_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
+#endif
    case STREAM_MACOS_FORK_DATA:
    case STREAM_HFSPLUS_ATTRIBUTES:
    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
@@ -411,6 +451,11 @@ bool is_restore_stream_supported(int stream)
    case STREAM_GZIP_DATA:
    case STREAM_SPARSE_GZIP_DATA:
    case STREAM_WIN32_GZIP_DATA:
+#endif
+#ifdef HAVE_LZO
+   case STREAM_COMPRESSED_DATA:
+   case STREAM_SPARSE_COMPRESSED_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
 #endif
    case STREAM_WIN32_DATA:
    case STREAM_UNIX_ATTRIBUTES:
@@ -431,7 +476,11 @@ bool is_restore_stream_supported(int stream)
    case STREAM_ENCRYPTED_FILE_GZIP_DATA:
    case STREAM_ENCRYPTED_WIN32_DATA:
    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+#ifdef HAVE_LZO
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
 #endif
+#endif     /* !HAVE_CRYPTO */
    case 0:                            /* compatibility with old tapes */
       return true;
    }
@@ -841,6 +890,13 @@ bool is_restore_stream_supported(int stream)
    case STREAM_SPARSE_GZIP_DATA:
    case STREAM_WIN32_GZIP_DATA:    
 #endif
+#ifndef HAVE_LZO
+   case STREAM_COMPRESSED_DATA:
+   case STREAM_SPARSE_COMPRESSED_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
+#endif
 #ifndef HAVE_DARWIN_OS
    case STREAM_MACOS_FORK_DATA:
    case STREAM_HFSPLUS_ATTRIBUTES:
@@ -852,6 +908,13 @@ bool is_restore_stream_supported(int stream)
    case STREAM_GZIP_DATA:
    case STREAM_SPARSE_GZIP_DATA:
    case STREAM_WIN32_GZIP_DATA:    
+#endif
+#ifdef HAVE_LZO
+   case STREAM_COMPRESSED_DATA:
+   case STREAM_SPARSE_COMPRESSED_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
 #endif
    case STREAM_WIN32_DATA:
    case STREAM_UNIX_ATTRIBUTES:

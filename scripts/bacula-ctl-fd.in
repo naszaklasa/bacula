@@ -6,7 +6,7 @@
 #   This is pretty much watered down version of the RedHat script
 #   that works on Solaris as well as Linux, but it won't work everywhere.
 #
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 
 PSCMD="@PSCMD@"
@@ -208,7 +208,11 @@ case "$1" in
 	    OPTIONS="${OPTIONS} -g ${FD_GROUP}"
 	 fi
 
-	 ${BACFDBIN}/bacula-fd $2 $3 ${OPTIONS} -v -c ${BACFDCFG}/bacula-fd.conf
+	 if [ "x${VALGRIND_FD}" = "x1" ]; then
+	    valgrind --leak-check=full ${BACFDBIN}/bacula-fd $2 $3 ${OPTIONS} -v -c ${BACFDCFG}/bacula-fd.conf
+	 else
+	    ${BACFDBIN}/bacula-fd $2 $3 ${OPTIONS} -v -c ${BACFDCFG}/bacula-fd.conf
+	 fi
       }
       ;;
 

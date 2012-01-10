@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -25,11 +25,10 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-/*
+/**
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id$
  */
 
 
@@ -59,6 +58,8 @@
 #define ioctl_req_t int
 #endif
 
+#define MANUAL_AUTH_URL "http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000"
+
 #ifdef PROTOTYPES
 # define __PROTO(p)     p
 #else
@@ -81,8 +82,12 @@
 
 #if defined(HAVE_WIN32)
 
-#define WIN32_REPARSE_POINT 1
-#define WIN32_MOUNT_POINT   2
+#define WIN32_REPARSE_POINT  1   /* Can be any number of "funny" directories except the next two */
+#define WIN32_MOUNT_POINT    2   /* Directory link to Volume */
+#define WIN32_JUNCTION_POINT 3   /* Directory link to a directory */
+
+/* Reduce compiler warnings from Windows vss code */
+#define uuid(x)
 
 void InitWinAPIWrapper();
 
@@ -164,6 +169,9 @@ void InitWinAPIWrapper();
 /* Maximum Name length including EOS */
 #define MAX_NAME_LENGTH 128
 
+/* Maximum escaped Name lenght including EOS 2*MAX_NAME_LENGTH+1 */
+#define MAX_ESCAPE_NAME_LENGTH 257
+
 /* Maximume number of user entered command args */
 #define MAX_CMD_ARGS 30
 
@@ -182,7 +190,7 @@ void InitWinAPIWrapper();
 #define B_DEV_BSIZE 512
 #endif
 
-/*
+/**
  * Set to time limit for other end to respond to
  *  authentication.  Normally 10 minutes is *way*
  *  more than enough. The idea is to keep the Director
@@ -196,173 +204,27 @@ void InitWinAPIWrapper();
  */
 #define DEFAULT_NETWORK_BUFFER_SIZE (64 * 1024)
 
-/*
- * Stream definitions. Once defined these must NEVER
- *   change as they go on the storage media.
- * Note, the following streams are passed from the SD to the DIR
- *   so that they may be put into the catalog (actually only the
- *   stat packet part of the attr record is put in the catalog.
- *
- *   STREAM_UNIX_ATTRIBUTES
- *   STREAM_UNIX_ATTRIBUTES_EX
- *   STREAM_MD5_DIGEST
- *   STREAM_SHA1_DIGEST
- *   STREAM_SHA256_DIGEST
- *   STREAM_SHA512_DIGEST
- */
-#define STREAM_NONE                         0    /* Reserved Non-Stream */
-#define STREAM_UNIX_ATTRIBUTES              1    /* Generic Unix attributes */
-#define STREAM_FILE_DATA                    2    /* Standard uncompressed data */
-#define STREAM_MD5_SIGNATURE                3    /* deprecated */
-#define STREAM_MD5_DIGEST                   3    /* MD5 digest for the file */
-#define STREAM_GZIP_DATA                    4    /* GZip compressed file data */
-#define STREAM_UNIX_ATTRIBUTES_EX           5    /* Extended Unix attr for Win32 EX - Deprecated */
-#define STREAM_SPARSE_DATA                  6    /* Sparse data stream */
-#define STREAM_SPARSE_GZIP_DATA             7    /* Sparse gzipped data stream */
-#define STREAM_PROGRAM_NAMES                8    /* program names for program data */
-#define STREAM_PROGRAM_DATA                 9    /* Data needing program */
-#define STREAM_SHA1_SIGNATURE              10    /* deprecated */
-#define STREAM_SHA1_DIGEST                 10    /* SHA1 digest for the file */
-#define STREAM_WIN32_DATA                  11    /* Win32 BackupRead data */
-#define STREAM_WIN32_GZIP_DATA             12    /* Gzipped Win32 BackupRead data */
-#define STREAM_MACOS_FORK_DATA             13    /* Mac resource fork */
-#define STREAM_HFSPLUS_ATTRIBUTES          14    /* Mac OS extra attributes */
-#define STREAM_UNIX_ACCESS_ACL             15    /* Standard ACL attributes on UNIX - Deprecated */
-#define STREAM_UNIX_DEFAULT_ACL            16    /* Default ACL attributes on UNIX - Deprecated */
-#define STREAM_SHA256_DIGEST               17    /* SHA-256 digest for the file */
-#define STREAM_SHA512_DIGEST               18    /* SHA-512 digest for the file */
-#define STREAM_SIGNED_DIGEST               19    /* Signed File Digest, ASN.1, DER Encoded */
-#define STREAM_ENCRYPTED_FILE_DATA         20    /* Encrypted, uncompressed data */
-#define STREAM_ENCRYPTED_WIN32_DATA        21    /* Encrypted, uncompressed Win32 BackupRead data */
-#define STREAM_ENCRYPTED_SESSION_DATA      22    /* Encrypted Session Data, ASN.1, DER Encoded */
-#define STREAM_ENCRYPTED_FILE_GZIP_DATA    23    /* Encrypted, compressed data */
-#define STREAM_ENCRYPTED_WIN32_GZIP_DATA   24    /* Encrypted, compressed Win32 BackupRead data */
-#define STREAM_ENCRYPTED_MACOS_FORK_DATA   25    /* Encrypted, uncompressed Mac resource fork */
-#define STREAM_PLUGIN_NAME                 26    /* Plugin "file" string */
-#define STREAM_PLUGIN_DATA                 27    /* Plugin specific data */
-
-/*
- * Additional Stream definitions. Once defined these must NEVER
- *   change as they go on the storage media.
- *
- * The Stream numbers from 1000-1999 are reserved for ACL and extended attribute streams.
- * Each different platform has its own stream id(s), if a platform supports multiple stream types
- * it should supply different handlers for each type it supports and this should be called
- * from the stream dispatch function. Currently in this reserved space we allocate the
- * different acl streams from 1000 on and the different extended attributes streams from
- * 1999 down. So the two naming spaces grows towards each other.
- */
-#define STREAM_ACL_AIX_TEXT              1000    /* AIX specific string representation from acl_get */
-#define STREAM_ACL_DARWIN_ACCESS_ACL     1001    /* Darwin (OSX) specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl)
-                                                  */
-#define STREAM_ACL_FREEBSD_DEFAULT_ACL   1002    /* FreeBSD specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for default acls.
-                                                  */
-#define STREAM_ACL_FREEBSD_ACCESS_ACL    1003    /* FreeBSD specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for access acls.
-                                                  */
-#define STREAM_ACL_HPUX_ACL_ENTRY        1004    /* HPUX specific acl_entry string representation
-                                                  * from acltostr (POSIX acl)
-                                                  */
-#define STREAM_ACL_IRIX_DEFAULT_ACL      1005    /* IRIX specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for default acls.
-                                                  */
-#define STREAM_ACL_IRIX_ACCESS_ACL       1006    /* IRIX specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for access acls.
-                                                  */
-#define STREAM_ACL_LINUX_DEFAULT_ACL     1007    /* Linux specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for default acls.
-                                                  */
-#define STREAM_ACL_LINUX_ACCESS_ACL      1008    /* Linux specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for access acls.
-                                                  */
-#define STREAM_ACL_TRU64_DEFAULT_ACL     1009    /* Tru64 specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for default acls.
-                                                  */
-#define STREAM_ACL_TRU64_DEFAULT_DIR_ACL 1010    /* Tru64 specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for default acls.
-                                                  */
-#define STREAM_ACL_TRU64_ACCESS_ACL      1011    /* Tru64 specific acl_t string representation
-                                                  * from acl_to_text (POSIX acl) for access acls.
-                                                  */
-#define STREAM_ACL_SOLARIS_ACLENT        1012    /* Solaris specific aclent_t string representation
-                                                  * from acltotext or acl_totext (POSIX acl)
-                                                  */
-#define STREAM_ACL_SOLARIS_ACE           1013    /* Solaris specific ace_t string representation from
-                                                  * from acl_totext (NFSv4 or ZFS acl)
-                                                  */
-#define STREAM_XATTR_OPENBSD             1993    /* OpenBSD specific extended attributes */
-#define STREAM_XATTR_SOLARIS_SYS         1994    /* Solaris specific extensible attributes or
-                                                  * otherwise named extended system attributes.
-                                                  */
-#define STREAM_XATTR_SOLARIS             1995    /* Solaris specific extented attributes */
-#define STREAM_XATTR_DARWIN              1996    /* Darwin (OSX) specific extended attributes */
-#define STREAM_XATTR_FREEBSD             1997    /* FreeBSD specific extended attributes */
-#define STREAM_XATTR_LINUX               1998    /* Linux specific extended attributes */
-#define STREAM_XATTR_NETBSD              1999    /* NetBSD specific extended attributes */
-
-/*
- *  File type (Bacula defined).
- *  NOTE!!! These are saved in the Attributes record on the tape, so
- *          do not change them. If need be, add to them.
- *
- *  This is stored as 32 bits on the Volume, but only FT_MASK (16) bits are
- *    used for the file type. The upper bits are used to indicate
- *    additional optional fields in the attribute record.
- */
-#define FT_MASK       0xFFFF          /* Bits used by FT (type) */
-#define FT_LNKSAVED   1               /* hard link to file already saved */
-#define FT_REGE       2               /* Regular file but empty */
-#define FT_REG        3               /* Regular file */
-#define FT_LNK        4               /* Soft Link */
-#define FT_DIREND     5               /* Directory at end (saved) */
-#define FT_SPEC       6               /* Special file -- chr, blk, fifo, sock */
-#define FT_NOACCESS   7               /* Not able to access */
-#define FT_NOFOLLOW   8               /* Could not follow link */
-#define FT_NOSTAT     9               /* Could not stat file */
-#define FT_NOCHG     10               /* Incremental option, file not changed */
-#define FT_DIRNOCHG  11               /* Incremental option, directory not changed */
-#define FT_ISARCH    12               /* Trying to save archive file */
-#define FT_NORECURSE 13               /* No recursion into directory */
-#define FT_NOFSCHG   14               /* Different file system, prohibited */
-#define FT_NOOPEN    15               /* Could not open directory */
-#define FT_RAW       16               /* Raw block device */
-#define FT_FIFO      17               /* Raw fifo device */
-/* The DIRBEGIN packet is sent to the FD file processing routine so
- * that it can filter packets, but otherwise, it is not used
- * or saved */
-#define FT_DIRBEGIN  18               /* Directory at beginning (not saved) */
-#define FT_INVALIDFS 19               /* File system not allowed for */
-#define FT_INVALIDDT 20               /* Drive type not allowed for */
-#define FT_REPARSE   21               /* Win NTFS reparse point */
-#define FT_PLUGIN    22               /* Plugin generated filename */
-#define FT_DELETED   23               /* Deleted file entry */
-#define FT_BASE      24               /* Duplicate base file entry */
-
-/* Definitions for upper part of type word (see above). */
-#define AR_DATA_STREAM (1<<16)        /* Data stream id present */
-
-/*
+/**
  * Tape label types -- stored in catalog
  */
 #define B_BACULA_LABEL 0
 #define B_ANSI_LABEL   1
 #define B_IBM_LABEL    2
 
-/*
+/**
  * Actions on purge (bit mask)
  */
-#define AOP_TRUNCATE 1
+#define ON_PURGE_TRUNCATE 1
 
 /* Size of File Address stored in STREAM_SPARSE_DATA. Do NOT change! */
-#define SPARSE_FADDR_SIZE (sizeof(uint64_t))
+#define OFFSET_FADDR_SIZE (sizeof(uint64_t))
 
 /* Size of crypto length stored at head of crypto buffer. Do NOT change! */
 #define CRYPTO_LEN_SIZE ((int)sizeof(uint32_t))
 
 
-/* This is for dumb compilers/libraries like Solaris. Linux GCC
+/**
+ * This is for dumb compilers/libraries like Solaris. Linux GCC
  * does it correctly, so it might be worthwhile
  * to remove the isascii(c) with ifdefs on such
  * "smart" systems.
@@ -372,7 +234,7 @@ void InitWinAPIWrapper();
 #define B_ISUPPER(c) (isascii((int)(c)) && isupper((int)(c)))
 #define B_ISDIGIT(c) (isascii((int)(c)) && isdigit((int)(c)))
 
-/* For multiplying by 10 with shift and addition */
+/** For multiplying by 10 with shift and addition */
 #define B_TIMES10(d) ((d<<3)+(d<<1))
 
 
@@ -389,7 +251,7 @@ typedef int (INTHANDLER)();
 #define S_ISLNK(m) (((m) & S_IFM) == S_IFLNK)
 #endif
 
-/* Added by KES to deal with Win32 systems */
+/** Added by KES to deal with Win32 systems */
 #ifndef S_ISWIN32
 #define S_ISWIN32 020000
 #endif
@@ -450,12 +312,12 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
 #endif
 
 
-/*
+/**
  * The digit following Dmsg and Emsg indicates the number of substitutions in
  * the message string. We need to do this kludge because non-GNU compilers
  * do not handle varargs #defines.
  */
-/* Debug Messages that are printed */
+/** Debug Messages that are printed */
 #ifdef DEBUG
 #define Dmsg0(lvl, msg)             if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg)
 #define Dmsg1(lvl, msg, a1)         if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1)
@@ -518,7 +380,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
 
 
 
-/* Messages that are printed (uses d_msg) */
+/** Messages that are printed (uses d_msg) */
 #define Pmsg0(lvl, msg)             p_msg(__FILE__, __LINE__, lvl, msg)
 #define Pmsg1(lvl, msg, a1)         p_msg(__FILE__, __LINE__, lvl, msg, a1)
 #define Pmsg2(lvl, msg, a1, a2)     p_msg(__FILE__, __LINE__, lvl, msg, a1, a2)
@@ -536,7 +398,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
 #define Pmsg14(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14) p_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14)
 
 
-/* Daemon Error Messages that are delivered according to the message resource */
+/** Daemon Error Messages that are delivered according to the message resource */
 #define Emsg0(typ, lvl, msg)             e_msg(__FILE__, __LINE__, typ, lvl, msg)
 #define Emsg1(typ, lvl, msg, a1)         e_msg(__FILE__, __LINE__, typ, lvl, msg, a1)
 #define Emsg2(typ, lvl, msg, a1, a2)     e_msg(__FILE__, __LINE__, typ, lvl, msg, a1, a2)
@@ -545,7 +407,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
 #define Emsg5(typ, lvl, msg, a1, a2, a3, a4, a5) e_msg(__FILE__, __LINE__, typ, lvl, msg, a1, a2, a3, a4, a5)
 #define Emsg6(typ, lvl, msg, a1, a2, a3, a4, a5, a6) e_msg(__FILE__, __LINE__, typ, lvl, msg, a1, a2, a3, a4, a5, a6)
 
-/* Job Error Messages that are delivered according to the message resource */
+/** Job Error Messages that are delivered according to the message resource */
 #define Jmsg0(jcr, typ, lvl, msg)             j_msg(__FILE__, __LINE__, jcr, typ, lvl, msg)
 #define Jmsg1(jcr, typ, lvl, msg, a1)         j_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1)
 #define Jmsg2(jcr, typ, lvl, msg, a1, a2)     j_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1, a2)
@@ -554,7 +416,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
 #define Jmsg5(jcr, typ, lvl, msg, a1, a2, a3, a4, a5) j_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1, a2, a3, a4, a5)
 #define Jmsg6(jcr, typ, lvl, msg, a1, a2, a3, a4, a5, a6) j_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1, a2, a3, a4, a5, a6)
 
-/* Queued Job Error Messages that are delivered according to the message resource */
+/** Queued Job Error Messages that are delivered according to the message resource */
 #define Qmsg0(jcr, typ, lvl, msg)             q_msg(__FILE__, __LINE__, jcr, typ, lvl, msg)
 #define Qmsg1(jcr, typ, lvl, msg, a1)         q_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1)
 #define Qmsg2(jcr, typ, lvl, msg, a1, a2)     q_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1, a2)
@@ -564,7 +426,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
 #define Qmsg6(jcr, typ, lvl, msg, a1, a2, a3, a4, a5, a6) q_msg(__FILE__, __LINE__, jcr, typ, lvl, msg, a1, a2, a3, a4, a5, a6)
 
 
-/* Memory Messages that are edited into a Pool Memory buffer */
+/** Memory Messages that are edited into a Pool Memory buffer */
 #define Mmsg0(buf, msg)             m_msg(__FILE__, __LINE__, buf, msg)
 #define Mmsg1(buf, msg, a1)         m_msg(__FILE__, __LINE__, buf, msg, a1)
 #define Mmsg2(buf, msg, a1, a2)     m_msg(__FILE__, __LINE__, buf, msg, a1, a2)
@@ -594,7 +456,7 @@ int  m_msg(const char *file, int line, POOLMEM **msgbuf, const char *fmt,...);
 int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...);
 
 
-/* Use our strdup with smartalloc */
+/** Use our strdup with smartalloc */
 #ifndef HAVE_WXCONSOLE
 #undef strdup
 #define strdup(buf) bad_call_on_strdup_use_bstrdup(buf)
@@ -608,11 +470,11 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #endif  
 #endif
 
-/* Use our fgets which handles interrupts */
+/** Use our fgets which handles interrupts */
 #undef fgets
 #define fgets(x,y,z) bfgets((x), (y), (z))
 
-/* Use our sscanf, which is safer and works with known sizes */
+/** Use our sscanf, which is safer and works with known sizes */
 #define sscanf bsscanf
 
 #ifdef DEBUG
@@ -625,10 +487,10 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define bmalloc(size) b_malloc(__FILE__, __LINE__, (size))
 #endif
 
-/* Macro to simplify free/reset pointers */
+/** Macro to simplify free/reset pointers */
 #define bfree_and_null(a) do{if(a){free(a); (a)=NULL;}} while(0)
 
-/*
+/**
  * Replace codes needed in both file routines and non-file routines
  * Job replace codes -- in "replace"
  */
@@ -637,8 +499,8 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define REPLACE_NEVER    'n'
 #define REPLACE_IFOLDER  'o'
 
-/* This probably should be done on a machine by machine basis, but it works */
-/* This is critical for the smartalloc routines to properly align memory */
+/** This probably should be done on a machine by machine basis, but it works */
+/** This is critical for the smartalloc routines to properly align memory */
 #define ALIGN_SIZE (sizeof(double))
 #define BALIGN(x) (((x) + ALIGN_SIZE - 1) & ~(ALIGN_SIZE -1))
 
@@ -647,47 +509,56 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
  *               OS Dependent defines
  * ============================================================= 
  */
-
-#ifndef HAVE_FSEEKO
-/* Bad news. This OS cannot handle 64 bit fseeks and ftells */
-#define fseeko fseek
-#define ftello ftell
-#endif
-
 #if defined (__digital__) && defined (__unix__)
 /* Tru64 - it does have fseeko and ftello , but since ftell/fseek are also 64 bit */
 /* take this 'shortcut' */
 #define fseeko fseek
 #define ftello ftell
+#else
+#ifndef HAVE_FSEEKO
+/* Bad news. This OS cannot handle 64 bit fseeks and ftells */
+#define fseeko fseek
+#define ftello ftell
+#endif
 #endif
 
-
 #ifdef HAVE_SUN_OS
-   /*
-    * On Solaris 2.5, threads are not timesliced by default, so we need to
-    * explictly increase the conncurrency level.
-    */
+/*
+ * On Solaris 2.5/2.6/7 and 8, threads are not timesliced by default,
+ * so we need to explictly increase the conncurrency level.
+ */
+#ifdef USE_THR_SETCONCURRENCY
 #include <thread.h>
 #define set_thread_concurrency(x)  thr_setconcurrency(x)
 extern int thr_setconcurrency(int);
 #define SunOS 1
+#else
+#define set_thread_concurrency(x)
+#endif
 
 #else
-
-
-/* Not needed on most systems */
+/*
+ * Not needed on most systems
+ */
 #define set_thread_concurrency(x)
 
 #endif
 
-#if defined(HAVE_DARWIN_OS) || defined(HAVE_OSF1_OS)
+#ifdef HAVE_DARWIN_OS
 /* Apparently someone forgot to wrap getdomainname as a C function */
-extern "C" int getdomainname(char *name, int len);
-#endif
-
-
+#ifdef  __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+int getdomainname(char *name, int len);
+#ifdef  __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* HAVE_DARWIN_OS */
 
 #if defined(HAVE_WIN32)
+/*
+ *   Windows
+ */
 #define DEFAULT_CONFIGDIR "C:\\Documents and Settings\\All Users\\Application Data\\Bacula"
 #define PathSeparator '\\'
 
@@ -699,6 +570,9 @@ extern void pause_msg(const char *file, const char *func, int line, const char *
 #define pause(msg) if (debug_level) pause_msg(__FILE__, __func__, __LINE__, (msg))
 
 #else
+/*
+ *   Unix/Linix
+ */
 #define PathSeparator '/'
 /* Define Winsock functions if we aren't on Windows */
 
@@ -712,29 +586,41 @@ inline const char *first_path_separator(const char *path) { return strchr(path, 
 #endif
 
 
-/* HP-UX 11 specific workarounds */
+/** HP-UX 11 specific workarounds */
 
 #ifdef HAVE_HPUX_OS
 # undef h_errno
 extern int h_errno;
-/* the {get,set}domainname() functions exist in HPUX's libc.
+/** the {get,set}domainname() functions exist in HPUX's libc.
  * the configure script detects that correctly.
  * the problem is no system headers declares the prototypes for these functions
  * this is done below
  */
-extern "C" int getdomainname(char *name, int namelen);
-extern "C" int setdomainname(char *name, int namelen);
+#ifdef  __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+int getdomainname(char *name, int namelen);
+int setdomainname(char *name, int namelen);
+#ifdef  __cplusplus
+}
+#endif /* __cplusplus */
 #endif /* HAVE_HPUX_OS */
 
 
 #ifdef HAVE_OSF1_OS
-extern "C" int fchdir(int filedes);
-extern "C" long gethostid(void);
-extern "C" int mknod(const char *path, int mode, dev_t device );
-#endif
+#ifdef  __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+int fchdir(int filedes);
+long gethostid(void);
+int getdomainname(char *name, int len);
+#ifdef  __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* HAVE_OSF1_OS */
 
 
-/* Disabled because it breaks internationalisation...
+/** Disabled because it breaks internationalisation...
 #undef HAVE_SETLOCALE
 #ifdef HAVE_SETLOCALE
 #include <locale.h>
@@ -748,7 +634,7 @@ extern "C" int mknod(const char *path, int mode, dev_t device );
 #endif
 */
 
-/* Determine endiannes */
+/** Determine endianes */
 static inline bool bigendian() { return htonl(1) == 1L; }
 
 #endif /* _BACONFIG_H */

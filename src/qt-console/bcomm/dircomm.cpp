@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -47,6 +47,7 @@ DirComm::DirComm(Console *parent, int conn):  m_notifier(NULL),  m_api_set(false
    m_sock = NULL;
    m_at_prompt = false;
    m_at_main_prompt = false;
+   m_sent_blank = false;
    m_conn = conn;
    m_in_command = 0;
    m_in_select = false;
@@ -94,9 +95,7 @@ bool DirComm::connect_dir()
       goto bail_out;
    }
 
-   if (mainWin->m_connDebug) {
-      Pmsg2(000, "DirComm %i connecting %s\n", m_conn, m_console->m_dir->name());
-   }
+   if (mainWin->m_connDebug)Pmsg2(000, "DirComm %i connecting %s\n", m_conn, m_console->m_dir->name());
    memset(jcr, 0, sizeof(JCR));
 
    mainWin->set_statusf(_("Connecting to Director %s:%d"), m_console->m_dir->address, m_console->m_dir->DIRport);
@@ -129,8 +128,9 @@ bool DirComm::connect_dir()
       if (!cons->tls_ctx) {
          m_console->display_textf(_("Failed to initialize TLS context for Console \"%s\".\n"),
             m_console->m_dir->name());
-         if (mainWin->m_connDebug)
+         if (mainWin->m_connDebug) {
             Pmsg2(000, "DirComm %i BAILING Failed to initialize TLS context for Console %s\n", m_conn, m_console->m_dir->name());
+         }
          goto bail_out;
       }
    }
@@ -152,8 +152,9 @@ bool DirComm::connect_dir()
          m_console->display_textf(_("Failed to initialize TLS context for Director \"%s\".\n"),
             m_console->m_dir->name());
          mainWin->set_status("Connection failed");
-         if (mainWin->m_connDebug)
+         if (mainWin->m_connDebug) {
             Pmsg2(000, "DirComm %i BAILING Failed to initialize TLS context for Director %s\n", m_conn, m_console->m_dir->name());
+         }
          goto bail_out;
       }
    }
@@ -171,23 +172,27 @@ bool DirComm::connect_dir()
                           NULL, m_console->m_dir->DIRport, 0);
    if (m_sock == NULL) {
       mainWin->set_status("Connection failed");
-      if (mainWin->m_connDebug)
+      if (mainWin->m_connDebug) {
          Pmsg2(000, "DirComm %i BAILING Connection failed %s\n", m_conn, m_console->m_dir->name());
+      }
       goto bail_out;
    } else {
       /* Update page selector to green to indicate that Console is connected */
       mainWin->actionConnect->setIcon(QIcon(":images/connected.png"));
       QBrush greenBrush(Qt::green);
       QTreeWidgetItem *item = mainWin->getFromHash(m_console);
-      item->setForeground(0, greenBrush);
+      if (item) {
+         item->setForeground(0, greenBrush);
+      }
    }
 
    jcr->dir_bsock = m_sock;
 
    if (!authenticate_director(jcr, m_console->m_dir, cons, buf, sizeof(buf))) {
       m_console->display_text(buf);
-      if (mainWin->m_connDebug)
+      if (mainWin->m_connDebug) {
          Pmsg2(000, "DirComm %i BAILING Connection failed %s\n", m_conn, m_console->m_dir->name());
+      }
       goto bail_out;
    }
 
@@ -204,8 +209,8 @@ bool DirComm::connect_dir()
     * Set up input notifier
     */
    m_notifier = new QSocketNotifier(m_sock->m_fd, QSocketNotifier::Read, 0);
-   QObject::connect(m_notifier, SIGNAL(activated(int)), this, SLOT(read_dir(int)));
-   m_notifier->setEnabled(false);
+   QObject::connect(m_notifier, SIGNAL(activated(int)), this, SLOT(notify_read_dir(int)));
+   m_notifier->setEnabled(true);
 
    write(".api 1");
    m_api_set = true;
@@ -253,6 +258,19 @@ int DirComm::write(const char *msg)
    m_at_prompt = false;
    m_at_main_prompt = false;
    if (mainWin->m_commDebug) Pmsg2(000, "conn %i send: %s\n", m_conn, msg);
+   /*
+    * Ensure we send only one blank line.  Multiple blank lines are
+    *  simply discarded, it keeps the console output looking nicer.
+    */
+   if (m_sock->msglen == 0 || (m_sock->msglen == 1 && *m_sock->msg == '\n')) {
+      if (!m_sent_blank) {
+         m_sent_blank = true;
+         return m_sock->send();
+      } else {
+         return -1;             /* discard multiple blanks */
+      }
+   }
+   m_sent_blank = false;        /* clear flag */
    return m_sock->send();
 }
 
@@ -288,8 +306,9 @@ int DirComm::read()
          } 
          app->processEvents();
          if (m_api_set && m_console->is_messagesPending() && is_notify_enabled() && m_console->hasFocus()) {
-            m_console->write_dir(m_conn, ".messages", false);
+            if (mainWin->m_commDebug) Pmsg1(000, "conn %i process_events\n", m_conn);
             m_console->messagesPending(false);
+            m_console->write_dir(m_conn, ".messages", false);
          }
       }
       if (!m_sock) {
@@ -308,10 +327,11 @@ int DirComm::read()
       switch (m_sock->msglen) {
       case BNET_MSGS_PENDING :
          if (is_notify_enabled() && m_console->hasFocus()) {
+            m_console->messagesPending(false);
             if (mainWin->m_commDebug) Pmsg1(000, "conn %i MSGS PENDING\n", m_conn);
             m_console->write_dir(m_conn, ".messages", false);
             m_console->displayToPrompt(m_conn);
-            m_console->messagesPending(false);
+            continue;
          }
          m_console->messagesPending(true);
          continue;
@@ -339,19 +359,24 @@ int DirComm::read()
             mainWin->set_status(_("At main prompt waiting for input ..."));
          }
          break;
-      case BNET_PROMPT:
-         if (mainWin->m_commDebug) Pmsg2(000, "conn %i PROMPT m_in_select %i\n", m_conn, m_in_select);
+      case BNET_SUB_PROMPT:
+         if (mainWin->m_commDebug) Pmsg2(000, "conn %i SUB_PROMPT m_in_select=%d\n", m_conn, m_in_select);
          m_at_prompt = true;
          m_at_main_prompt = false;
          mainWin->set_status(_("At prompt waiting for input ..."));
-         /***** FIXME *****/
-         /* commented out until the prompt communication issue with the director is resolved 
-          * This is where I call a new text input dialog class to prevent the connection issues
-          * when a text input is requited.
-          *   if (!m_in_select) {
-          *      new textInputDialog(m_console, m_conn);
-          *   }
-          */
+         break;
+      case BNET_TEXT_INPUT:
+         if (mainWin->m_commDebug) Pmsg4(000, "conn %i TEXT_INPUT at_prompt=%d  m_in_select=%d notify=%d\n", 
+               m_conn, m_at_prompt, m_in_select, is_notify_enabled());
+         if (!m_in_select && is_notify_enabled()) {
+            mainWin->waitExit();
+            new textInputDialog(m_console, m_conn);
+         } else {
+            if (mainWin->m_commDebug) Pmsg0(000, "!m_in_select && is_notify_enabled\n");
+            m_at_prompt = true;
+            m_at_main_prompt = false;
+            mainWin->set_status(_("At prompt waiting for input ..."));
+         }
          break;
       case BNET_CMD_FAILED:
          if (mainWin->m_commDebug) Pmsg1(000, "CMD FAILED\n", m_conn);
@@ -411,6 +436,11 @@ int DirComm::read()
          mainWin->set_status(msg());
          break;
       }
+
+      if (!m_sock) {
+         stat = BNET_HARDEOF;
+         return stat;
+      }
       if (is_bnet_stop(m_sock)) {         /* error or term request */
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i BNET STOP\n", m_conn);
          m_console->stopTimer();
@@ -434,9 +464,12 @@ int DirComm::read()
 }
 
 /* Called by signal when the Director has output for us */
-void DirComm::read_dir(int /* fd */)
+void DirComm::notify_read_dir(int /* fd */)
 {
    int stat;
+   if (!mainWin->m_notify) {
+      return;
+   }
    if (mainWin->m_commDebug) Pmsg1(000, "enter read_dir conn %i read_dir\n", m_conn);
    stat = m_sock->wait_data(0, 5000);
    if (stat > 0) {
@@ -461,24 +494,23 @@ void DirComm::read_dir(int /* fd */)
 bool DirComm::notify(bool enable) 
 { 
    bool prev_enabled = false;
+   /* Set global flag */
+   mainWin->m_notify = enable;
    if (m_notifier) {
       prev_enabled = m_notifier->isEnabled();   
-      m_notifier->setEnabled(enable);
-      if (mainWin->m_connDebug) {
-         Pmsg3(000, "conn=%i notify=%d prev=%d\n", m_conn, enable, prev_enabled);
+      if (prev_enabled != enable) {
+         m_notifier->setEnabled(enable);
       }
-   } else if (mainWin->m_connDebug)
+      if (mainWin->m_connDebug) Pmsg3(000, "conn=%i notify=%d prev=%d\n", m_conn, enable, prev_enabled);
+   } else if (mainWin->m_connDebug) {
       Pmsg2(000, "m_notifier does not exist: %i %s\n", m_conn, m_console->m_dir->name());
+   }
    return prev_enabled;
 }
 
 bool DirComm::is_notify_enabled() const
 {
-   bool enabled = false;
-   if (m_notifier) {
-      enabled = m_notifier->isEnabled();   
-   }
-   return enabled;
+   return mainWin->m_notify;
 }
 
 /*

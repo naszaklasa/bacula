@@ -1,22 +1,45 @@
-#! /bin/sh
+#!/bin/sh
 #
 # bacula       This shell script takes care of starting and stopping
 #	       the bacula File daemon.
 #
-# chkconfig: 2345 91 9
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
-#  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
+# For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
+
+FD_USER=@fd_user@
+FD_GROUP=@fd_group@
+FD_OPTIONS=''
 
 case "$1" in
     start)
+       if [ ! -z "${DIR_USER}" ]; then
+          [ -z "${DIR_OPTIONS}" ] && DIR_OPTIONS="-u ${DIR_USER}" || \
+                                     DIR_OPTIONS="${DIR_OPTIONS} -u ${DIR_USER}"
+       fi
+       if [ ! -z "${DIR_GROUP}" ]; then
+          [ -z "${DIR_OPTIONS}" ] && DIR_OPTIONS="-g ${DIR_GROUP}" || \
+                                     DIR_OPTIONS="${DIR_OPTIONS} -g ${DIR_GROUP}"
+       fi
+
        echo "Starting the Bacula File daemon: "
-       @sbindir@/bacula-fd $2 -c @sysconfdir@/bacula-fd.conf
+       @sbindir@/bacula-fd $2 ${FD_OPTIONS} -c @sysconfdir@/bacula-fd.conf
        ;;
     stop)
        echo "Stopping the Bacula File daemon: "
-       pkill -x bacula-fd
+       if [ -x /usr/bin/zonename ]; then
+          case `/usr/bin/zonename` in
+             global)
+                pkill -z global -x bacula-fd
+                ;;
+             *)
+                pkill -x bacula-fd
+                ;;
+          esac
+       else
+          pkill -x bacula-fd
+       fi
        ;;
     restart)
        $0 stop

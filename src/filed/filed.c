@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -34,6 +34,7 @@
 
 #include "bacula.h"
 #include "filed.h"
+#include "lib/mntent_cache.h"
 
 #ifdef HAVE_PYTHON
 
@@ -53,7 +54,6 @@ extern void *handle_client_request(void *dir_sock);
 extern bool parse_fd_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
-void terminate_filed(int sig);
 static bool check_resources();
 
 /* Exported variables */
@@ -71,7 +71,7 @@ static CONFIG *config;
 
 static void usage()
 {
-   Pmsg3(-1, _(
+   fprintf(stderr, _(
 PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bacula-fd [-f -s] [-c config_file] [-d debug_level]\n"
@@ -88,6 +88,7 @@ PROG_COPYRIGHT
 "        -v          verbose user messages\n"
 "        -?          print this message.\n"
 "\n"), 2000, VERSION, BDATE);
+
    exit(1);
 }
 
@@ -295,6 +296,7 @@ void terminate_filed(int sig)
    bnet_stop_thread_server(server_tid);
    generate_daemon_event(NULL, "Exit");
    unload_plugins();
+   flush_mntent_cache();
    write_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
    delete_pid_file(me->pid_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
 

@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -40,15 +40,17 @@ struct RESTORE_CIPHER_CTX {
 
 struct r_ctx {
    JCR *jcr;
-   int32_t stream;
-   int32_t prev_stream;
+   int32_t stream;                     /* stream less new bits */
+   int32_t prev_stream;                /* previous stream */
+   int32_t full_stream;                /* full stream including new bits */
+   int32_t comp_stream;                /* last compressed stream found. needed only to restore encrypted compressed backup */
    BFILE bfd;                          /* File content */
    uint64_t fileAddr;                  /* file write address */
    uint32_t size;                      /* Size of file */
    int flags;                          /* Options for extract_data() */
    BFILE forkbfd;                      /* Alternative data stream */
    uint64_t fork_addr;                 /* Write address for alternative stream */
-   intmax_t fork_size;                 /* Size of alternate stream */
+   int64_t fork_size;                  /* Size of alternate stream */
    int fork_flags;                     /* Options for extract_data() */
    int32_t type;                       /* file type FT_ */
    ATTR *attr;                         /* Pointer to attributes */

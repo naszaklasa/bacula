@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -47,7 +47,7 @@ int make_estimate(JCR *jcr)
 {
    int stat;
 
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    set_find_options((FF_PKT *)jcr->ff, jcr->incremental, jcr->mtime);
    /* in accurate mode, we overwrite the find_one check function */
@@ -82,6 +82,7 @@ static int tally_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    case FT_INVALIDFS:
    case FT_INVALIDDT:
    case FT_REPARSE:
+   case FT_JUNCTION:
    case FT_DIREND:
    case FT_SPEC:
    case FT_RAW:

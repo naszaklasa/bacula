@@ -2,7 +2,7 @@
 #
 # shell script to delete Bacula tables for MySQL
 
-bindir=@SQL_BINDIR@
+bindir=@MYSQL_BINDIR@
 db_name=@db_name@
 
 if $bindir/mysql $* <<END-OF-DATA
@@ -35,6 +35,7 @@ DROP TABLE IF EXISTS Location;
 DROP TABLE IF EXISTS LocationLog;
 DROP TABLE IF EXISTS PathVisibility;
 DROP TABLE IF EXISTS PathHierarchy;
+DROP TABLE IF EXISTS RestoreObject;
 END-OF-DATA
 then
    echo "Deletion of ${db_name} MySQL tables succeeded."

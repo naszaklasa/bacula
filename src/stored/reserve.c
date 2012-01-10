@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -69,7 +69,7 @@ bool use_cmd(JCR *jcr)
     * Get the device, media, and pool information
     */
    if (!use_storage_cmd(jcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
       return false;
    }
@@ -453,7 +453,7 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
 
                if (vol->dev->is_autochanger()) {
                   Dmsg1(dbglvl, "vol=%s is in changer\n", vol->vol_name);
-                  if (!is_vol_in_autochanger(rctx, vol)) {
+                  if (!is_vol_in_autochanger(rctx, vol) || !vol->dev->autoselect) {
                      continue;
                   }
                } else if (strcmp(device_name, vol->dev->device->hdr.name) != 0) {
@@ -828,7 +828,7 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
    if (dev->can_read()) {
       Mmsg(jcr->errmsg, _("3603 JobId=%u device %s is busy reading.\n"), 
          jcr->JobId, dev->print_name());
-      Dmsg1(dbglvl, "%s", jcr->errmsg);
+      Dmsg1(dbglvl, "Failed: %s", jcr->errmsg);
       queue_reserve_message(jcr);
       goto bail_out;
    }
@@ -837,7 +837,7 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
    if (dev->is_device_unmounted()) {
       Mmsg(jcr->errmsg, _("3604 JobId=%u device %s is BLOCKED due to user unmount.\n"), 
          jcr->JobId, dev->print_name());
-      Dmsg1(dbglvl, "%s", jcr->errmsg);
+      Dmsg1(dbglvl, "Failed: %s", jcr->errmsg);
       queue_reserve_message(jcr);
       goto bail_out;
    }
@@ -875,9 +875,8 @@ static int is_pool_ok(DCR *dcr)
 "3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %s.\n"), 
             (uint32_t)jcr->JobId, dcr->pool_name, dev->pool_name,
             dev->num_reserved(), dev->print_name());
+      Dmsg1(dbglvl, "Failed: %s", jcr->errmsg);
       queue_reserve_message(jcr);
-      Dmsg2(dbglvl, "failed: busy num_writers=0, reserved, pool=%s wanted=%s\n",
-         dev->pool_name, dcr->pool_name);
    }
    return 0;
 }
@@ -898,8 +897,8 @@ static bool is_max_jobs_ok(DCR *dcr)
       /* Max Concurrent Jobs depassed or already reserved */
       Mmsg(jcr->errmsg, _("3609 JobId=%u Max concurrent jobs exceeded on drive %s.\n"), 
             (uint32_t)jcr->JobId, dev->print_name());
+      Dmsg1(dbglvl, "Failed: %s", jcr->errmsg);
       queue_reserve_message(jcr);
-      Dmsg1(dbglvl, "reserve dev failed: %s", jcr->errmsg);
       return false;
    }
    if (strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0) {
@@ -910,8 +909,8 @@ static bool is_max_jobs_ok(DCR *dcr)
       /* Max Job Vols depassed or already reserved */
       Mmsg(jcr->errmsg, _("3610 JobId=%u Volume max jobs exceeded on drive %s.\n"), 
             (uint32_t)jcr->JobId, dev->print_name());
-      queue_reserve_message(jcr);
       Dmsg1(dbglvl, "reserve dev failed: %s", jcr->errmsg);
+      queue_reserve_message(jcr);
       return false;                /* wait */
    }
    return true;
@@ -960,9 +959,9 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
          } else {
             Dmsg1(dbglvl, "not low use num_writers=%d\n", dev->num_writers+dev->num_reserved());
          }
-         Dmsg0(dbglvl, "failed: !prefMnt && busy.\n");
          Mmsg(jcr->errmsg, _("3605 JobId=%u wants free drive but device %s is busy.\n"), 
             jcr->JobId, dev->print_name());
+         Dmsg1(dbglvl, "Failed: %s", jcr->errmsg);
          queue_reserve_message(jcr);
          return 0;
       }
@@ -971,8 +970,8 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
       if (rctx.PreferMountedVols && !dev->vol && dev->is_tape()) {
          Mmsg(jcr->errmsg, _("3606 JobId=%u prefers mounted drives, but drive %s has no Volume.\n"), 
             jcr->JobId, dev->print_name());
+         Dmsg1(dbglvl, "Failed: %s", jcr->errmsg);
          queue_reserve_message(jcr);
-         Dmsg0(dbglvl, "failed: want mounted -- no vol\n");
          return 0;                 /* No volume mounted */
       }
 
@@ -1056,7 +1055,7 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
    Mmsg(jcr->errmsg, _("3911 JobId=%u failed reserve drive %s.\n"), 
          jcr->JobId, dev->print_name());
    queue_reserve_message(jcr);
-   Dmsg1(dbglvl, "failed: No reserve %s\n", dev->print_name());
+   Dmsg1(dbglvl, "Failed: No reserve %s\n", dev->print_name());
    return 0;
 }
 

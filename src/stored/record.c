@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -31,8 +31,6 @@
  *
  *              Kern Sibbald, April MMI
  *                added BB02 format October MMII
- *
- *   Version $Id$
  *
  */
 
@@ -93,112 +91,149 @@ const char *FI_to_ascii(char *buf, int fi)
  */
 const char *stream_to_ascii(char *buf, int stream, int fi)
 {
-    if (fi < 0) {
-       sprintf(buf, "%d", stream);
-       return buf;
-    }
-    switch (stream) {
-    case STREAM_UNIX_ATTRIBUTES:
-       return "UATTR";
-    case STREAM_FILE_DATA:
-       return "DATA";
-    case STREAM_WIN32_DATA:
-       return "WIN32-DATA";
-    case STREAM_WIN32_GZIP_DATA:
-       return "WIN32-GZIP";
-    case STREAM_MD5_DIGEST:
-       return "MD5";
-    case STREAM_SHA1_DIGEST:
-       return "SHA1";
-    case STREAM_GZIP_DATA:
-       return "GZIP";
-    case STREAM_UNIX_ATTRIBUTES_EX:
-       return "UNIX-ATTR-EX";
-    case STREAM_SPARSE_DATA:
-       return "SPARSE-DATA";
-    case STREAM_SPARSE_GZIP_DATA:
-       return "SPARSE-GZIP";
-    case STREAM_PROGRAM_NAMES:
-       return "PROG-NAMES";
-    case STREAM_PROGRAM_DATA:
-       return "PROG-DATA";
-    case STREAM_PLUGIN_NAME:
-       return "PLUGIN-NAME";
-    case STREAM_MACOS_FORK_DATA:
-       return "MACOS-RSRC";
-    case STREAM_HFSPLUS_ATTRIBUTES:
-       return "HFSPLUS-ATTR";
-    case STREAM_SHA256_DIGEST:
-       return "SHA256";
-    case STREAM_SHA512_DIGEST:
-       return "SHA512";
-    case STREAM_SIGNED_DIGEST:
-       return "SIGNED-DIGEST";
-    case STREAM_ENCRYPTED_SESSION_DATA:
-       return "ENCRYPTED-SESSION-DATA";
-    case STREAM_ENCRYPTED_FILE_DATA:
-       return "ENCRYPTED-FILE";
-    case STREAM_ENCRYPTED_FILE_GZIP_DATA:
-       return "ENCRYPTED-GZIP";
-    case STREAM_ENCRYPTED_WIN32_DATA:
-       return "ENCRYPTED-WIN32-DATA";
-    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
-       return "ENCRYPTED-WIN32-GZIP";
-    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
-       return "ENCRYPTED-MACOS-RSRC";
-    case -STREAM_UNIX_ATTRIBUTES:
-       return "contUATTR";
-    case -STREAM_FILE_DATA:
-       return "contDATA";
-    case -STREAM_WIN32_DATA:
-       return "contWIN32-DATA";
-    case -STREAM_WIN32_GZIP_DATA:
-       return "contWIN32-GZIP";
-    case -STREAM_MD5_DIGEST:
-       return "contMD5";
-    case -STREAM_SHA1_DIGEST:
-       return "contSHA1";
-    case -STREAM_GZIP_DATA:
-       return "contGZIP";
-    case -STREAM_UNIX_ATTRIBUTES_EX:
-       return "contUNIX-ATTR-EX";
-    case -STREAM_SPARSE_DATA:
-       return "contSPARSE-DATA";
-    case -STREAM_SPARSE_GZIP_DATA:
-       return "contSPARSE-GZIP";
-    case -STREAM_PROGRAM_NAMES:
-       return "contPROG-NAMES";
-    case -STREAM_PROGRAM_DATA:
-       return "contPROG-DATA";
-    case -STREAM_MACOS_FORK_DATA:
-       return "contMACOS-RSRC";
-    case -STREAM_HFSPLUS_ATTRIBUTES:
-       return "contHFSPLUS-ATTR";
-    case -STREAM_SHA256_DIGEST:
-       return "contSHA256";
-    case -STREAM_SHA512_DIGEST:
-       return "contSHA512";
-    case -STREAM_SIGNED_DIGEST:
-       return "contSIGNED-DIGEST";
-    case -STREAM_ENCRYPTED_SESSION_DATA:
-       return "contENCRYPTED-SESSION-DATA";
-    case -STREAM_ENCRYPTED_FILE_DATA:
-       return "contENCRYPTED-FILE";
-    case -STREAM_ENCRYPTED_FILE_GZIP_DATA:
-       return "contENCRYPTED-GZIP";
-    case -STREAM_ENCRYPTED_WIN32_DATA:
-       return "contENCRYPTED-WIN32-DATA";
-    case -STREAM_ENCRYPTED_WIN32_GZIP_DATA:
-       return "contENCRYPTED-WIN32-GZIP";
-    case -STREAM_ENCRYPTED_MACOS_FORK_DATA:
-       return "contENCRYPTED-MACOS-RSRC";
-    case -STREAM_PLUGIN_NAME:
-       return "contPLUGIN-NAME";
 
-    default:
-       sprintf(buf, "%d", stream);
-       return buf;
-    }
+   if (fi < 0) {
+      sprintf(buf, "%d", stream);
+      return buf;
+   }
+   if (stream < 0) {
+      stream = -stream;
+      stream &= STREAMMASK_TYPE;
+      /* Stream was negative => all are continuation items */
+      switch (stream) {
+      case STREAM_UNIX_ATTRIBUTES:
+         return "contUATTR";
+      case STREAM_FILE_DATA:
+         return "contDATA";
+      case STREAM_WIN32_DATA:
+         return "contWIN32-DATA";
+      case STREAM_WIN32_GZIP_DATA:
+         return "contWIN32-GZIP";
+      case STREAM_WIN32_COMPRESSED_DATA:
+         return "contWIN32-COMPRESSED";
+      case STREAM_MD5_DIGEST:
+         return "contMD5";
+      case STREAM_SHA1_DIGEST:
+         return "contSHA1";
+      case STREAM_GZIP_DATA:
+         return "contGZIP";
+      case STREAM_COMPRESSED_DATA:
+         return "contCOMPRESSED";
+      case STREAM_UNIX_ATTRIBUTES_EX:
+         return "contUNIX-ATTR-EX";
+      case STREAM_RESTORE_OBJECT:
+         return "contRESTORE-OBJECT";
+      case STREAM_SPARSE_DATA:
+         return "contSPARSE-DATA";
+      case STREAM_SPARSE_GZIP_DATA:
+         return "contSPARSE-GZIP";
+      case STREAM_SPARSE_COMPRESSED_DATA:
+         return "contSPARSE-COMPRESSED";
+      case STREAM_PROGRAM_NAMES:
+         return "contPROG-NAMES";
+      case STREAM_PROGRAM_DATA:
+         return "contPROG-DATA";
+      case STREAM_MACOS_FORK_DATA:
+         return "contMACOS-RSRC";
+      case STREAM_HFSPLUS_ATTRIBUTES:
+         return "contHFSPLUS-ATTR";
+      case STREAM_SHA256_DIGEST:
+         return "contSHA256";
+      case STREAM_SHA512_DIGEST:
+         return "contSHA512";
+      case STREAM_SIGNED_DIGEST:
+         return "contSIGNED-DIGEST";
+      case STREAM_ENCRYPTED_SESSION_DATA:
+         return "contENCRYPTED-SESSION-DATA";
+      case STREAM_ENCRYPTED_FILE_DATA:
+         return "contENCRYPTED-FILE";
+      case STREAM_ENCRYPTED_FILE_GZIP_DATA:
+         return "contENCRYPTED-GZIP";
+      case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+         return "contENCRYPTED-COMPRESSED";
+      case STREAM_ENCRYPTED_WIN32_DATA:
+         return "contENCRYPTED-WIN32-DATA";
+      case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+         return "contENCRYPTED-WIN32-GZIP";
+      case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
+         return "contENCRYPTED-WIN32-COMPRESSED";
+      case STREAM_ENCRYPTED_MACOS_FORK_DATA:
+         return "contENCRYPTED-MACOS-RSRC";
+      case STREAM_PLUGIN_NAME:
+         return "contPLUGIN-NAME";
+
+      default:
+         sprintf(buf, "%d", -stream);
+         return buf;
+      }
+   }
+
+   switch (stream & STREAMMASK_TYPE) {
+   case STREAM_UNIX_ATTRIBUTES:
+      return "UATTR";
+   case STREAM_FILE_DATA:
+      return "DATA";
+   case STREAM_WIN32_DATA:
+      return "WIN32-DATA";
+   case STREAM_WIN32_GZIP_DATA:
+      return "WIN32-GZIP";
+   case STREAM_WIN32_COMPRESSED_DATA:
+      return "WIN32-COMPRESSED";
+   case STREAM_MD5_DIGEST:
+      return "MD5";
+   case STREAM_SHA1_DIGEST:
+      return "SHA1";
+   case STREAM_GZIP_DATA:
+      return "GZIP";
+   case STREAM_COMPRESSED_DATA:
+      return "COMPRESSED";
+   case STREAM_UNIX_ATTRIBUTES_EX:
+      return "UNIX-ATTR-EX";
+   case STREAM_RESTORE_OBJECT:
+      return "RESTORE-OBJECT";
+   case STREAM_SPARSE_DATA:
+      return "SPARSE-DATA";
+   case STREAM_SPARSE_GZIP_DATA:
+      return "SPARSE-GZIP";
+   case STREAM_SPARSE_COMPRESSED_DATA:
+      return "SPARSE-COMPRESSED";
+   case STREAM_PROGRAM_NAMES:
+      return "PROG-NAMES";
+   case STREAM_PROGRAM_DATA:
+      return "PROG-DATA";
+   case STREAM_PLUGIN_NAME:
+      return "PLUGIN-NAME";
+   case STREAM_MACOS_FORK_DATA:
+      return "MACOS-RSRC";
+   case STREAM_HFSPLUS_ATTRIBUTES:
+      return "HFSPLUS-ATTR";
+   case STREAM_SHA256_DIGEST:
+      return "SHA256";
+   case STREAM_SHA512_DIGEST:
+      return "SHA512";
+   case STREAM_SIGNED_DIGEST:
+      return "SIGNED-DIGEST";
+   case STREAM_ENCRYPTED_SESSION_DATA:
+      return "ENCRYPTED-SESSION-DATA";
+   case STREAM_ENCRYPTED_FILE_DATA:
+      return "ENCRYPTED-FILE";
+   case STREAM_ENCRYPTED_FILE_GZIP_DATA:
+      return "ENCRYPTED-GZIP";
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+      return "ENCRYPTED-COMPRESSED";
+   case STREAM_ENCRYPTED_WIN32_DATA:
+      return "ENCRYPTED-WIN32-DATA";
+   case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+      return "ENCRYPTED-WIN32-GZIP";
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
+      return "ENCRYPTED-WIN32-COMPRESSED";
+   case STREAM_ENCRYPTED_MACOS_FORK_DATA:
+      return "ENCRYPTED-MACOS-RSRC";
+
+      default:
+         sprintf(buf, "%d", stream);
+         return buf;
+      }
 }
 
 /*
@@ -518,8 +553,10 @@ bool read_record_from_block(DCR *dcr, DEV_BLOCK *block, DEV_RECORD *rec)
             return false;             /* This is from some other Session */
          }
          rec->Stream = -Stream;       /* set correct Stream */
+         rec->maskedStream = rec->Stream & STREAMMASK_TYPE;
       } else {                        /* Regular record */
          rec->Stream = Stream;
+         rec->maskedStream = rec->Stream & STREAMMASK_TYPE;
          rec->data_len = 0;           /* transfer to beginning of data */
       }
       rec->VolSessionId = VolSessionId;

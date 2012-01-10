@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -38,7 +38,7 @@
 #include "run/run.h"
 #include "util/fmtwidgetitem.h"
 
-MediaView::MediaView()
+MediaView::MediaView() : Pages()
 {
    setupUi(this);
    m_name = tr("Media");
@@ -324,7 +324,7 @@ void MediaView::populateTable()
 
       foreach (resultline, results) { // should have only one result
          int index = 0;
-         QString VolBytes, MediaType, LastWritten, VolStatus;
+         QString Slot, VolBytes, MediaType, LastWritten, VolStatus;
          fieldlist = resultline.split("\t");
          if (fieldlist.size() != 10) {
             continue;
@@ -337,7 +337,9 @@ void MediaView::populateTable()
          
          /* Online */
          mediaitem.setInChanger(index++, fld.next());
-         fld.next();            // Slot
+
+         Slot = fld.next();            // Slot
+         mediaitem.setTextFld(index++, Slot);
 
          MediaType = fld.next();
          VolStatus = fld.next();

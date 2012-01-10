@@ -3,12 +3,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -17,7 +17,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -28,8 +28,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id$
- *
  *   Dirk Bartley, March 2007
  */
 
@@ -55,15 +53,15 @@ class Console;
 class Pages : public QWidget
 {
 public:
+   /* methods */
    Pages();
    void dockPage();
    void undockPage();
+   void hidePage();
    void togglePageDocking();
    bool isDocked();
    bool isOnceDocked();
    bool isCloseable();
-   QTabWidget *m_parent;
-   QList<QAction*> m_contextActions;
    virtual void PgSeltreeWidgetClicked();
    virtual void currentStackItem();
    void closeStackPage();
@@ -78,12 +76,19 @@ public:
    QString &name() { return m_name; };
    void getVolumeList(QStringList &);
    void getStatusList(QStringList &);
+   void firstUseDock();
+
+   /* members */
+   QTabWidget *m_parent;
+   QList<QAction*> m_contextActions;
+
 
 public slots:
    /* closeEvent is a virtual function inherited from QWidget */
    virtual void closeEvent(QCloseEvent* event);
 
 protected:
+   /* methods */
    void pgInitialize();
    void pgInitialize(const QString &);
    void pgInitialize(const QString &, QTreeWidgetItem *);
@@ -91,9 +96,12 @@ protected:
    virtual void changeEvent(QEvent *event);
    void setConsoleCurrent();
    void setTitle();
+
+   /* members */
    bool m_closeable;
    bool m_docked;
    bool m_onceDocked;
+   bool m_dockOnFirstUse;
    Console *m_console;
    QString m_name;
 };

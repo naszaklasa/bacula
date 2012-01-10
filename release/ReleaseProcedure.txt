@@ -1,0 +1,64 @@
+
+These are the steps to complete for making a new release.
+
+1. Ensure that the previous release had a tag pushed. If
+   not create one at the prior release point and push it
+   to the repos.
+
+2. Update the ChangeLog using release/git2changelog.pl Release-5.2.x..HEAD >1
+
+3. Edit 1 into ChangeLog ensuring to mark the previous release
+   Version number prior to adding the new ChangeLog output.
+
+4. Edit the ReleaseNotes. Be sure not to change anything in the
+   prior version (typos are OK).  This sometimes means duplicating
+   text, but it is far better to have a complete history.
+   Terminate the previous release with a line of all =====,
+   and ensure that the previous release version is properly
+   defined.  Then add the new release section.  Point out
+   the need to review prior releases if changing major versions.
+
+5. Update the version and date.
+
+6. Update the po files (cd po; make update-po).  Correct any
+   problems and re-run until correct.
+
+7. Update the docs. Make sure they have the correct date, and
+   that the new docs are uploaded to bacula.org
+
+8. Make sure everything is pushed including the docs.
+
+9. Diff the prior version against the current one:
+    git diff Release-5.2.1..HEAD >diff (where 5.2.1 is the prior)
+   and check for debug messages that have level zero, new text
+   in non-debug messages that is not setup for translation.
+
+10. Run a full regression test (./nightly-all) on as many
+   platforms as possible.
+
+11. Check the CDash Bacula output pages to make sure there are
+    no overlooked problems.
+
+12. Cut the release (i.e. make the .tar.gz files) by copying
+   the release directory out of the build tree, ensuring that
+   your config file is properly set, and that your signing
+   key is properly setup, and running the ./makeall script.
+
+13. Ensure that the Windows builds were done properly.
+
+14. detar the main bacula source release
+
+15. Run a regression on the detared file (ensures that all files
+    are actually in the tar and that it is not corrupt).
+
+16. push the tags (once pushed they can be corrected but it is more
+    complicated than simply re-running the ./makeall script)
+
+17. Upload the release files to Source Forge.
+
+18. Update the release version and date on the main bacula.org page
+
+19. Update the news item to announce the release.
+
+20. Send the release announcement to the users, devel, and announce 
+    mailing lists.

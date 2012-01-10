@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -291,6 +291,24 @@ JOB *select_job_resource(UAContext *ua)
    }
    job = (JOB *)GetResWithName(R_JOB, name);
    return job;
+}
+
+/* 
+ * Select a Restore Job resource from argument or prompt
+ */
+JOB *get_restore_job(UAContext *ua)
+{
+   JOB *job;
+   int i = find_arg_with_value(ua, "restore_job");
+   if (i >= 0 && acl_access_ok(ua, Job_ACL, ua->argv[i])) {
+      job = (JOB *)GetResWithName(R_JOB, ua->argv[i]);
+      if (job && job->JobType == JT_RESTORE) {
+         return job;
+      }
+      ua->error_msg(_("Error: Restore Job resource \"%s\" does not exist.\n"),
+                    ua->argv[i]);
+   }
+   return select_restore_job_resource(ua);
 }
 
 /*
@@ -580,37 +598,53 @@ int select_pool_and_media_dbr(UAContext *ua, POOL_DBR *pr, MEDIA_DBR *mr)
 int select_media_dbr(UAContext *ua, MEDIA_DBR *mr)
 {
    int i;
+   int ret = 0;
+   POOLMEM *err = get_pool_memory(PM_FNAME);
+   *err=0;
 
    memset(mr, 0, sizeof(MEDIA_DBR));
 
    i = find_arg_with_value(ua, "volume");
    if (i >= 0) {
-      bstrncpy(mr->VolumeName, ua->argv[i], sizeof(mr->VolumeName));
+      if (is_name_valid(ua->argv[i], &err)) {
+         bstrncpy(mr->VolumeName, ua->argv[i], sizeof(mr->VolumeName));
+      } else {
+         goto bail_out;
+      }
    }
    if (mr->VolumeName[0] == 0) {
       POOL_DBR pr;
       memset(&pr, 0, sizeof(pr));
       /* Get the pool from pool=<pool-name> */
       if (!get_pool_dbr(ua, &pr)) {
-         return 0;
+         goto bail_out;
       }
       mr->PoolId = pr.PoolId;
       db_list_media_records(ua->jcr, ua->db, mr, prtit, ua, HORZ_LIST);
       if (!get_cmd(ua, _("Enter *MediaId or Volume name: "))) {
-         return 0;
+         goto bail_out;
       }
       if (ua->cmd[0] == '*' && is_a_number(ua->cmd+1)) {
          mr->MediaId = str_to_int64(ua->cmd+1);
-      } else {
+      } else if (is_name_valid(ua->cmd, &err)) {
          bstrncpy(mr->VolumeName, ua->cmd, sizeof(mr->VolumeName));
+      } else {
+         goto bail_out;
       }
    }
 
    if (!db_get_media_record(ua->jcr, ua->db, mr)) {
-      ua->error_msg("%s", db_strerror(ua->db));
-      return 0;
+      pm_strcpy(err, db_strerror(ua->db));
+      goto bail_out;
    }
-   return 1;
+   ret = 1;
+
+bail_out:
+   if (!ret && *err) {
+      ua->error_msg("%s", err);
+   }
+   free_pool_memory(err);
+   return ret;
 }
 
 
@@ -1045,10 +1079,136 @@ bool get_level_from_name(JCR *jcr, const char *level_name)
    bool found = false;
    for (int i=0; joblevels[i].level_name; i++) {
       if (strcasecmp(level_name, joblevels[i].level_name) == 0) {
-         jcr->set_JobLevel(joblevels[i].level);
+         jcr->setJobLevel(joblevels[i].level);
          found = true;
          break;
       }
    }
    return found;
+}
+
+/* Get a running job
+ * "reason" is used in user messages
+ * can be: cancel, limit, ...
+ *  Returns: NULL on error
+ *           JCR on success (should be free_jcr() after)
+ */
+JCR *select_running_job(UAContext *ua, const char *reason)
+{
+   int i;
+   int njobs = 0;
+   JCR *jcr = NULL;
+   char JobName[MAX_NAME_LENGTH];
+   char temp[256];
+
+   for (i=1; i<ua->argc; i++) {
+      if (strcasecmp(ua->argk[i], NT_("jobid")) == 0) {
+         uint32_t JobId;
+         JobId = str_to_int64(ua->argv[i]);
+         if (!JobId) {
+            break;
+         }
+         if (!(jcr=get_jcr_by_id(JobId))) {
+            ua->error_msg(_("JobId %s is not running. Use Job name to %s inactive jobs.\n"),  ua->argv[i], _(reason));
+            return NULL;
+         }
+         break;
+      } else if (strcasecmp(ua->argk[i], NT_("job")) == 0) {
+         if (!ua->argv[i]) {
+            break;
+         }
+         if (!(jcr=get_jcr_by_partial_name(ua->argv[i]))) {
+            ua->warning_msg(_("Warning Job %s is not running. Continuing anyway ...\n"), ua->argv[i]);
+            jcr = new_jcr(sizeof(JCR), dird_free_jcr);
+            bstrncpy(jcr->Job, ua->argv[i], sizeof(jcr->Job));
+         }
+         break;
+      } else if (strcasecmp(ua->argk[i], NT_("ujobid")) == 0) {
+         if (!ua->argv[i]) {
+            break;
+         }
+         if (!(jcr=get_jcr_by_full_name(ua->argv[i]))) {
+            ua->warning_msg(_("Warning Job %s is not running. Continuing anyway ...\n"), ua->argv[i]);
+            jcr = new_jcr(sizeof(JCR), dird_free_jcr);
+            bstrncpy(jcr->Job, ua->argv[i], sizeof(jcr->Job));
+         }
+         break;
+      }
+
+   }
+   if (jcr) {
+      if (jcr->job && !acl_access_ok(ua, Job_ACL, jcr->job->name())) {
+         ua->error_msg(_("Unauthorized command from this console.\n"));
+         return NULL;
+      }
+   } else {
+     /*
+      * If we still do not have a jcr,
+      *   throw up a list and ask the user to select one.
+      */
+      char buf[1000];
+      int tjobs = 0;                  /* total # number jobs */
+      /* Count Jobs running */
+      foreach_jcr(jcr) {
+         if (jcr->JobId == 0) {      /* this is us */
+            continue;
+         }
+         tjobs++;                    /* count of all jobs */
+         if (!acl_access_ok(ua, Job_ACL, jcr->job->name())) {
+            continue;               /* skip not authorized */
+         }
+         njobs++;                   /* count of authorized jobs */
+      }
+      endeach_jcr(jcr);
+
+      if (njobs == 0) {            /* no authorized */
+         if (tjobs == 0) {
+            ua->send_msg(_("No Jobs running.\n"));
+         } else {
+            ua->send_msg(_("None of your jobs are running.\n"));
+         }
+         return NULL;
+      }
+
+      start_prompt(ua, _("Select Job:\n"));
+      foreach_jcr(jcr) {
+         char ed1[50];
+         if (jcr->JobId == 0) {      /* this is us */
+            continue;
+         }
+         if (!acl_access_ok(ua, Job_ACL, jcr->job->name())) {
+            continue;               /* skip not authorized */
+         }
+         bsnprintf(buf, sizeof(buf), _("JobId=%s Job=%s"), edit_int64(jcr->JobId, ed1), jcr->Job);
+         add_prompt(ua, buf);
+      }
+      endeach_jcr(jcr);
+      bsnprintf(temp, sizeof(temp), _("Choose Job to %s"), _(reason));
+      if (do_prompt(ua, _("Job"),  temp, buf, sizeof(buf)) < 0) {
+         return NULL;
+      }
+      if (!strcmp(reason, "cancel")) {
+         if (ua->api && njobs == 1) {
+            char nbuf[1000];
+            bsnprintf(nbuf, sizeof(nbuf), _("Cancel: %s\n\n%s"), buf,  
+                      _("Confirm cancel?"));
+            if (!get_yesno(ua, nbuf) || ua->pint32_val == 0) {
+               return NULL;
+            }
+         } else {
+            if (njobs == 1) {
+               if (!get_yesno(ua, _("Confirm cancel (yes/no): ")) || ua->pint32_val == 0) {
+                  return NULL;
+               }
+            }
+         }
+      }
+      sscanf(buf, "JobId=%d Job=%127s", &njobs, JobName);
+      jcr = get_jcr_by_full_name(JobName);
+      if (!jcr) {
+         ua->warning_msg(_("Job \"%s\" not found.\n"), JobName);
+         return NULL;
+      }
+   }
+   return jcr;
 }

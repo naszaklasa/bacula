@@ -7471,7 +7471,7 @@ msgid "Authors: Kern Sibbald and John Walker"
 msgstr ""
 
 #: src/gnome2-console/interface.c:458
-msgid "It comes by night and sucks the essence from your computers"
+msgid "The Leading Open Source Backup Solution."
 msgstr ""
 
 #: src/gnome2-console/interface.c:523 src/gnome2-console/interface.c:540

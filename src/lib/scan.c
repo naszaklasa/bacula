@@ -1,19 +1,12 @@
 /*
- *   scan.c -- scanning routines for Bacula
- *
- *    Kern Sibbald, MM  separated from util.c MMIII
- *
- *   Version $Id$
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -22,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -32,16 +25,24 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-
+/*
+ *   scan.c -- scanning routines for Bacula
+ *
+ *    Kern Sibbald, MM  separated from util.c MMIII
+ *
+ */
 
 #include "bacula.h"
 #include "jcr.h"
 #include "findlib/find.h"
 
-/* Strip leading space from command line arguments */
+/*
+ * Strip leading space from command line arguments
+ */
 void strip_leading_space(char *str)
 {
    char *p = str;
+
    while (B_ISSPACE(*p)) {
       p++;
    }
@@ -50,37 +51,49 @@ void strip_leading_space(char *str)
    }
 }
 
-
-/* Strip any trailing junk from the command */
+/*
+ * Strip any trailing junk from the command
+ */
 void strip_trailing_junk(char *cmd)
 {
    char *p;
-   p = cmd + strlen(cmd) - 1;
 
-   /* strip trailing junk from command */
-   while ((p >= cmd) && (*p == '\n' || *p == '\r' || *p == ' '))
+   /*
+    * Strip trailing junk from command
+    */
+   p = cmd + strlen(cmd) - 1;
+   while ((p >= cmd) && (*p == '\n' || *p == '\r' || *p == ' ')) {
       *p-- = 0;
+   }
 }
 
-/* Strip any trailing newline characters from the string */
+/*
+ * Strip any trailing newline characters from the string
+ */
 void strip_trailing_newline(char *cmd)
 {
    char *p;
-   p = cmd + strlen(cmd) - 1;
 
-   while ((p >= cmd) && (*p == '\n' || *p == '\r'))
+   p = cmd + strlen(cmd) - 1;
+   while ((p >= cmd) && (*p == '\n' || *p == '\r')) {
       *p-- = 0;
+   }
 }
 
-/* Strip any trailing slashes from a directory path */
+/*
+ * Strip any trailing slashes from a directory path
+ */
 void strip_trailing_slashes(char *dir)
 {
    char *p;
-   p = dir + strlen(dir) - 1;
 
-   /* strip trailing slashes */
-   while (p >= dir && IsPathSeparator(*p))
+   /*
+    * Strip trailing slashes
+    */
+   p = dir + strlen(dir) - 1;
+   while (p >= dir && IsPathSeparator(*p)) {
       *p-- = 0;
+   }
 }
 
 /*
@@ -122,9 +135,10 @@ bool skip_nonspaces(char **msg)
    return *p ? true : false;
 }
 
-/* folded search for string - case insensitive */
-int
-fstrsch(const char *a, const char *b)   /* folded case search */
+/*
+ * Folded search for string - case insensitive
+ */
+int fstrsch(const char *a, const char *b)   /* folded case search */
 {
    const char *s1,*s2;
    char c1, c2;
@@ -150,7 +164,6 @@ fstrsch(const char *a, const char *b)   /* folded case search */
    }
    return 1;
 }
-
 
 /*
  * Return next argument from command line.  Note, this
@@ -279,7 +292,9 @@ int parse_args_only(POOLMEM *cmd, POOLMEM **args, int *argc,
    strip_trailing_junk(*args);
    p = *args;
    *argc = 0;
-   /* Pick up all arguments */
+   /*
+    * Pick up all arguments
+    */
    while (*argc < max_args) {
       n = next_arg(&p);
       if (*n) {
@@ -292,14 +307,13 @@ int parse_args_only(POOLMEM *cmd, POOLMEM **args, int *argc,
    return 1;
 }
 
-
 /*
  * Given a full filename, split it into its path
  *  and filename parts. They are returned in pool memory
  *  in the arguments provided.
  */
 void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
-        POOLMEM **file, int *fnl)
+                             POOLMEM **file, int *fnl)
 {
    const char *f;
    int slen;
@@ -361,6 +375,7 @@ int bsscanf(const char *buf, const char *fmt, ...)
    int max_len = BIG;
    uint64_t value;
    bool error = false;
+   bool negative;
 
    va_start(ap, fmt);
    while (*fmt && !error) {
@@ -371,7 +386,6 @@ int bsscanf(const char *buf, const char *fmt, ...)
 switch_top:
          switch (*fmt++) {
          case 'u':
-         case 'd':
             value = 0;
             while (B_ISDIGIT(*buf)) {
                value = B_TIMES10(value) + *buf++ - '0';
@@ -385,6 +399,34 @@ switch_top:
 //             Dmsg0(000, "Store 32 bit int\n");
             } else {
                *((uint64_t *)vp) = (uint64_t)value;
+//             Dmsg0(000, "Store 64 bit int\n");
+            }
+            count++;
+            l = 0;
+            break;
+         case 'd':
+            value = 0;
+            if (*buf == '-') {
+               negative = true;
+               buf++;
+            } else {
+               negative = false;
+            }
+            while (B_ISDIGIT(*buf)) {
+               value = B_TIMES10(value) + *buf++ - '0';
+            }
+            if (negative) {
+               value = -value;
+            }
+            vp = (void *)va_arg(ap, void *);
+//          Dmsg2(000, "val=%lld at 0x%lx\n", value, (long unsigned)vp);
+            if (l == 0) {
+               *((int *)vp) = (int)value;
+            } else if (l == 1) {
+               *((int32_t *)vp) = (int32_t)value;
+//             Dmsg0(000, "Store 32 bit int\n");
+            } else {
+               *((int64_t *)vp) = (int64_t)value;
 //             Dmsg0(000, "Store 64 bit int\n");
             }
             count++;

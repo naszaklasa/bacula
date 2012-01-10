@@ -9,13 +9,13 @@
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
 ### BEGIN INIT INFO
-# Provides:          bacula-sd
+# Provides:	     bacula-sd
 # Required-Start:    $network
 # Required-Stop:     $network
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Start @BACULA@ Storage daemon at boot time
-# Description:       Enable @BACULA@ Storage daemon.
+# Description:	     Enable @BACULA@ Storage daemon.
 ### END INIT INFO
 
 
@@ -35,24 +35,30 @@ if [ -n "`getent services ${NAME}`" ]; then
    BPORT=`getent services ${NAME} | awk '{ gsub("/tcp","",$2); print $2; }'`
 fi
 
+if [ -f /etc/default/$NAME ]; then
+   . /etc/default/$NAME
+fi
+
 PIDFILE=@piddir@/${NAME}.${BPORT}.pid
 
 if [ "x${BUSER}" != "x" ]; then
-   BOPTIONS="${BOPTIONS} -u ${BUSER}"
-fi
-if [ "x${BGROUP}" != "x" ]; then
-   BOPTIONS="${BOPTIONS} -g ${BGROUP}"
+   USERGRP="--chuid ${BUSER}"
+   if [ "x${BGROUP}" != "x" ]; then
+      USERGRP="${USERGRP}:${BGROUP}"
+   fi
 fi
 
 case "$1" in
    start)
       echo -n "Starting ${DESC}: "
-      start-stop-daemon --start --quiet --pidfile ${PIDFILE} --exec ${DAEMON} -- ${BOPTIONS}
+      start-stop-daemon --start --quiet --pidfile ${PIDFILE} ${USERGRP} --exec ${DAEMON} -- ${BOPTIONS}
+      RETVAL=$?
       echo "${NAME}"
       ;;
    stop)
       echo -n "Stopping ${DESC}: "
-      start-stop-daemon --oknodo --stop --quiet --exec ${DAEMON} -- ${BOPTIONS}
+      start-stop-daemon --oknodo --stop --quiet ${USERGRP}  --exec ${DAEMON} -- ${BOPTIONS}
+      RETVAL=$?
       echo "${NAME}"
       ;;
    restart|force-reload)
@@ -65,4 +71,4 @@ case "$1" in
       exit 1
       ;;
 esac
-exit 0
+exit $RETVAL

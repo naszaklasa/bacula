@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -34,6 +34,7 @@
 
 #include "bacula.h"
 #include "filed.h"
+#include "ch.h"
 #include "restore.h"
 
 #ifdef HAVE_DARWIN_OS
@@ -81,6 +82,12 @@ const bool have_libz = true;
 #else
 const bool have_libz = false;
 #endif
+#ifdef HAVE_LZO
+const bool have_lzo = true;
+#else
+const bool have_lzo = false;
+#endif
+
 
 static void deallocate_cipher(r_ctx &rctx);
 static void deallocate_fork_cipher(r_ctx &rctx);
@@ -90,8 +97,8 @@ static void close_previous_stream(r_ctx &rctx);
 
 static bool verify_signature(JCR *jcr, r_ctx &rctx);
 int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
-                     uint64_t *addr, int flags, RESTORE_CIPHER_CTX *cipher_ctx);
-bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags, 
+                     uint64_t *addr, int flags, int32_t stream, RESTORE_CIPHER_CTX *cipher_ctx);
+bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags, int32_t stream,
                   RESTORE_CIPHER_CTX *cipher_ctx);
 
 /*
@@ -106,7 +113,7 @@ static int bclose_chksize(JCR *jcr, BFILE *bfd, boffset_t osize)
    fsize = blseek(bfd, 0, SEEK_CUR);
    bclose(bfd);
    if (fsize > 0 && fsize != osize) {
-      Qmsg3(jcr, M_ERROR, 0, _("Size of data or stream of %s not correct. Original %s, restored %s.\n"),
+      Qmsg3(jcr, M_WARNING, 0, _("Size of data or stream of %s not correct. Original %s, restored %s.\n"),
             jcr->last_fname, edit_uint64(osize, ec1),
             edit_uint64(fsize, ec2));
       return -1;
@@ -126,12 +133,12 @@ bool restore_finderinfo(JCR *jcr, POOLMEM *buf, int32_t buflen)
    Dmsg0(130, "Restoring Finder Info\n");
    jcr->ff->flags |= FO_HFSPLUS;
    if (buflen != 32) {
-      Jmsg(jcr, M_ERROR, 0, _("Invalid length of Finder Info (got %d, not 32)\n"), buflen);
+      Jmsg(jcr, M_WARNING, 0, _("Invalid length of Finder Info (got %d, not 32)\n"), buflen);
       return false;
    }
 
    if (setattrlist(jcr->last_fname, &attrList, buf, buflen, 0) != 0) {
-      Jmsg(jcr, M_ERROR, 0, _("Could not set Finder Info on %s\n"), jcr->last_fname);
+      Jmsg(jcr, M_WARNING, 0, _("Could not set Finder Info on %s\n"), jcr->last_fname);
       return false;
    }
 
@@ -155,7 +162,7 @@ void do_restore(JCR *jcr)
    char ec1[50];                      /* Buffer printing huge values */
    uint32_t buf_size;                 /* client buffer size */
    int stat;
-   intmax_t rsrc_len = 0;             /* Original length of resource fork */
+   int64_t rsrc_len = 0;              /* Original length of resource fork */
    r_ctx rctx;
    ATTR *attr;
    /* ***FIXME*** make configurable */
@@ -177,7 +184,7 @@ void do_restore(JCR *jcr)
    int non_support_xattr = 0;
 
    sd = jcr->store_bsock;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    LockRes();
    CLIENT *client = (CLIENT *)GetNextRes(R_CLIENT, NULL);
@@ -188,7 +195,7 @@ void do_restore(JCR *jcr)
       buf_size = 0;                   /* use default */
    }
    if (!bnet_set_buffer_size(sd, buf_size, BNET_SETBUF_WRITE)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       return;
    }
    jcr->buf_size = sd->msglen;
@@ -197,11 +204,19 @@ void do_restore(JCR *jcr)
     * St Bernard code goes here if implemented -- see end of file
     */
 
-   if (have_libz) {
+   /* use the same buffer size to decompress both gzip and lzo */
+   if (have_libz || have_lzo) {
       uint32_t compress_buf_size = jcr->buf_size + 12 + ((jcr->buf_size+999) / 1000) + 100;
       jcr->compress_buf = get_memory(compress_buf_size);
       jcr->compress_buf_size = compress_buf_size;
    }
+
+#ifdef HAVE_LZO
+   if (lzo_init() != LZO_E_OK) {
+      Jmsg(jcr, M_FATAL, 0, _("LZO init failed\n"));
+      goto bail_out;
+   }
+#endif
 
    if (have_crypto) {
       rctx.cipher_ctx.buf = get_memory(CRYPTO_CIPHER_MAX_BLOCK_SIZE);
@@ -263,11 +278,13 @@ void do_restore(JCR *jcr)
        * First we expect a Stream Record Header
        */
       if (sscanf(sd->msg, rec_header, &VolSessionId, &VolSessionTime, &file_index,
-          &rctx.stream, &rctx.size) != 5) {
+          &rctx.full_stream, &rctx.size) != 5) {
          Jmsg1(jcr, M_FATAL, 0, _("Record header scan error: %s\n"), sd->msg);
          goto bail_out;
       }
-      Dmsg5(50, "Got hdr: Files=%d FilInx=%d size=%d Stream=%d, %s.\n", 
+      /* Strip off new stream high bits */
+      rctx.stream = rctx.full_stream & STREAMMASK_TYPE;
+      Dmsg5(150, "Got hdr: Files=%d FilInx=%d size=%d Stream=%d, %s.\n", 
             jcr->JobFiles, file_index, rctx.size, rctx.stream, stream_to_ascii(rctx.stream));
 
       /*
@@ -319,31 +336,32 @@ void do_restore(JCR *jcr)
          if (rctx.type == FT_DELETED) { /* deleted file */
             continue;
          }
+         /*
+          * Restore objects should be ignored here -- they are
+          * returned at the beginning of the restore. 
+          */
+         if (rctx.type == FT_RESTORE_FIRST) {
+            continue;
+         }
 
          /*
           * Unpack attributes and do sanity check them
           */
-         if (!unpack_attributes_record(jcr, rctx.stream, sd->msg, attr)) {
+         if (!unpack_attributes_record(jcr, rctx.stream, sd->msg, sd->msglen, attr)) {
             goto bail_out;
          }
-#ifdef xxx
-         if (file_index != attr->file_index) {
-            Jmsg(jcr, M_FATAL, 0, _("Record header file index %ld not equal record index %ld\n"),
-                 file_index, attr->file_index);
-            Dmsg0(200, "File index error\n");
-            goto bail_out;
-         }
-#endif
 
-         Dmsg3(200, "File %s\nattrib=%s\nattribsEx=%s\n", attr->fname,
+         Dmsg3(100, "File %s\nattrib=%s\nattribsEx=%s\n", attr->fname,
                attr->attr, attr->attrEx);
+         Dmsg3(100, "=== msglen=%d attrExlen=%d msg=%s\n", sd->msglen,
+               strlen(attr->attrEx), sd->msg);
 
-         attr->data_stream = decode_stat(attr->attr, &attr->statp, &attr->LinkFI);
+         attr->data_stream = decode_stat(attr->attr, &attr->statp, sizeof(attr->statp), &attr->LinkFI);
 
          if (!is_restore_stream_supported(attr->data_stream)) {
             if (!non_support_data++) {
-               Jmsg(jcr, M_ERROR, 0, _("%s stream not supported on this Client.\n"),
-                  stream_to_ascii(attr->data_stream));
+               Jmsg(jcr, M_WARNING, 0, _("%s stream not supported on this Client.\n"),
+                    stream_to_ascii(attr->data_stream));
             }
             continue;
          }
@@ -496,10 +514,15 @@ void do_restore(JCR *jcr)
       case STREAM_GZIP_DATA:
       case STREAM_SPARSE_GZIP_DATA:
       case STREAM_WIN32_GZIP_DATA:
+      case STREAM_COMPRESSED_DATA:
+      case STREAM_SPARSE_COMPRESSED_DATA:
+      case STREAM_WIN32_COMPRESSED_DATA:
       case STREAM_ENCRYPTED_FILE_DATA:
       case STREAM_ENCRYPTED_WIN32_DATA:
       case STREAM_ENCRYPTED_FILE_GZIP_DATA:
       case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+      case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
+      case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
          /*
           * Force an expected, consistent stream type here
           */
@@ -509,8 +532,9 @@ void do_restore(JCR *jcr)
                          || rctx.prev_stream == STREAM_ENCRYPTED_SESSION_DATA)) {
             rctx.flags = 0;
 
-            if (rctx.stream == STREAM_SPARSE_DATA || 
-                rctx.stream == STREAM_SPARSE_GZIP_DATA) {
+            if (rctx.stream == STREAM_SPARSE_DATA
+                  || rctx.stream == STREAM_SPARSE_COMPRESSED_DATA
+                  || rctx.stream == STREAM_SPARSE_GZIP_DATA) {
                rctx.flags |= FO_SPARSE;
             }
 
@@ -518,13 +542,21 @@ void do_restore(JCR *jcr)
                   || rctx.stream == STREAM_SPARSE_GZIP_DATA
                   || rctx.stream == STREAM_WIN32_GZIP_DATA
                   || rctx.stream == STREAM_ENCRYPTED_FILE_GZIP_DATA
+                  || rctx.stream == STREAM_COMPRESSED_DATA
+                  || rctx.stream == STREAM_SPARSE_COMPRESSED_DATA
+                  || rctx.stream == STREAM_WIN32_COMPRESSED_DATA
+                  || rctx.stream == STREAM_ENCRYPTED_FILE_COMPRESSED_DATA
+                  || rctx.stream == STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA
                   || rctx.stream == STREAM_ENCRYPTED_WIN32_GZIP_DATA) {
-               rctx.flags |= FO_GZIP;
+               rctx.flags |= FO_COMPRESS;
+               rctx.comp_stream = rctx.stream;
             }
 
             if (rctx.stream == STREAM_ENCRYPTED_FILE_DATA
                   || rctx.stream == STREAM_ENCRYPTED_FILE_GZIP_DATA
                   || rctx.stream == STREAM_ENCRYPTED_WIN32_DATA
+                  || rctx.stream == STREAM_ENCRYPTED_FILE_COMPRESSED_DATA
+                  || rctx.stream == STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA
                   || rctx.stream == STREAM_ENCRYPTED_WIN32_GZIP_DATA) {               
                /*
                 * Set up a decryption context
@@ -558,7 +590,7 @@ void do_restore(JCR *jcr)
             }
 
             if (extract_data(jcr, &rctx.bfd, sd->msg, sd->msglen, &rctx.fileAddr,
-                             rctx.flags, &rctx.cipher_ctx) < 0) {
+                             rctx.flags, rctx.stream, &rctx.cipher_ctx) < 0) {
                rctx.extract = false;
                bclose(&rctx.bfd);
                continue;
@@ -603,7 +635,7 @@ void do_restore(JCR *jcr)
             if (rctx.extract) {
                if (rctx.prev_stream != rctx.stream) {
                   if (bopen_rsrc(&rctx.forkbfd, jcr->last_fname, O_WRONLY | O_TRUNC | O_BINARY, 0) < 0) {
-                     Jmsg(jcr, M_ERROR, 0, _("Cannot open resource fork for %s.\n"), jcr->last_fname);
+                     Jmsg(jcr, M_WARNING, 0, _("Cannot open resource fork for %s.\n"), jcr->last_fname);
                      rctx.extract = false;
                      continue;
                   }
@@ -613,7 +645,7 @@ void do_restore(JCR *jcr)
                }
 
                if (extract_data(jcr, &rctx.forkbfd, sd->msg, sd->msglen, &rctx.fork_addr, rctx.fork_flags,
-                                &rctx.fork_cipher_ctx) < 0) {
+                                rctx.stream, &rctx.fork_cipher_ctx) < 0) {
                   rctx.extract = false;
                   bclose(&rctx.forkbfd);
                   continue;
@@ -650,6 +682,10 @@ void do_restore(JCR *jcr)
       case STREAM_ACL_TRU64_ACCESS_ACL:
       case STREAM_ACL_SOLARIS_ACLENT:
       case STREAM_ACL_SOLARIS_ACE:
+      case STREAM_ACL_AFS_TEXT:
+      case STREAM_ACL_AIX_AIXC:
+      case STREAM_ACL_AIX_NFS4:
+      case STREAM_ACL_FREEBSD_NFS4_ACL:
          /*
           * Do not restore ACLs when
           * a) The current file is not extracted
@@ -683,6 +719,9 @@ void do_restore(JCR *jcr)
          }
          break;
 
+      case STREAM_XATTR_IRIX:
+      case STREAM_XATTR_TRU64:
+      case STREAM_XATTR_AIX:
       case STREAM_XATTR_OPENBSD:
       case STREAM_XATTR_SOLARIS_SYS:
       case STREAM_XATTR_SOLARIS:
@@ -760,9 +799,12 @@ void do_restore(JCR *jcr)
          plugin_name_stream(jcr, sd->msg);
          break;
 
+      case STREAM_RESTORE_OBJECT:
+         break;                    /* these are sent by Director */
+
       default:
          close_previous_stream(rctx);
-         Jmsg(jcr, M_ERROR, 0, _("Unknown stream=%d ignored. This shouldn't happen!\n"),
+         Jmsg(jcr, M_WARNING, 0, _("Unknown stream=%d ignored. This shouldn't happen!\n"),
               rctx.stream);
          Dmsg2(0, "Unknown stream=%d data=%s\n", rctx.stream, sd->msg);
          break;
@@ -778,11 +820,11 @@ void do_restore(JCR *jcr)
    }
 
    close_previous_stream(rctx);
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
    goto ok_out;
 
 bail_out:
-   set_jcr_job_status(jcr, JS_ErrorTerminated);
+   jcr->setJobStatus(JS_ErrorTerminated);
 
 ok_out:
    /*
@@ -791,15 +833,15 @@ ok_out:
    Dmsg2(10, "End Do Restore. Files=%d Bytes=%s\n", jcr->JobFiles,
       edit_uint64(jcr->JobBytes, ec1));
    if (have_acl && jcr->acl_data->nr_errors > 0) {
-      Jmsg(jcr, M_ERROR, 0, _("Encountered %ld acl errors while doing restore\n"),
+      Jmsg(jcr, M_WARNING, 0, _("Encountered %ld acl errors while doing restore\n"),
            jcr->acl_data->nr_errors);
    }
    if (have_xattr && jcr->xattr_data->nr_errors > 0) {
-      Jmsg(jcr, M_ERROR, 0, _("Encountered %ld xattr errors while doing restore\n"),
+      Jmsg(jcr, M_WARNING, 0, _("Encountered %ld xattr errors while doing restore\n"),
            jcr->xattr_data->nr_errors);
    }
    if (non_support_data > 1 || non_support_attr > 1) {
-      Jmsg(jcr, M_ERROR, 0, _("%d non-supported data streams and %d non-supported attrib streams ignored.\n"),
+      Jmsg(jcr, M_WARNING, 0, _("%d non-supported data streams and %d non-supported attrib streams ignored.\n"),
          non_support_data, non_support_attr);
    }
    if (non_support_rsrc) {
@@ -1048,7 +1090,7 @@ bool sparse_data(JCR *jcr, BFILE *bfd, uint64_t *addr, char **data, uint32_t *le
       unser_declare;
       uint64_t faddr;
       char ec1[50];
-      unser_begin(*data, SPARSE_FADDR_SIZE);
+      unser_begin(*data, OFFSET_FADDR_SIZE);
       unser_uint64(faddr);
       if (*addr != faddr) {
          *addr = faddr;
@@ -1060,49 +1102,117 @@ bool sparse_data(JCR *jcr, BFILE *bfd, uint64_t *addr, char **data, uint32_t *le
             return false;
          }
       }
-      *data += SPARSE_FADDR_SIZE;
-      *length -= SPARSE_FADDR_SIZE;
+      *data += OFFSET_FADDR_SIZE;
+      *length -= OFFSET_FADDR_SIZE;
       return true;
 }
 
-bool decompress_data(JCR *jcr, char **data, uint32_t *length)
+bool decompress_data(JCR *jcr, int32_t stream, char **data, uint32_t *length)
 {
-#ifdef HAVE_LIBZ
-   uLong compress_len;
-   int stat;
    char ec1[50]; /* Buffer printing huge values */
 
-   /* 
-    * NOTE! We only use uLong and Byte because they are
-    * needed by the zlib routines, they should not otherwise
-    * be used in Bacula.
-    */
-   compress_len = jcr->compress_buf_size;
-   Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
-   while ((stat=uncompress((Byte *)jcr->compress_buf, &compress_len,
-                           (const Byte *)*data, (uLong)*length)) == Z_BUF_ERROR)
+   Dmsg1(200, "Stream found in decompress_data(): %d\n", stream);
+   if(stream == STREAM_COMPRESSED_DATA || stream == STREAM_SPARSE_COMPRESSED_DATA || stream == STREAM_WIN32_COMPRESSED_DATA
+       || stream == STREAM_ENCRYPTED_FILE_COMPRESSED_DATA || stream == STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA)
    {
-      /*
-       * The buffer size is too small, try with a bigger one
-       */
-      compress_len = jcr->compress_buf_size = jcr->compress_buf_size + (jcr->compress_buf_size >> 1);
-      Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
-      jcr->compress_buf = check_pool_memory_size(jcr->compress_buf,
-                                                 compress_len);
-   }
-   if (stat != Z_OK) {
-      Qmsg(jcr, M_ERROR, 0, _("Uncompression error on file %s. ERR=%s\n"),
-           jcr->last_fname, zlib_strerror(stat));
-      return false;
-   }
-   *data = jcr->compress_buf;
-   *length = compress_len;
-   Dmsg2(200, "Write uncompressed %d bytes, total before write=%s\n", compress_len, edit_uint64(jcr->JobBytes, ec1));
-   return true;
-#else
-   Qmsg(jcr, M_ERROR, 0, _("GZIP data stream found, but GZIP not configured!\n"));
-   return false;
+      uint32_t comp_magic, comp_len;
+      uint16_t comp_level, comp_version;
+#ifdef HAVE_LZO
+      lzo_uint compress_len;
+      const unsigned char *cbuf;
+      int r, real_compress_len;
 #endif
+
+      /* read compress header */
+      unser_declare;
+      unser_begin(*data, sizeof(comp_stream_header));
+      unser_uint32(comp_magic);
+      unser_uint32(comp_len);
+      unser_uint16(comp_level);
+      unser_uint16(comp_version);
+      Dmsg4(200, "Compressed data stream found: magic=0x%x, len=%d, level=%d, ver=0x%x\n", comp_magic, comp_len,
+                              comp_level, comp_version);
+
+      /* version check */
+      if (comp_version != COMP_HEAD_VERSION) {
+         Qmsg(jcr, M_ERROR, 0, _("Compressed header version error. version=0x%x\n"), comp_version);
+         return false;
+      }
+      /* size check */
+      if (comp_len + sizeof(comp_stream_header) != *length) {
+         Qmsg(jcr, M_ERROR, 0, _("Compressed header size error. comp_len=%d, msglen=%d\n"),
+              comp_len, *length);
+         return false;
+      }
+      switch(comp_magic) {
+#ifdef HAVE_LZO
+         case COMPRESS_LZO1X:
+            compress_len = jcr->compress_buf_size;
+            cbuf = (const unsigned char*)*data + sizeof(comp_stream_header);
+            real_compress_len = *length - sizeof(comp_stream_header);
+            Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
+            while ((r=lzo1x_decompress_safe(cbuf, real_compress_len,
+                                            (unsigned char *)jcr->compress_buf, &compress_len, NULL)) == LZO_E_OUTPUT_OVERRUN)
+            {
+               /*
+                * The buffer size is too small, try with a bigger one
+                */
+               compress_len = jcr->compress_buf_size = jcr->compress_buf_size + (jcr->compress_buf_size >> 1);
+               Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
+               jcr->compress_buf = check_pool_memory_size(jcr->compress_buf,
+                                                    compress_len);
+            }
+            if (r != LZO_E_OK) {
+               Qmsg(jcr, M_ERROR, 0, _("LZO uncompression error on file %s. ERR=%d\n"),
+                    jcr->last_fname, r);
+               return false;
+            }
+            *data = jcr->compress_buf;
+            *length = compress_len;
+            Dmsg2(200, "Write uncompressed %d bytes, total before write=%s\n", compress_len, edit_uint64(jcr->JobBytes, ec1));
+            return true;
+#endif
+         default:
+            Qmsg(jcr, M_ERROR, 0, _("Compression algorithm 0x%x found, but not supported!\n"), comp_magic);
+            return false;
+      }
+    } else {
+#ifdef HAVE_LIBZ
+      uLong compress_len;
+      int stat;
+
+      /* 
+       * NOTE! We only use uLong and Byte because they are
+       * needed by the zlib routines, they should not otherwise
+       * be used in Bacula.
+       */
+      compress_len = jcr->compress_buf_size;
+      Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
+      while ((stat=uncompress((Byte *)jcr->compress_buf, &compress_len,
+                              (const Byte *)*data, (uLong)*length)) == Z_BUF_ERROR)
+      {
+         /*
+          * The buffer size is too small, try with a bigger one
+          */
+         compress_len = jcr->compress_buf_size = jcr->compress_buf_size + (jcr->compress_buf_size >> 1);
+         Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
+         jcr->compress_buf = check_pool_memory_size(jcr->compress_buf,
+                                                    compress_len);
+      }
+      if (stat != Z_OK) {
+         Qmsg(jcr, M_ERROR, 0, _("Uncompression error on file %s. ERR=%s\n"),
+              jcr->last_fname, zlib_strerror(stat));
+         return false;
+      }
+      *data = jcr->compress_buf;
+      *length = compress_len;
+      Dmsg2(200, "Write uncompressed %d bytes, total before write=%s\n", compress_len, edit_uint64(jcr->JobBytes, ec1));
+      return true;
+#else
+      Qmsg(jcr, M_ERROR, 0, _("GZIP data stream found, but GZIP not configured!\n"));
+      return false;
+#endif
+   }
 }
 
 static void unser_crypto_packet_len(RESTORE_CIPHER_CTX *ctx)
@@ -1144,7 +1254,7 @@ bool store_data(JCR *jcr, BFILE *bfd, char *data, const int32_t length, bool win
  * Return value is the number of bytes written, or -1 on errors.
  */
 int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
-                     uint64_t *addr, int flags, RESTORE_CIPHER_CTX *cipher_ctx)
+                     uint64_t *addr, int flags, int32_t stream, RESTORE_CIPHER_CTX *cipher_ctx)
 {
    char *wbuf;                 /* write buffer */
    uint32_t wsize;             /* write size */
@@ -1223,14 +1333,14 @@ int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
       Dmsg2(130, "Encryption writing full block, %u bytes, remaining %u bytes in buffer\n", wsize, cipher_ctx->buf_len);
    }
 
-   if (flags & FO_SPARSE) {
+   if ((flags & FO_SPARSE) || (flags & FO_OFFSETS)) {
       if (!sparse_data(jcr, bfd, addr, &wbuf, &wsize)) {
          goto bail_out;
       }
    }
 
-   if (flags & FO_GZIP) {
-      if (!decompress_data(jcr, &wbuf, &wsize)) {
+   if (flags & FO_COMPRESS) {
+      if (!decompress_data(jcr, stream, &wbuf, &wsize)) {
          goto bail_out;
       }
    }
@@ -1319,7 +1429,7 @@ static void close_previous_stream(r_ctx &rctx)
  * writing it to bfd.
  * Return value is true on success, false on failure.
  */
-bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags,
+bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags, int32_t stream,
                   RESTORE_CIPHER_CTX *cipher_ctx)
 {
    uint32_t decrypted_len = 0;
@@ -1364,14 +1474,14 @@ again:
    cipher_ctx->buf_len -= cipher_ctx->packet_len;
    Dmsg2(130, "Encryption writing full block, %u bytes, remaining %u bytes in buffer\n", wsize, cipher_ctx->buf_len);
 
-   if (flags & FO_SPARSE) {
+   if ((flags & FO_SPARSE) || (flags & FO_OFFSETS)) {
       if (!sparse_data(jcr, bfd, addr, &wbuf, &wsize)) {
          return false;
       }
    }
 
-   if (flags & FO_GZIP) {
-      if (!decompress_data(jcr, &wbuf, &wsize)) {
+   if (flags & FO_COMPRESS) {
+      if (!decompress_data(jcr, stream, &wbuf, &wsize)) {
          return false;
       }
    }
@@ -1417,7 +1527,7 @@ static void deallocate_cipher(r_ctx &rctx)
     * Flush and deallocate previous stream's cipher context
     */
    if (rctx.cipher_ctx.cipher) {
-      flush_cipher(rctx.jcr, &rctx.bfd, &rctx.fileAddr, rctx.flags, &rctx.cipher_ctx);
+      flush_cipher(rctx.jcr, &rctx.bfd, &rctx.fileAddr, rctx.flags, rctx.comp_stream, &rctx.cipher_ctx);
       crypto_cipher_free(rctx.cipher_ctx.cipher);
       rctx.cipher_ctx.cipher = NULL;
    }
@@ -1430,7 +1540,7 @@ static void deallocate_fork_cipher(r_ctx &rctx)
     * Flush and deallocate previous stream's fork cipher context
     */
    if (rctx.fork_cipher_ctx.cipher) {
-      flush_cipher(rctx.jcr, &rctx.forkbfd, &rctx.fork_addr, rctx.fork_flags, &rctx.fork_cipher_ctx);
+      flush_cipher(rctx.jcr, &rctx.forkbfd, &rctx.fork_addr, rctx.fork_flags, rctx.comp_stream, &rctx.fork_cipher_ctx);
       crypto_cipher_free(rctx.fork_cipher_ctx.cipher);
       rctx.fork_cipher_ctx.cipher = NULL;
    }

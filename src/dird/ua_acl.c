@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -49,6 +49,11 @@ bool acl_access_ok(UAContext *ua, int acl, const char *item)
 /* This version expects the length of the item which we must check. */
 bool acl_access_ok(UAContext *ua, int acl, const char *item, int len)
 {
+   /* The resource name contains nasty characters */
+   if (acl != Where_ACL && !is_name_valid(item, NULL)) {
+      Dmsg1(1400, "Access denied for item=%s\n", item);
+      return false;
+   }
 
    /* If no console resource => default console and all is permitted */
    if (!ua->cons) {

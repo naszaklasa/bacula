@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -84,7 +84,7 @@ enable_priv(JCR *jcr, HANDLE hToken, const char *name, int ignore_errors)
     /* Set the security privilege for this process. */
     tkp.PrivilegeCount = 1;
     tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    p_AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, NULL, NULL);
+    p_AdjustTokenPrivileges(hToken, FALSE, &tkp, sizeof(TOKEN_PRIVILEGES), NULL, NULL);
     lerror = GetLastError();
     if (lerror != ERROR_SUCCESS) {
        if (!ignore_errors) {
@@ -130,7 +130,6 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
     if (enable_priv(jcr, hToken, SE_RESTORE_NAME, ignore_errors)) {
        stat |= 1<<2;
     }
-#if 0
     if (enable_priv(jcr, hToken, SE_SECURITY_NAME, ignore_errors)) {
        stat |= 1<<0;
     }
@@ -155,7 +154,7 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
     if (enable_priv(jcr, hToken, SE_CREATE_PERMANENT_NAME, ignore_errors)) {
        stat |= 1<<10;
     }
-#endif
+
     if (stat) {
        stat |= 1<<9;
     }

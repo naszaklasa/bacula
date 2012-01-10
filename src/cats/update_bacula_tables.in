@@ -1,21 +1,44 @@
 #!/bin/sh
 #
 # This routine alters the appropriately configured
-#  Bacula tables for PostgreSQL, Ingres, MySQL, or SQLite.
+# Bacula tables for PostgreSQL, Ingres, MySQL, or SQLite.
 #
-if test xsqlite3 = x@DB_TYPE@ ; then
-  echo "Altering SQLite tables"
-  @scriptdir@/update_@DB_TYPE@_tables $*
+
+default_db_type=@DEFAULT_DB_TYPE@
+
+#
+# See if the first argument is a valid backend name.
+# If so the user overrides the default database backend.
+#
+if [ $# -gt 0 ]; then
+   case $1 in
+     sqlite3)
+       db_type=$1
+       shift
+       ;;
+     mysql)
+       db_type=$1
+       shift
+       ;;
+     postgresql)
+       db_type=$1
+       shift
+       ;;
+     ingres)
+       db_type=$1
+       shift
+       ;;
+     *)
+       ;;
+   esac
 fi
-if test xmysql = x@DB_TYPE@ ; then
-  echo "Altering MySQL tables"
-  @scriptdir@/update_mysql_tables $*
+
+#
+# If no new db_type is gives use the default db_type.
+#
+if [ -z "${db_type}" ]; then
+   db_type="${default_db_type}"
 fi
-if test xingres = x@DB_TYPE@ ; then
-  echo "Altering Ingres tables"
-  @scriptdir@/update_ingres_tables $*
-fi
-if test xpostgresql = x@DB_TYPE@ ; then
-  echo "Altering PostgreSQL tables"
-  @scriptdir@/update_postgresql_tables $*
-fi
+
+echo "Altering ${db_type} tables"
+@scriptdir@/update_${db_type}_tables $*

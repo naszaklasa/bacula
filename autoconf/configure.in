@@ -4,7 +4,9 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl require a recent autoconf
 AC_PREREQ(2.61)
-AC_INIT(src/version.h)
+AC_INIT([bacula], m4_esyscmd([sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ../src/version.h src/version.h 2> /dev/null | tr -d '\n']))
+AC_CONFIG_SRCDIR(src/version.h)
+
 BUILD_DIR=`pwd`
 cd ..
 TOP_DIR=`pwd`
@@ -36,48 +38,46 @@ BACULA=${BACULA:-Bacula}
 VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 DATE=`sed -n -e 's/^.*[ \t]*BDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 LSMDATE=`sed -n -e 's/^.*LSMDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+BDB_VERSION=`sed -n -e 's/^.*BDB_VERSION \(.*\)$/\1/p' ${srcdir}/src/cats/cats.h`
 AC_SUBST(VERSION)dnl 
 AC_SUBST(DATE)dnl 
 AC_SUBST(LSMDATE)dnl 
 AC_SUBST(BACULA)dnl
 AC_SUBST(post_host)dnl
+AC_SUBST(BDB_VERSION)dnl
 
 dnl src/lib
-LIBBAC_LT_CURRENT=`sed -n -e 's/^.*LIBBAC_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBAC_LT_REVISION=`sed -n -e 's/^.*LIBBAC_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBAC_LT_AGE=`sed -n -e 's/^.*LIBBAC_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACCFG_LT_CURRENT=`sed -n -e 's/^.*LIBBACCFG_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACCFG_LT_REVISION=`sed -n -e 's/^.*LIBBACCFG_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACCFG_LT_AGE=`sed -n -e 's/^.*LIBBACCFG_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACPY_LT_CURRENT=`sed -n -e 's/^.*LIBBACPY_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACPY_LT_REVISION=`sed -n -e 's/^.*LIBBACPY_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACPY_LT_AGE=`sed -n -e 's/^.*LIBBACPY_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+dnl can be overwritten by specific values from version.h
+LIBBAC_LT_RELEASE=`sed -n -e 's/^#.*LIBBAC_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+LIBBACCFG_LT_RELEASE=`sed -n -e 's/^#.*LIBBACCFG_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+LIBBACPY_LT_RELEASE=`sed -n -e 's/^#.*LIBBACPY_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 
-AC_SUBST(LIBBAC_LT_CURRENT)dnl
-AC_SUBST(LIBBAC_LT_REVISION)dnl
-AC_SUBST(LIBBAC_LT_AGE)dnl
-AC_SUBST(LIBBACCFG_LT_CURRENT)dnl
-AC_SUBST(LIBBACCFG_LT_REVISION)dnl
-AC_SUBST(LIBBACCFG_LT_AGE)dnl
-AC_SUBST(LIBBACPY_LT_CURRENT)dnl
-AC_SUBST(LIBBACPY_LT_REVISION)dnl
-AC_SUBST(LIBBACPY_LT_AGE)dnl
+LIBBAC_LT_RELEASE=${LIBBAC_LT_RELEASE:-$VERSION}
+LIBBACCFG_LT_RELEASE=${LIBBACCFG_LT_RELEASE:-$VERSION}
+LIBBACPY_LT_RELEASE=${LIBBACPY_LT_RELEASE:-$VERSION}
+
+AC_SUBST(LIBBAC_LT_RELEASE)dnl
+AC_SUBST(LIBBACCFG_LT_RELEASE)dnl
+AC_SUBST(LIBBACPY_LT_RELEASE)dnl
 
 dnl src/cats
-LIBBACSQL_LT_CURRENT=`sed -n -e 's/^.*LIBBACSQL_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACSQL_LT_REVISION=`sed -n -e 's/^.*LIBBACSQL_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACSQL_LT_AGE=`sed -n -e 's/^.*LIBBACSQL_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST(LIBBACSQL_LT_CURRENT)dnl
-AC_SUBST(LIBBACSQL_LT_REVISION)dnl
-AC_SUBST(LIBBACSQL_LT_AGE)dnl
+dnl can be overwritten by specific values from version.h
+LIBBACSQL_LT_RELEASE=`sed -n -e 's/^#.*LIBBACSQL_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+LIBBACCATS_LT_RELEASE=`sed -n -e 's/^#.*LIBBACCATS_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+
+LIBBACSQL_LT_RELEASE=${LIBBACSQL_LT_RELEASE:-$VERSION}
+LIBBACCATS_LT_RELEASE=${LIBBACCATS_LT_RELEASE:-$VERSION}
+
+AC_SUBST(LIBBACSQL_LT_RELEASE)dnl
+AC_SUBST(LIBBACCATS_LT_RELEASE)dnl
 
 dnl src/findlib
-LIBBACFIND_LT_CURRENT=`sed -n -e 's/^.*LIBBACFIND_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACFIND_LT_REVISION=`sed -n -e 's/^.*LIBBACFIND_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACFIND_LT_AGE=`sed -n -e 's/^.*LIBBACFIND_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST(LIBBACFIND_LT_CURRENT)dnl
-AC_SUBST(LIBBACFIND_LT_REVISION)dnl
-AC_SUBST(LIBBACFIND_LT_AGE)dnl
+dnl can be overwritten by specific values from version.h
+LIBBACFIND_LT_RELEASE=`sed -n -e 's/^#.*LIBBACFIND_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+
+LIBBACFIND_LT_RELEASE=${LIBBACFIND_LT_RELEASE:-$VERSION}
+
+AC_SUBST(LIBBACFIND_LT_RELEASE)dnl
 
 echo "configuring for ${BACULA} $VERSION ($DATE)"
 
@@ -337,12 +337,12 @@ fi
 dnl -------------------------------------------------------------------------
 dnl  If the user has not set --htmldir, we default to /usr/share/doc/bacula/html
 dnl -------------------------------------------------------------------------
-if test x$htmldir = x${docdir} ; then
-   htmldir=`eval echo ${docdir}bacula/html`
+if test x$htmldir = x'/usr/share/doc/bacula/' ; then
+   htmldir=`eval echo ${docdir}html`
 fi
 
 dnl -------------------------------------------------------------------------
-dnl  If the user has not set --docdir, we default to /usr/share/doc/
+dnl  If the user has not set --docdir, we default to /usr/share/doc/bacula
 dnl -------------------------------------------------------------------------
 if test x$docdir = x'/usr/share/doc/' ; then
    docdir=`eval echo ${docdir}bacula`
@@ -359,12 +359,6 @@ then
    AM_GNU_GETTEXT
 fi
 
-support_mysql=no
-support_sqlite=no
-support_sqlite3=no
-support_postgresql=no
-support_ingres=no
-support_dbi=no
 support_smartalloc=yes
 support_readline=yes
 support_conio=yes
@@ -385,17 +379,16 @@ support_python=no
 build_client_only=no
 build_dird=yes
 build_stored=yes
-cats=
-db_type=Internal
+db_backends=""
+batch_insert_db_backends=""
 support_lockmgr=no
-DB_TYPE=bdb
 
 dnl --------------------------------------------------------------------------
 dnl CHECKING COMMAND LINE OPTIONS
 dnl --------------------------------------------------------------------------
 
 dnl -------------------------------------------
-dnl gnome (default off)
+dnl gnome -- no longer supported
 dnl -------------------------------------------
 AC_ARG_ENABLE(gnome,
    AC_HELP_STRING([--enable-gnome], [enable build of bgnome-console GUI @<:@default=no@:>@]),
@@ -727,8 +720,8 @@ AC_ARG_ENABLE(client-only,
    [
        if test x$enableval = xyes; then
 	  build_client_only=yes
-	  db_type=None
-	  DB_TYPE=none
+	  db_backends="None"
+	  DB_BACKENDS="none"
        fi
    ]
 )
@@ -818,11 +811,12 @@ if test x$support_ipv6 = xyes; then
 fi
 
 TERM_LIB=""
-AC_CHECK_HEADER(termcap.h, 
-  [ AC_CHECK_LIB(termcap, tgetent, 
-    [ TERM_LIB="-ltermcap" ],
-    [ AC_CHECK_LIB(ncurses, tgetent, [ TERM_LIB="-lncurses" ])
+AC_CHECK_HEADER(curses.h, [ 
+    AC_CHECK_LIB(tinfo, tgetent, [ TERM_LIB="-ltinfo" ], [
+      AC_CHECK_LIB(ncurses, tgetent, [ TERM_LIB="-lncurses" ], [
+	AC_CHECK_LIB(termcap, tgetent, [ TERM_LIB="-ltermcap" ])
     ])
+  ])
   ],
   [  AC_CHECK_HEADERS(curses.h)
      AC_CHECK_HEADER(term.h,
@@ -842,7 +836,7 @@ if test x$support_conio = xyes; then
       support_readline=no
       AC_DEFINE(HAVE_CONIO, 1, [Set if Bacula conio support enabled]) 
    else
-      echo " "; echo "Required libraries not found. CONIO turned off ..."; echo " "],
+      echo " "; echo "Required libraries not found. CONIO turned off ..."; echo " "
    fi
 fi
 
@@ -1178,9 +1172,7 @@ if test "x$with_openssl_directory" != "xno"; then
       ]
    )
 
-   LIBS="${saved_LIBS}"
-   CFLAGS="${saved_CFLAGS}"
-
+   AC_MSG_RESULT([$support_tls])
    if test "$support_tls" = "yes"; then
       AC_DEFINE(HAVE_OPENSSL, 1, [Define if OpenSSL library is available])
       AC_DEFINE(HAVE_TLS, 1, [Define if TLS support should be enabled])
@@ -1194,25 +1186,24 @@ if test "x$with_openssl_directory" != "xno"; then
    if test "$ac_cv_openssl_export" = "yes"; then
       AC_DEFINE(HAVE_OPENSSL_EXPORT_LIBRARY, 1, [Define if the OpenSSL library is export-contrained to 128bit ciphers])
    fi
+
+   if test "$support_crypto" = "yes"; then
+      AC_CHECK_LIB(crypto, EVP_PKEY_encrypt_old, AC_DEFINE(HAVE_OPENSSLv1, 1, [Set if have OpenSSL version 1.x]))
+   fi
+
+   LIBS="${saved_LIBS}"
+   CFLAGS="${saved_CFLAGS}"
 else
    support_tls="no"
    support_crypto="no"
+   AC_MSG_RESULT([$support_tls])
+fi
+
+if test "$support_tls" = "no" -o "$support_crypto" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""
 fi
 
-if test "$support_tls" = "no"; then
-   OPENSSL_LIBS=""
-   OPENSSL_INC=""
-fi  
-if test "$support_crypto" = "no"; then
-   OPENSSL_LIBS=""
-   OPENSSL_INC=""
-else
-   AC_CHECK_LIB(ssl, EVP_PKEY_encrypt_old, AC_DEFINE(HAVE_OPENSSLv1, 1, [Set if have OpenSSL version 1.x]))
-fi  
-
-AC_MSG_RESULT([$support_tls])
 AC_SUBST(OPENSSL_LIBS)
 AC_SUBST(OPENSSL_INC)
 
@@ -1711,102 +1702,129 @@ AC_ARG_WITH(sbin-perm,
 
 AC_SUBST(SBINPERM)
 
+dnl -------------------------------------------
+dnl enable batch attribute DB insert (default on)
+dnl -------------------------------------------
+support_batch_insert=yes
+AC_ARG_ENABLE(batch-insert,
+   AC_HELP_STRING([--enable-batch-insert], [enable the DB batch insert code @<:@default=yes@:>@]),
+   [
+       if test x$enableval = xno; then
+	  support_batch_insert=no
+       fi
+   ]
+)
+
+if test x$support_batch_insert = xyes; then
+   AC_DEFINE(USE_BATCH_FILE_INSERT, 1, [Set if DB batch insert code enabled])
+fi
+
 dnl ------------------------------------------------
 dnl Bacula check for various SQL database engines
 dnl ------------------------------------------------
-SQL_LIB=
+
+dnl
+dnl Set uncomment_dbi by default to '#' if DBI is enabled this will get reset
+dnl
+uncomment_dbi="#"
+
 BA_CHECK_POSTGRESQL_DB
 
 BA_CHECK_MYSQL_DB
 
-BA_CHECK_INGRES_DB
-
 BA_CHECK_SQLITE3_DB
 
-# BA_CHECK_SQLITE_DB
+#BA_CHECK_INGRES_DB
 
-BA_CHECK_DBI_DB
+#BA_CHECK_DBI_DB
 
-BA_CHECK_DBI_DRIVER
-
-AC_SUBST(cats)
-AC_SUBST(DB_TYPE)
+#BA_CHECK_DBI_DRIVER
 
 dnl -------------------------------------------
-dnl enable batch attribute DB insert (default on)
+dnl If no batch insert backend are enable set
+dnl variable to None
 dnl -------------------------------------------
-support_batch_insert=no
-A=`test -f $SQL_LIB && nm $SQL_LIB | grep pthread_mutex_lock`
-pkg=$?
-if test $pkg = 0; then
-   support_batch_insert=yes
-   AC_ARG_ENABLE(batch-insert,
-      AC_HELP_STRING([--enable-batch-insert], [enable the DB batch insert code @<:@default=no@:>@]),
-      [
-	  if test x$enableval = xno; then
-	     support_batch_insert=no
-	  else
-	     support_batch_insert=yes
-	  fi
-      ]
-   )
-fi
-   
-dnl Check if postgresql can support batch mode	 
-if test x$DB_TYPE = xpostgresql; then
-   AC_CHECK_LIB(pq, PQisthreadsafe, AC_DEFINE(HAVE_PQISTHREADSAFE, 1, [Set if have PQisthreadsafe]))
-   AC_CHECK_LIB(pq, PQputCopyData, AC_DEFINE(HAVE_PQ_COPY, 1, [Set if have PQputCopyData]))
-   if test "x$ac_cv_lib_pq_PQputCopyData" != "xyes"
-    then
-	support_batch_insert=no
-   fi
+if test -z "${batch_insert_db_backends}"; then
+   batch_insert_db_backends="None"
 fi
 
-if test x$DB_TYPE = xdbi; then
-   DB_TYPE=$DB_PROG
-   db_type=$DB_PROG
-   pkg=1
-   dnl Check for batch insert
-   if test $DB_PROG = postgresql; then
-      AC_CHECK_LIB(pq, PQisthreadsafe, AC_DEFINE(HAVE_PQISTHREADSAFE))
-      AC_CHECK_LIB(pq, PQputCopyData, AC_DEFINE(HAVE_PQ_COPY))
-      test "x$ac_cv_lib_pq_PQputCopyData" != "xyes"
-      pkg=$?
-   fi
+dnl -------------------------------------------
+dnl Make sure at least one database backend is found
+dnl -------------------------------------------
+if test "x${db_backends}" = "x" ; then
+   echo " "
+   echo " "
+   echo "You have not specified either --enable-client-only or one of the"
+   echo "supported databases: MySQL, PostgreSQL, or SQLite3."
+   echo "This is not permitted. Please reconfigure."
+   echo " "
+   echo "Aborting the configuration ..."
+   echo " "
+   echo " "
+   exit 1
+fi
 
-   if test $DB_PROG = mysql; then
-      A=`test -f $SQL_LIB && nm $DB_PROG_LIB | grep pthread_mutex_lock`
-      pkg=$?	
-   fi
+dnl -------------------------------------------
+dnl See how many catalog backends are configured.
+dnl -------------------------------------------
+case `echo $DB_BACKENDS | wc -w | sed -e 's/^ *//'` in
+   1)
+      DEFAULT_DB_TYPE="${DB_BACKENDS}"
+      if test x$use_libtool = xno; then
+	 SHARED_CATALOG_TARGETS=""
+      else
+	 SHARED_CATALOG_TARGETS="libbaccats-${DEFAULT_DB_TYPE}.la"
+      fi
+      ;;
+   *)
+      dnl ------------------------------------------------
+      dnl Set the default backend to the first backend found
+      dnl ------------------------------------------------
+      DEFAULT_DB_TYPE=`echo ${DB_BACKENDS} | cut -d' ' -f1`
 
-   if test $DB_PROG = sqlite3; then
-      A=`test -f $SQL_LIB && nm $DB_PROG_LIB | grep pthread_mutex_lock`
-      pkg=$?
-      AC_CHECK_LIB(sqlite3, sqlite3_threadsafe, AC_DEFINE(HAVE_SQLITE3_THREADSAFE, 1, [Set if have sqlite3_threadsafe]))
-   fi
+      dnl ------------------------------------------------
+      dnl For multiple backend we need libtool support.
+      dnl ------------------------------------------------
+      if test x$use_libtool = xno; then
+	 echo " "
+	 echo " "
+	 echo "You have specified two or more of the"
+	 echo "supported databases: MySQL, PostgreSQL, or SQLite3."
+	 echo "This is not permitted when not using libtool Please reconfigure."
+	 echo " "
+	 echo "Aborting the configuration ..."
+	 echo " "
+	 echo " "
+	 exit 1
+      fi
 
-   if test $pkg = 0; then
-      AC_ARG_ENABLE(batch-insert,
-	 AC_HELP_STRING([--enable-batch-insert], [enable the DB batch insert code @<:@default=no@:>@]),
-	 [
-	     if test x$enableval = xno; then
-		support_batch_insert=no
-	     else
-		support_batch_insert=yes
-	     fi
-	 ]
-      )
-   fi
-else 
-   dnl If dbi was not chosen, let the comment in file
-   uncomment_dbi="#"  
+      SHARED_CATALOG_TARGETS=""
+      for db_type in ${DB_BACKENDS}
+      do
+	 if test -z "${SHARED_CATALOG_TARGETS}"; then
+	    SHARED_CATALOG_TARGETS="libbaccats-${db_type}.la"
+	 else
+	    SHARED_CATALOG_TARGETS="${SHARED_CATALOG_TARGETS} libbaccats-${db_type}.la"
+	 fi
+      done
+      ;;
+esac
+
+dnl -------------------------------------------
+dnl Unset DB_LIBS when using libtool as we link the
+dnl shared library using the right database lib no need to
+dnl set DB_LIBS which is only used for non shared versions
+dnl of the backends.
+dnl -------------------------------------------
+if test x$use_libtool = xyes; then
+   DB_LIBS=""
 fi
 
 AC_SUBST(uncomment_dbi)
-
-if test $support_batch_insert = yes ; then
-   AC_DEFINE(HAVE_BATCH_FILE_INSERT, 1, [Set if DB batch insert code enabled])
-fi
+AC_SUBST(DB_BACKENDS)
+AC_SUBST(DB_LIBS)
+AC_SUBST(DEFAULT_DB_TYPE)
+AC_SUBST(SHARED_CATALOG_TARGETS)
 
 AC_DEFINE(PROTOTYPES)
 
@@ -1968,6 +1986,8 @@ AC_LANG_POP(C++)
 
 AC_C_CONST
 
+AC_C_BIGENDIAN([AC_DEFINE([HAVE_BIG_ENDIAN], [1], [Big Endian])], [AC_DEFINE([HAVE_LITTLE_ENDIAN], [1], [Little Endian])])
+
 dnl --------------------------------------------------------------------------
 dnl CHECKING FOR FILESYSTEM TYPE
 dnl --------------------------------------------------------------------------
@@ -2022,6 +2042,10 @@ fi
 AC_MSG_RESULT($fstype)
 
 AC_CHECK_HEADER(sys/statvfs.h, [ AC_DEFINE(HAVE_SYS_STATVFS_H,1,[Defines if your system have the sys/statvfs.h header file])] , )
+
+AC_LANG_PUSH(C++)
+AC_CHECK_FUNCS(backtrace)
+AC_LANG_POP(C++)
 
 dnl --------------------------------------------------------------------------
 dnl CHECKING FOR TYPEDEFS, STRUCTURES, AND COMPILER CHARACTERISTICS.
@@ -2318,6 +2342,9 @@ AC_CHECK_FUNCS( \
    [echo 'configure: cannot find needed function.'; exit 1]
 )
 
+AC_CHECK_FUNCS(getpagesize, [AC_DEFINE(HAVE_GETPAGESIZE, 1, [Set if have getpagesize])])
+AC_CHECK_FUNCS(malloc_trim, [AC_DEFINE(HAVE_MALLOC_TRIM, 1, [Set if have malloc_trim])])
+
 AC_CHECK_FUNCS(fchdir, [AC_DEFINE(HAVE_FCHDIR)])
 AC_CHECK_FUNCS(strtoll, [AC_DEFINE(HAVE_STRTOLL)])
 AC_CHECK_FUNCS(posix_fadvise)
@@ -2387,6 +2414,7 @@ AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 AC_FUNC_ALLOCA
 AC_FUNC_GETMNTENT
+AC_CHECK_FUNCS(getmntinfo, [AC_DEFINE(HAVE_GETMNTINFO)])
 AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_SETPGRP 	    dnl check for BSD setpgrp.
 # AC_FUNC_FNMATCH    dnl use local version
@@ -2396,12 +2424,26 @@ AC_CHECK_LIB(intl, gettext, [LIBS="$LIBS -lintl"])
 AC_CHECK_LIB(sun, getpwnam)
 
 AC_CHECK_HEADERS(zlib.h)
-AC_CHECK_LIB(z, deflate, [FDLIBS="-lz"])
+AC_CHECK_LIB(z, deflate, [ZLIBS="-lz"])
 have_zlib=no
-if test x$FDLIBS = x-lz; then
+if test x$ZLIBS = x-lz; then
    AC_DEFINE(HAVE_LIBZ)
    have_zlib=yes
 fi
+AC_SUBST(ZLIBS)
+
+dnl
+dnl Check for lzo
+dnl
+AC_CHECK_HEADERS(lzo/lzoconf.h)
+AC_CHECK_HEADERS(lzo/lzo1x.h)
+AC_CHECK_LIB(lzo2, lzo1x_1_compress, [LZOLIBS="-llzo2"])
+have_lzo=no
+if test x$LZOLIBS = x-llzo2; then
+   AC_DEFINE(HAVE_LZO)
+   have_lzo=yes
+fi
+AC_SUBST(LZOLIBS)
 
 dnl
 dnl Check for ACL support and libraries
@@ -2422,38 +2464,117 @@ have_acl=no
 have_extended_acl=no
 if test x$support_acl = xyes -o x$support_acl = xauto; then
    AC_CHECK_HEADER(sys/acl.h, [ AC_DEFINE(HAVE_SYS_ACL_H,1,[Defines if your system have the sys/acl.h header file])] , )
+
+   dnl
+   dnl First check for acl_get_file in libc
+   dnl
    AC_CHECK_FUNC(acl_get_file,
       [
 	  have_acl=yes
-      ], [
-	  AC_CHECK_LIB(acl, acl_get_file,
-	     [
-		 have_acl=yes;
-		 FDLIBS="-lacl $FDLIBS"
-	     ], [
-		 AC_CHECK_LIB(pacl, acl_get_file,
-		    [
-			have_acl=yes;
-			FDLIBS="-lpacl $FDLIBS"
-		    ], [
-			AC_CHECK_LIB(sec, acltotext,
-			   [
-			       have_acl=yes;
-			       FDLIBS="-lsec $FDLIBS"
-
-			       AC_CHECK_LIB(sec, acl_totext,
-				  [
-				      have_extended_acl=yes
-				  ]
-			       )
-			   ]
-			)
-		    ]
-		 )
-	     ]
-	  )
       ]
    )
+
+   dnl
+   dnl Check for acl_get_file in libacl (Linux)
+   dnl
+   if test $have_acl = no; then
+      AC_CHECK_LIB(acl, acl_get_file,
+	 [
+	     have_acl=yes
+	     FDLIBS="-lacl $FDLIBS"
+	 ]
+      )
+   fi
+
+   dnl
+   dnl Check for acl_get_file in libpacl (OSF1)
+   dnl and if ACL_TYPE_DEFAULT_DIR is defined.
+   dnl
+   if test $have_acl = no -a \
+	   x${HAVE_OSF1_OS_TRUE} = x; then
+      AC_CHECK_LIB(pacl, acl_get_file,
+	 [
+	     have_acl=yes
+	     FDLIBS="-lpacl $FDLIBS"
+	 ]
+      )
+
+      AC_MSG_CHECKING(for ACL_TYPE_DEFAULT_DIR in acl.h include file)
+      grep ACL_TYPE_DEFAULT_DIR /usr/include/sys/acl.h > /dev/null 2>&1
+      if test $? = 0; then
+	 AC_DEFINE(HAVE_ACL_TYPE_DEFAULT_DIR,1,[Defines if your system have the ACL_TYPE_DEFAULT_DIR acl type])
+	 AC_MSG_RESULT(yes)
+      else
+	 AC_MSG_RESULT(no)
+      fi
+   fi
+
+   dnl
+   dnl On OSX check for availability of ACL_TYPE_EXTENDED
+   dnl
+   if test $have_acl = yes -a \
+	   x${HAVE_DARWIN_OS_TRUE} = x; then
+      AC_MSG_CHECKING(for ACL_TYPE_EXTENDED in acl.h include file)
+      grep ACL_TYPE_EXTENDED /usr/include/sys/acl.h > /dev/null 2>&1
+      if test $? = 0; then
+	 AC_DEFINE(HAVE_ACL_TYPE_EXTENDED,1,[Defines if your system have the ACL_TYPE_EXTENDED acl type])
+	 AC_MSG_RESULT(yes)
+      else
+	 AC_MSG_RESULT(no)
+      fi
+   fi
+
+   dnl
+   dnl On FreeBSD check for availability of ACL_TYPE_NFS4
+   dnl
+   if test $have_acl = yes -a \
+	   x${HAVE_FREEBSD_OS_TRUE} = x; then
+      AC_MSG_CHECKING(for ACL_TYPE_NFS4 in acl.h include file)
+      grep ACL_TYPE_NFS4 /usr/include/sys/acl.h > /dev/null 2>&1
+      if test $? = 0; then
+	 AC_DEFINE(HAVE_ACL_TYPE_NFS4,1,[Defines if your system have the ACL_TYPE_NFS4 acl type])
+	 AC_MSG_RESULT(yes)
+      else
+	 AC_MSG_RESULT(no)
+      fi
+   fi
+
+   dnl
+   dnl Check for acltotext and acl_totext (Solaris)
+   dnl
+   if test $have_acl = no -a \
+	   x${HAVE_SUN_OS_TRUE} = x; then
+      AC_CHECK_LIB(sec, acltotext,
+	 [
+	     have_acl=yes
+	     FDLIBS="-lsec $FDLIBS"
+
+	     AC_CHECK_LIB(sec, acl_totext,
+		[
+		    have_extended_acl=yes
+		]
+	     )
+	 ]
+      )
+   fi
+
+   dnl
+   dnl Check for acl_get and aclx_get (AIX)
+   dnl
+   if test $have_acl = no -a \
+	   x${HAVE_AIX_OS_TRUE} = x; then
+      AC_CHECK_FUNC(acl_get,
+	 [
+	     have_acl=yes
+
+	     AC_CHECK_FUNC(aclx_get,
+		[
+		    have_extended_acl=yes
+		]
+	     )
+	 ]
+      )
+   fi
 
    if test x$support_acl = xyes -a $have_acl != yes; then
       AC_MSG_ERROR([acl support explicitly enabled but no supported acl implementation found, 
@@ -2488,83 +2609,111 @@ have_xattr=no
 if test x$support_xattr = xyes -o x$support_xattr = xauto; then
    dnl
    dnl First check for *BSD support
+   dnl When running on a BSD variant
    dnl
-   AC_CHECK_HEADER(sys/extattr.h, [ AC_DEFINE(HAVE_SYS_EXTATTR_H,1,[Defines if your system have the sys/extattr.h header file])] , )
-   AC_CHECK_HEADER(libutil.h, [ AC_DEFINE(HAVE_LIBUTIL_H,1,[Defines if your system have the libutil.h header file])] , )
-   AC_CHECK_FUNCS(extattr_get_link extattr_set_link extattr_list_link,
-      [
-	  have_xattr=yes
-	  AC_DEFINE([HAVE_EXTATTR_GET_LINK],1,[Define to 1 if you have the 'extattr_get_link' function.])
-	  AC_DEFINE([HAVE_EXTATTR_SET_LINK],1,[Define to 1 if you have the 'extattr_set_link' function.])
-	  AC_DEFINE([HAVE_EXTATTR_LIST_LINK],1,[Define to 1 if you have the 'extattr_list_link' function.])
-      ]
-   )
-   
-   if test $have_xattr = no; then
-      AC_CHECK_FUNCS(extattr_get_file extattr_set_file extattr_list_file,
+   if test x${HAVE_FREEBSD_OS_TRUE} = x -o \
+	   x${HAVE_NETBSD_OS_TRUE} = x -o \
+	   x${HAVE_OPENBSD_OS_TRUE} = x; then
+      AC_CHECK_HEADER(sys/extattr.h, [ AC_DEFINE(HAVE_SYS_EXTATTR_H,1,[Defines if your system have the sys/extattr.h header file])] , )
+      AC_CHECK_HEADER(libutil.h, [ AC_DEFINE(HAVE_LIBUTIL_H,1,[Defines if your system have the libutil.h header file])] , )
+      AC_CHECK_FUNCS(extattr_get_link extattr_set_link extattr_list_link,
 	 [
 	     have_xattr=yes
-	     AC_DEFINE([HAVE_EXTATTR_GET_FILE],1,[Define to 1 if you have the 'extattr_get_file' function.])
-	     AC_DEFINE([HAVE_EXTATTR_SET_FILE],1,[Define to 1 if you have the 'extattr_set_file' function.])
-	     AC_DEFINE([HAVE_EXTATTR_LIST_FILE],1,[Define to 1 if you have the 'extattr_list_file' function.])
+	     AC_DEFINE([HAVE_EXTATTR_GET_LINK],1,[Define to 1 if you have the 'extattr_get_link' function.])
+	     AC_DEFINE([HAVE_EXTATTR_SET_LINK],1,[Define to 1 if you have the 'extattr_set_link' function.])
+	     AC_DEFINE([HAVE_EXTATTR_LIST_LINK],1,[Define to 1 if you have the 'extattr_list_link' function.])
 	 ]
       )
-   fi
    
-   if test $have_xattr = yes; then
-      have_extattr_string_in_libc=no
-      AC_CHECK_FUNCS(extattr_namespace_to_string extattr_string_to_namespace,
-	 [
-	     have_extattr_string_in_libc=yes
-	     AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING],1,[Define to 1 if you have the 'extattr_namespace_to_string' function.])
-	     AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE],1,[Define to 1 if you have the 'extattr_string_to_namespace' function.])
-	 ]
-      )
-
-      dnl
-      dnl If extattr_namespace_to_string and extattr_string_to_namespace are not in libc see if they are in libutil
-      dnl
-      if test $have_extattr_string_in_libc = no; then
-	 AC_CHECK_LIB(util, extattr_namespace_to_string extattr_string_to_namespace,
+      if test $have_xattr = no; then
+	 AC_CHECK_FUNCS(extattr_get_file extattr_set_file extattr_list_file,
 	    [
-		AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING],1,[Define to 1 if you have the 'extattr_namespace_to_string' function.])
-		AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE],1,[Define to 1 if you have the 'extattr_string_to_namespace' function.])
-		FDLIBS="-lutil $FDLIBS"
+		have_xattr=yes
+		AC_DEFINE([HAVE_EXTATTR_GET_FILE],1,[Define to 1 if you have the 'extattr_get_file' function.])
+		AC_DEFINE([HAVE_EXTATTR_SET_FILE],1,[Define to 1 if you have the 'extattr_set_file' function.])
+		AC_DEFINE([HAVE_EXTATTR_LIST_FILE],1,[Define to 1 if you have the 'extattr_list_file' function.])
 	    ]
 	 )
+      fi
+   
+      if test $have_xattr = yes; then
+	 have_extattr_string_in_libc=no
+	 AC_CHECK_FUNCS(extattr_namespace_to_string extattr_string_to_namespace,
+	    [
+		have_extattr_string_in_libc=yes
+		AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING],1,[Define to 1 if you have the 'extattr_namespace_to_string' function.])
+		AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE],1,[Define to 1 if you have the 'extattr_string_to_namespace' function.])
+	    ]
+	 )
+
+	 dnl
+	 dnl If extattr_namespace_to_string and extattr_string_to_namespace are not in libc see if they are in libutil
+	 dnl
+	 if test $have_extattr_string_in_libc = no; then
+	    AC_CHECK_LIB(util, extattr_namespace_to_string extattr_string_to_namespace,
+	       [
+		   AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING],1,[Define to 1 if you have the 'extattr_namespace_to_string' function.])
+		   AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE],1,[Define to 1 if you have the 'extattr_string_to_namespace' function.])
+		   FDLIBS="-lutil $FDLIBS"
+	       ]
+	    )
+	 fi
       fi
    fi
 
    dnl
-   dnl If we failed to find *BSD support try the Linux or OSX implementation of xattr
+   dnl If we failed to find *BSD support try the AIX implementation of extented attributes (EA)
+   dnl When running on AIX
    dnl
-   if test $have_xattr = no; then
-      AC_CHECK_HEADER(sys/xattr.h, [ AC_DEFINE(HAVE_SYS_XATTR_H,1,[Defines if your system have the sys/xattr.h header file])] , )
-      AC_CHECK_FUNCS(llistxattr lgetxattr lsetxattr,
+   if test $have_xattr = no -a \
+	   x${HAVE_AIX_OS_TRUE} = x; then
+      AC_CHECK_HEADER(sys/ea.h, [ AC_DEFINE(HAVE_SYS_EA_H,1,[Defines if your system have the sys/ea.h header file])] , )
+      AC_CHECK_FUNCS(llistea lgetea lsetea,
 	 [
 	     have_xattr=yes
-	     AC_DEFINE([HAVE_LLISTXATTR],1,[Define to 1 if you have the 'llistxattr' function.])
-	     AC_DEFINE([HAVE_LGETXATTR],1,[Define to 1 if you have the 'lgetxattr' function.])
-	     AC_DEFINE([HAVE_LSETXATTR],1,[Define to 1 if you have the 'lsetxattr' function.])
+	     AC_DEFINE([HAVE_LLISTEA],1,[Define to 1 if you have the 'llistea' function.])
+	     AC_DEFINE([HAVE_LGETEA],1,[Define to 1 if you have the 'lgetea' function.])
+	     AC_DEFINE([HAVE_LSETEA],1,[Define to 1 if you have the 'lsetea' function.])
 	 ]
       )
 
       if test $have_xattr = no; then
-	 AC_CHECK_FUNCS(listxattr getxattr setxattr,
+	 AC_CHECK_FUNCS(listea getea setea,
 	    [
 		have_xattr=yes
-		AC_DEFINE([HAVE_LISTXATTR],1,[Define to 1 if you have the 'listxattr' function.])
-		AC_DEFINE([HAVE_GETXATTR],1,[Define to 1 if you have the 'getxattr' function.])
-		AC_DEFINE([HAVE_SETXATTR],1,[Define to 1 if you have the 'setxattr' function.])
+		AC_DEFINE([HAVE_LISTEA],1,[Define to 1 if you have the 'listea' function.])
+		AC_DEFINE([HAVE_GETEA],1,[Define to 1 if you have the 'getea' function.])
+		AC_DEFINE([HAVE_SETEA],1,[Define to 1 if you have the 'setea' function.])
 	    ]
 	 )
       fi
    fi
 
    dnl
-   dnl If we failed to find *BSD support and the Linux or OSX implementation of xattr try the Solaris xattr implementation
+   dnl If we failed to find AIX support try the TRU64 implementation of extented attributes
+   dnl when running on a TRU64 OS.
    dnl
-   if test $have_xattr = no; then
+   if test $have_xattr = no -a \
+	   x${HAVE_OSF1_OS_TRUE} = x; then
+      AC_CHECK_HEADER(sys/proplist.h, [ AC_DEFINE(HAVE_SYS_PROPLIST_H,1,[Defines if your system have the sys/proplist.h header file])] , )
+      AC_CHECK_FUNCS(getproplist get_proplist_entry sizeof_proplist_entry add_proplist_entry setproplist,
+	 [
+	     have_xattr=yes
+	     AC_DEFINE([HAVE_GETPROPLIST],1,[Define to 1 if you have the 'getproplist' function.])
+	     AC_DEFINE([HAVE_GET_PROPLIST_ENTRY],1,[Define to 1 if you have the 'get_proplist_entry' function.])
+	     AC_DEFINE([HAVE_SIZEOF_PROPLIST_ENTRY],1,[Define to 1 if you have the 'sizeof_proplist_entry' function.])
+	     AC_DEFINE([HAVE_ADD_PROPLIST_ENTRY],1,[Define to 1 if you have the 'add_proplist_entry' function.])
+	     AC_DEFINE([HAVE_SETPROPLIST],1,[Define to 1 if you have the 'setproplist' function.])
+	 ]
+      )
+   fi
+
+   dnl
+   dnl If we failed to find TRU64 support try the SOLARIS implementation of extented and extensible attributes
+   dnl when running on a Solaris.
+   dnl
+   if test $have_xattr = no -a \
+	   x${HAVE_SUN_OS_TRUE} = x; then
       AC_CHECK_HEADER(sys/attr.h, [ AC_DEFINE(HAVE_SYS_ATTR_H,1,[Defines if your system have the sys/attr.h header file])] , )
       AC_CHECK_HEADER(sys/nvpair.h, [ AC_DEFINE(HAVE_SYS_NVPAIR_H,1,[Defines if your system have the sys/nvpair.h header file])] , )
       AC_CHECK_HEADER(attr.h, [ AC_DEFINE(HAVE_ATTR_H,1,[Defines if your system have the attr.h header file])] , )
@@ -2585,6 +2734,32 @@ if test x$support_xattr = xyes -o x$support_xattr = xauto; then
 	    [
 		AC_DEFINE([HAVE_NVLIST_NEXT_NVPAIR],1,[Define to 1 if you have the 'nvlist_next_nvpair' function.])
 		FDLIBS="-lnvpair $FDLIBS"
+	    ]
+	 )
+      fi
+   fi
+
+   dnl
+   dnl If we failed to find Solaris support try the generic xattr support code
+   dnl
+   if test $have_xattr = no; then
+      AC_CHECK_HEADER(sys/xattr.h, [ AC_DEFINE(HAVE_SYS_XATTR_H,1,[Defines if your system have the sys/xattr.h header file])] , )
+      AC_CHECK_FUNCS(llistxattr lgetxattr lsetxattr,
+	 [
+	     have_xattr=yes
+	     AC_DEFINE([HAVE_LLISTXATTR],1,[Define to 1 if you have the 'llistxattr' function.])
+	     AC_DEFINE([HAVE_LGETXATTR],1,[Define to 1 if you have the 'lgetxattr' function.])
+	     AC_DEFINE([HAVE_LSETXATTR],1,[Define to 1 if you have the 'lsetxattr' function.])
+	 ]
+      )
+
+      if test $have_xattr = no; then
+	 AC_CHECK_FUNCS(listxattr getxattr setxattr,
+	    [
+		have_xattr=yes
+		AC_DEFINE([HAVE_LISTXATTR],1,[Define to 1 if you have the 'listxattr' function.])
+		AC_DEFINE([HAVE_GETXATTR],1,[Define to 1 if you have the 'getxattr' function.])
+		AC_DEFINE([HAVE_SETXATTR],1,[Define to 1 if you have the 'setxattr' function.])
 	    ]
 	 )
       fi
@@ -2640,7 +2815,6 @@ if test x$have_gcc = xyes ; then
    CFLAGS="$CFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti"
 fi
 LDFLAGS=${LDFLAGS--O}
-DB_LIBS="${SQL_LFLAGS}"
 CPPFLAGS="$CPPFLAGS"
 CFLAGS="$CFLAGS"
 AC_SUBST(DEBUG)
@@ -2652,7 +2826,6 @@ AC_SUBST(X_CFLAGS)
 AC_SUBST(DEFS)
 AC_SUBST(LIBS)
 AC_SUBST(DLIB)
-AC_SUBST(DB_LIBS)
 AC_SUBST(X_LIBS)
 AC_SUBST(X_EXTRA_LIBS)
 AC_SUBST(WCFLAGS)
@@ -2678,6 +2851,7 @@ PFILES="platforms/Makefile"
 PSCMD="ps -e"
 WIN32=
 MACOSX=
+COMPRESS_MANPAGES=yes
 
 hostname=`uname -n | cut -d '.' -f 1`
 if test x${hostname} = x ; then
@@ -2905,9 +3079,18 @@ solaris)
        platforms/solaris/bacula-fd \
        platforms/solaris/bacula-sd \
        platforms/solaris/bacula-dir"
-   if test x$DISTVER = x5.6 ; then
-       AC_DEFINE(HAVE_OLD_SOCKOPT)
-   fi
+   COMPRESS_MANPAGES=
+   case ${DISTVER} in
+   5.5|5.6)
+      AC_DEFINE(HAVE_OLD_SOCKOPT)
+      AC_DEFINE(USE_THR_SETCONCURRENCY)
+      ;;
+   5.7|5.8)
+      AC_DEFINE(USE_THR_SETCONCURRENCY)
+      ;;
+   *)
+      ;;
+   esac
    LIBS="$LIBS -lresolv -lrt"
   ;;
 suse)
@@ -2919,7 +3102,8 @@ suse)
        platforms/suse/Makefile \
        platforms/suse/bacula-fd \
        platforms/suse/bacula-sd \
-       platforms/suse/bacula-dir"
+       platforms/suse/bacula-dir \
+       platforms/suse/bacula"
   ;;
 suse5)
    DISTNAME=suse
@@ -2941,6 +3125,39 @@ unknown)
   ;;
 esac  
 
+dnl -------------------------------------------
+dnl systemd (default off)
+dnl -------------------------------------------
+AC_MSG_CHECKING(for systemd support)
+AC_ARG_WITH(systemd,
+   AC_HELP_STRING([--with-systemd@<:@=UNITDIR@:>@], [Include systemd support. UNITDIR is where systemd system .service files are located, default is to ask systemctl.]),
+   [
+       if test "$withval" != "no"; then
+           if test "$withval" = "yes"; then
+               SYSTEMD_UNITDIR="`systemctl show | grep UnitPath | cut -d " " -f2`"
+           else
+               SYSTEMD_UNITDIR="${withval}"
+           fi
+
+	   PFILES="${PFILES} \
+	           platforms/systemd/Makefile \
+	           platforms/systemd/bacula-dir.service \
+	           platforms/systemd/bacula-fd.service \
+	           platforms/systemd/bacula-sd.service"
+           AC_DEFINE(HAVE_SYSTEMD, 1, [Define to 1 if systemd support should be enabled])
+           AC_MSG_RESULT(yes)
+	   support_systemd="yes"
+       else
+           AC_MSG_RESULT(no)
+	   support_systemd="no"
+       fi
+   ],[
+       support_systemd="no"
+       AC_MSG_RESULT(no)
+   ]
+)
+AC_SUBST(SYSTEMD_UNITDIR)
+
 AC_SUBST(hostname)
 
 LIBS="$PTHREAD_LIB $LIBS"
@@ -2953,6 +3170,7 @@ AC_SUBST(WIN32)
 AC_SUBST(MACOSX)
 AC_SUBST(DISTNAME)
 AC_SUBST(DISTVER)
+AC_SUBST(COMPRESS_MANPAGES)
 
 dnl common parts of the Makefile
 MCOMMON=./autoconf/Make.common
@@ -2975,13 +3193,8 @@ fi
 AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
 	   manpages/Makefile \
-	   scripts/startmysql \
-	   scripts/stopmysql \
 	   scripts/btraceback \
-	   scripts/startit \
-	   scripts/stopit \
 	   scripts/bconsole \
-	   scripts/gconsole \
 	   scripts/bacula \
 	   scripts/bacula-ctl-dir \
 	   scripts/bacula-ctl-fd \
@@ -2995,7 +3208,6 @@ AC_OUTPUT([autoconf/Make.common \
 	   scripts/bacula.desktop.gnome2.consolehelper \
 	   scripts/bacula.desktop.gnome1.xsu \
 	   scripts/bacula.desktop.gnome2.xsu \
-	   scripts/bgnome-console.console_apps \
 	   scripts/mtx-changer \
 	   scripts/disk-changer \
 	   scripts/dvd-handler \
@@ -3014,6 +3226,8 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/host.h \
 	   src/console/Makefile \
 	   src/console/bconsole.conf \
+	   src/qt-console/tray-monitor/tray-monitor.pro \
+	   src/qt-console/tray-monitor/tray-monitor.conf \
 	   src/qt-console/bat.conf \
 	   src/qt-console/bat.pro \
 	   src/qt-console/bat.pro.mingw32 \
@@ -3051,26 +3265,15 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/cats/grant_sqlite3_privileges \
 	   src/cats/drop_sqlite3_tables \
 	   src/cats/drop_sqlite3_database \
-	   src/cats/create_ingres_database \
-	   src/cats/update_ingres_tables \
-	   src/cats/make_ingres_tables \
-	   src/cats/grant_ingres_privileges \
-	   src/cats/drop_ingres_tables \
-	   src/cats/drop_ingres_database \
 	   src/cats/sqlite \
 	   src/cats/mysql \
-	   src/cats/create_bdb_database \
-	   src/cats/update_bdb_tables \
-	   src/cats/make_bdb_tables \
-	   src/cats/grant_bdb_privileges \
-	   src/cats/drop_bdb_tables \
-	   src/cats/drop_bdb_database \
 	   src/cats/create_bacula_database \
 	   src/cats/update_bacula_tables \
 	   src/cats/grant_bacula_privileges \
 	   src/cats/make_bacula_tables \
 	   src/cats/drop_bacula_tables \
 	   src/cats/drop_bacula_database \
+	   src/cats/install-default-backend \
 	   src/findlib/Makefile \
 	   src/tools/Makefile \
 	   src/plugins/fd/Makefile \
@@ -3084,6 +3287,12 @@ AC_OUTPUT([autoconf/Make.common \
 	   updatedb/update_mysql_tables_10_to_11 \
 	   updatedb/update_sqlite3_tables_10_to_11 \
 	   updatedb/update_postgresql_tables_10_to_11 \
+	   updatedb/update_mysql_tables_11_to_12 \
+	   updatedb/update_sqlite3_tables_11_to_12 \
+	   updatedb/update_postgresql_tables_11_to_12 \
+	   updatedb/update_mysql_tables_12_to_14 \
+	   updatedb/update_sqlite3_tables_12_to_14 \
+	   updatedb/update_postgresql_tables_12_to_14 \
 	   examples/nagios/check_bacula/Makefile \
 	   $PFILES ],  
      [ ]
@@ -3094,13 +3303,12 @@ if test "${support_bat}" = "yes" ; then
       AC_MSG_ERROR([Could not find qmake $PATH. Check your Qt installation])
    fi
 
-   QMAKEBIN="qmake"
    cd src/qt-console
    echo "Creating bat Makefile"
    touch bat
    chmod 755 bat
    rm -f Makefile
-   $QMAKEBIN
+   $QMAKE
    ${MAKE:-make} clean
    cd ${BUILD_DIR}
 fi
@@ -3119,22 +3327,22 @@ chmod 755 install_conf_file build-depkgs-qt-console
 cd ${BUILD_DIR}
 
 cd scripts
-chmod 755 startmysql stopmysql bacula startit stopit btraceback mtx-changer
+chmod 755 bacula btraceback mtx-changer
 chmod 755 dvd-handler dvd-simulator
-chmod 755 bconsole gconsole mtx-changer devel_bacula logrotate
+chmod 755 bconsole mtx-changer devel_bacula logrotate
 cd ..
 
 c=updatedb
 chmod 755 $c/update_mysql_tables_10_to_11   $c/update_sqlite3_tables_10_to_11
 chmod 755 $c/update_postgresql_tables_10_to_11
+chmod 755 $c/update_mysql_tables_11_to_12   $c/update_sqlite3_tables_11_to_12
+chmod 755 $c/update_postgresql_tables_11_to_12
+
 
 c=src/cats
 
 chmod 755 $c/create_bacula_database   $c/update_bacula_tables  $c/make_bacula_tables
 chmod 755 $c/grant_bacula_privileges  $c/drop_bacula_tables    $c/drop_bacula_database
-
-chmod 755 $c/create_bdb_database      $c/update_bdb_tables     $c/make_bdb_tables
-chmod 755 $c/grant_bdb_privileges     $c/drop_bdb_tables       $c/drop_bdb_database
 
 chmod 755 $c/create_mysql_database    $c/update_mysql_tables   $c/make_mysql_tables
 chmod 755 $c/grant_mysql_privileges   $c/drop_mysql_tables     $c/drop_mysql_database
@@ -3145,13 +3353,15 @@ chmod 755 $c/grant_sqlite3_privileges  $c/drop_sqlite3_tables	 $c/drop_sqlite3_d
 chmod 755 $c/create_postgresql_database  $c/update_postgresql_tables $c/make_postgresql_tables
 chmod 755 $c/grant_postgresql_privileges $c/drop_postgresql_tables   $c/drop_postgresql_database
 
-chmod 755 $c/create_ingres_database  $c/update_ingres_tables $c/make_ingres_tables
-chmod 755 $c/grant_ingres_privileges $c/drop_ingres_tables   $c/drop_ingres_database
+#chmod 755 $c/create_ingres_database  $c/update_ingres_tables $c/make_ingres_tables
+#chmod 755 $c/grant_ingres_privileges $c/drop_ingres_tables   $c/drop_ingres_database
 
 
 chmod 755 $c/make_catalog_backup $c/delete_catalog_backup  $c/make_catalog_backup.pl
 chmod 755 $c/sqlite
 chmod 755 $c/mysql
+
+chmod 755 $c/install-default-backend
 
 chmod 755 src/win32/build-depkgs-mingw32
 
@@ -3181,90 +3391,76 @@ echo "Cleaning up"
 echo " "
 ${MAKE:-make} clean
 
-if test "x${db_type}" = "xInternal" ; then
-   echo " "
-   echo " "
-   echo "You have not specified either --enable-client-only or one of the"
-   echo "  supported databases: MySQL, PostgreSQL, Ingres, SQLite3 or DBI."
-   echo "  This is not permitted. Please reconfigure."
-   echo " "
-   echo "Aborting the configuration ..."
-   echo " "
-   echo " "
-   exit 1
-fi
-
 echo "
 Configuration on `date`:
 
-   Host:		    ${host}${post_host} -- ${DISTNAME} ${DISTVER}
-   Bacula version:	    ${BACULA} ${VERSION} (${DATE})
-   Source code location:    ${srcdir}
-   Install binaries:	    ${sbindir}
-   Install libraries:	    ${libdir}
-   Install config files:    ${sysconfdir}
-   Scripts directory:	    ${scriptdir}
-   Archive directory:	    ${archivedir}
-   Working directory:	    ${working_dir}
-   PID directory:	    ${piddir}
-   Subsys directory:	    ${subsysdir}
-   Man directory:	    ${mandir}
-   Data directory:	    ${datarootdir}
-   Plugin directory:	    ${plugindir}
-   C Compiler:		    ${CC} ${CCVERSION}
-   C++ Compiler:	    ${CXX} ${CXXVERSION}
-   Compiler flags:	    ${WCFLAGS} ${CFLAGS} 
-   Linker flags:	    ${WLDFLAGS} ${LDFLAGS}
-   Libraries:		    ${LIBS}
-   Statically Linked Tools: ${support_static_tools}
-   Statically Linked FD:    ${support_static_fd}
-   Statically Linked SD:    ${support_static_sd}
-   Statically Linked DIR:   ${support_static_dir}
-   Statically Linked CONS:  ${support_static_cons}
-   Database type:	    ${db_type}
-   Database port:	    ${db_port}
-   Database lib:	    ${DB_LIBS}
-   Database name:	    ${db_name}
-   Database user:	    ${db_user}
+   Host:		     ${host}${post_host} -- ${DISTNAME} ${DISTVER}
+   Bacula version:	     ${BACULA} ${VERSION} (${DATE})
+   Source code location:     ${srcdir}
+   Install binaries:	     ${sbindir}
+   Install libraries:	     ${libdir}
+   Install config files:     ${sysconfdir}
+   Scripts directory:	     ${scriptdir}
+   Archive directory:	     ${archivedir}
+   Working directory:	     ${working_dir}
+   PID directory:	     ${piddir}
+   Subsys directory:	     ${subsysdir}
+   Man directory:	     ${mandir}
+   Data directory:	     ${datarootdir}
+   Plugin directory:	     ${plugindir}
+   C Compiler:		     ${CC} ${CCVERSION}
+   C++ Compiler:	     ${CXX} ${CXXVERSION}
+   Compiler flags:	     ${WCFLAGS} ${CFLAGS} 
+   Linker flags:	     ${WLDFLAGS} ${LDFLAGS}
+   Libraries:		     ${LIBS}
+   Statically Linked Tools:  ${support_static_tools}
+   Statically Linked FD:     ${support_static_fd}
+   Statically Linked SD:     ${support_static_sd}
+   Statically Linked DIR:    ${support_static_dir}
+   Statically Linked CONS:   ${support_static_cons}
+   Database backends:	     ${db_backends}
+   Database port:	     ${db_port}
+   Database name:	     ${db_name}
+   Database user:	     ${db_user}
  
-   Job Output Email:	    ${job_email}
-   Traceback Email:	    ${dump_email}
-   SMTP Host Address:	    ${smtp_host}
+   Job Output Email:	     ${job_email}
+   Traceback Email:	     ${dump_email}
+   SMTP Host Address:	     ${smtp_host}
  
-   Director Port:	    ${dir_port}
-   File daemon Port:	    ${fd_port}
-   Storage daemon Port:     ${sd_port}
+   Director Port:	     ${dir_port}
+   File daemon Port:	     ${fd_port}
+   Storage daemon Port:      ${sd_port}
  
-   Director User:	    ${dir_user}
-   Director Group:	    ${dir_group}
-   Storage Daemon User:     ${sd_user}
-   Storage DaemonGroup:     ${sd_group}
-   File Daemon User:	    ${fd_user}
-   File Daemon Group:	    ${fd_group}
+   Director User:	     ${dir_user}
+   Director Group:	     ${dir_group}
+   Storage Daemon User:      ${sd_user}
+   Storage DaemonGroup:      ${sd_group}
+   File Daemon User:	     ${fd_user}
+   File Daemon Group:	     ${fd_group}
  
-   SQL binaries Directory   ${SQL_BINDIR}
- 
-   Large file support:	    $largefile_support
-   Bacula conio support:    ${got_conio} ${CONS_LIBS}
-   readline support:	    ${got_readline} ${PRTREADLINE_SRC}
-   TCP Wrappers support:    ${TCPW_MSG} ${WRAPLIBS}
-   TLS support: 	    ${support_tls}
-   Encryption support:	    ${support_crypto} 
-   ZLIB support:	    ${have_zlib}
-   enable-smartalloc:	    ${support_smartalloc} 
-   enable-lockmgr:	    ${support_lockmgr}
-   bat support: 	    ${support_bat}
-   enable-gnome:	    ${support_gnome} ${gnome_version}
-   enable-bwx-console:	    ${support_wx_console} ${wx_version}
-   enable-tray-monitor:     ${support_tray_monitor}
-   client-only: 	    ${build_client_only}
-   build-dird:		    ${build_dird}
-   build-stored:	    ${build_stored}
-   Plugin support:	    ${have_plugins}
-   ACL support: 	    ${have_acl}
-   XATTR support:	    ${have_xattr}
-   Python support:	    ${support_python} ${PYTHON_LIBS}
-   Batch insert enabled:    ${support_batch_insert}
+   Large file support:	     $largefile_support
+   Bacula conio support:     ${got_conio} ${CONS_LIBS}
+   readline support:	     ${got_readline} ${PRTREADLINE_SRC}
+   TCP Wrappers support:     ${TCPW_MSG} ${WRAPLIBS}
+   TLS support: 	     ${support_tls}
+   Encryption support:	     ${support_crypto} 
+   ZLIB support:	     ${have_zlib}
+   LZO support: 	     ${have_lzo}
+   enable-smartalloc:	     ${support_smartalloc} 
+   enable-lockmgr:	     ${support_lockmgr}
+   bat support: 	     ${support_bat}
+   enable-gnome:	     ${support_gnome} ${gnome_version}
+   enable-bwx-console:	     ${support_wx_console} ${wx_version}
+   enable-tray-monitor:      ${support_tray_monitor}
+   client-only: 	     ${build_client_only}
+   build-dird:		     ${build_dird}
+   build-stored:	     ${build_stored}
+   Plugin support:	     ${have_plugins}
+   ACL support: 	     ${have_acl}
+   XATTR support:	     ${have_xattr}
+   Python support:	     ${support_python} ${PYTHON_LIBS}
+   systemd support:	     ${support_systemd} ${SYSTEMD_UNITDIR}
+   Batch insert enabled:     ${batch_insert_db_backends}
 
   " > config.out
 
@@ -3280,13 +3476,3 @@ echo __EOC__ >> scripts/bacula_config
 chmod 755 scripts/bacula_config
 
 cat config.out
-
-# Display a warning message if postgresql client lib is <= 8.1
-if test x$DB_TYPE = xpostgresql -a x$ac_cv_lib_pq_PQisthreadsafe != xyes \
-	-a x$support_batch_insert = xyes
-then
-	echo "WARNING: Your PostgreSQL client library is too old to detect "
-	echo " if it was compiled with --enable-thread-safety, consider to"
-	echo " upgrade it in order to avoid problems with Batch insert mode"
-	echo
-fi

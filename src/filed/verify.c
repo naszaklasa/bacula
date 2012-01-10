@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -29,8 +29,6 @@
  *  Bacula File Daemon  verify.c  Verify files.
  *
  *    Kern Sibbald, October MM
- *
- *   Version $Id$
  *
  */
 
@@ -53,7 +51,7 @@ static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr);
  */
 void do_verify(JCR *jcr)
 {
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    jcr->buf_size = DEFAULT_NETWORK_BUFFER_SIZE;
    if ((jcr->big_buf = (char *) malloc(jcr->buf_size)) == NULL) {
       Jmsg1(jcr, M_ABORT, 0, _("Cannot malloc %d network read buffer\n"),
@@ -69,7 +67,7 @@ void do_verify(JCR *jcr)
       free(jcr->big_buf);
       jcr->big_buf = NULL;
    }
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
 }
 
 /*
@@ -110,6 +108,7 @@ static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       jcr->num_files_examined--;      /* correct file count */
       return 1;                       /* ignored */
    case FT_REPARSE: 
+   case FT_JUNCTION:
    case FT_DIREND:
       Dmsg1(30, "FT_DIR saving: %s\n", ff_pkt->fname);
       break;
@@ -157,6 +156,8 @@ static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    case FT_NOFSCHG:
       Jmsg(jcr, M_SKIPPED, 1, _("     File system change prohibited. Directory skipped: %s\n"), ff_pkt->fname);
       return 1;
+   case FT_RESTORE_FIRST:
+      return 1;                       /* silently skip */
    case FT_NOOPEN: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
@@ -171,7 +172,7 @@ static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    }
 
    /* Encode attributes and possibly extend them */
-   encode_stat(attribs, &ff_pkt->statp, ff_pkt->LinkFI, 0);
+   encode_stat(attribs, &ff_pkt->statp, sizeof(ff_pkt->statp), ff_pkt->LinkFI, 0);
    encode_attribsEx(jcr, attribsEx, ff_pkt);
 
    jcr->lock();
@@ -196,7 +197,8 @@ static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       stat = dir->fsend("%d %d %s %s%c%s%c%s%c", jcr->JobFiles,
                         STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->fname,
                         0, attribs, 0, ff_pkt->link, 0);
-   } else if (ff_pkt->type == FT_DIREND || ff_pkt->type == FT_REPARSE) {
+   } else if (ff_pkt->type == FT_DIREND || ff_pkt->type == FT_REPARSE ||
+              ff_pkt->type == FT_JUNCTION) {
       /* Here link is the canonical filename (i.e. with trailing slash) */
       stat = dir->fsend("%d %d %s %s%c%s%c%c", jcr->JobFiles,
                         STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->link,
@@ -368,11 +370,13 @@ static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
       
       crypto_digest_update(digest, (uint8_t *)buf, n);
 
-      /* Can be used by BaseJobs, update only for Verify jobs */
-      if (jcr->getJobLevel() != L_FULL) {
+      /* Can be used by BaseJobs or with accurate, update only for Verify
+       * jobs 
+       */
+      if (jcr->getJobType() == JT_VERIFY) {
          jcr->JobBytes += n;
-         jcr->ReadBytes += n;
       }
+      jcr->ReadBytes += n;
    }
    if (n < 0) {
       berrno be;

@@ -2,7 +2,11 @@
 #
 # shell script to create Bacula MySQL tables
 #
-bindir=@SQL_BINDIR@
+# Important note: 
+#   You won't get any support for performance issue if you changed the default
+#   schema.
+#
+bindir=@MYSQL_BINDIR@
 PATH="$bindir:$PATH"
 db_name=${db_name:-@db_name@}
 
@@ -28,6 +32,17 @@ CREATE TABLE Path (
    INDEX (Path(255))
    );
 
+-- We strongly recommend to avoid the temptation to add new indexes.
+-- In general, these will cause very significant performance
+-- problems in other areas.  A better approch is to carefully check
+-- that all your memory configuation parameters are
+-- suitable for the size of your installation.	If you backup
+-- millions of files, you need to adapt the database memory
+-- configuration parameters concerning sorting, joining and global
+-- memory.  By default, sort and join parameters are very small
+-- (sometimes 8Kb), and having sufficient memory specified by those
+-- parameters is extremely important to run fast.  
+
 -- In File table
 -- FileIndex can be 0 for FT_DELETED files
 -- FileNameId can link to Filename.Name='' for directories
@@ -37,6 +52,7 @@ CREATE TABLE File (
    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
    PathId INTEGER UNSIGNED NOT NULL REFERENCES Path,
    FilenameId INTEGER UNSIGNED NOT NULL REFERENCES Filename,
+   DeltaSeq SMALLINT UNSIGNED DEFAULT 0,
    MarkId INTEGER UNSIGNED DEFAULT 0,
    LStat TINYBLOB NOT NULL,
    MD5 TINYBLOB,
@@ -45,15 +61,30 @@ CREATE TABLE File (
    INDEX (JobId, PathId, FilenameId)
    );
 
+CREATE TABLE RestoreObject (
+   RestoreObjectId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+   ObjectName BLOB NOT NULL,
+   RestoreObject LONGBLOB NOT NULL,
+   PluginName TINYBLOB NOT NULL,
+   ObjectLength INTEGER DEFAULT 0,
+   ObjectFullLength INTEGER DEFAULT 0,
+   ObjectIndex INTEGER DEFAULT 0,
+   ObjectType INTEGER DEFAULT 0,
+   FileIndex INTEGER UNSIGNED DEFAULT 0,
+   JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+   ObjectCompression INTEGER DEFAULT 0,
+   PRIMARY KEY(RestoreObjectId),
+   INDEX (JobId)
+   );
+
+
 #
 # Possibly add one or more of the following indexes
 #  to the above File table if your Verifies are
-#  too slow.
+#  too slow, but they can slow down backups.
 #
 #  INDEX (PathId),
 #  INDEX (FilenameId),
-#  INDEX (FilenameId, PathId)
-#  INDEX (JobId),
 #
 
 CREATE TABLE MediaType (
@@ -151,6 +182,7 @@ CREATE TABLE JobHisto (
    HasCache TINYINT DEFAULT 0,
    Reviewed TINYINT DEFAULT 0,
    Comment BLOB,
+   INDEX (JobId),
    INDEX (StartTime)
    );
 
@@ -224,7 +256,7 @@ CREATE TABLE Media (
     'Read-Only', 'Disabled', 'Error', 'Busy', 'Used', 'Cleaning') NOT NULL,
    Enabled TINYINT DEFAULT 1,
    Recycle TINYINT DEFAULT 0,
-   ActionOnPurge     TINYINT    DEFAULT 0,
+   ActionOnPurge     TINYINT	DEFAULT 0,
    VolRetention BIGINT UNSIGNED DEFAULT 0,
    VolUseDuration BIGINT UNSIGNED DEFAULT 0,
    MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
@@ -264,7 +296,7 @@ CREATE TABLE Pool (
    MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
    AutoPrune TINYINT DEFAULT 0,
    Recycle TINYINT DEFAULT 0,
-   ActionOnPurge     TINYINT    DEFAULT 0,
+   ActionOnPurge     TINYINT	DEFAULT 0,
    PoolType ENUM('Backup', 'Copy', 'Cloned', 'Archive', 'Migration', 'Scratch') NOT NULL,
    LabelType TINYINT DEFAULT 0,
    LabelFormat TINYBLOB,
@@ -324,8 +356,8 @@ CREATE TABLE UnsavedFiles (
 
 CREATE TABLE Counters (
    Counter TINYBLOB NOT NULL,
-   MinValue INTEGER DEFAULT 0,
-   MaxValue INTEGER DEFAULT 0,
+   \`MinValue\` INTEGER DEFAULT 0,
+   \`MaxValue\` INTEGER DEFAULT 0,
    CurrentValue INTEGER DEFAULT 0,
    WrapCounter TINYBLOB NOT NULL,
    PRIMARY KEY (Counter(128))
@@ -375,7 +407,7 @@ CREATE TABLE PathHierarchy
 );
 
 CREATE INDEX pathhierarchy_ppathid 
-          ON PathHierarchy (PPathId);
+	  ON PathHierarchy (PPathId);
 
 CREATE TABLE PathVisibility
 (
@@ -386,14 +418,14 @@ CREATE TABLE PathVisibility
       CONSTRAINT pathvisibility_pkey PRIMARY KEY (JobId, PathId)
 );
 CREATE INDEX pathvisibility_jobid
-             ON PathVisibility (JobId);
+	     ON PathVisibility (JobId);
 
 CREATE TABLE Version (
    VersionId INTEGER UNSIGNED NOT NULL 
    );
 
 -- Initialize Version		 
-INSERT INTO Version (VersionId) VALUES (12);
+INSERT INTO Version (VersionId) VALUES (@BDB_VERSION@);
 
 END-OF-DATA
 then

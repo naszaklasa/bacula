@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, January MMVI
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -95,13 +94,13 @@ bool do_mac(JCR *jcr)
    /* Ready devices for reading and writing */
    if (!acquire_device_for_read(jcr->read_dcr) ||
        !acquire_device_for_append(jcr->dcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       goto bail_out;
    }
 
    Dmsg2(200, "===== After acquire pos %u:%u\n", jcr->dcr->dev->file, jcr->dcr->dev->block_num);
      
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
 
    begin_data_spool(jcr->dcr);
@@ -165,7 +164,7 @@ ok_out:
    jcr->end_time = time(NULL);
    dequeue_messages(jcr);             /* send any queued messages */
    if (ok) {
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
    }
    generate_daemon_event(jcr, "JobEnd");
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
@@ -187,7 +186,6 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    JCR *jcr = dcr->jcr;
    DEVICE *dev = jcr->dcr->dev;
    char buf1[100], buf2[100];
-   int32_t stream;   
    
 #ifdef xxx
    Dmsg5(000, "on entry     JobId=%d FI=%s SessId=%d Strm=%s len=%d\n",
@@ -263,25 +261,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       FI_to_ascii(buf1, rec->FileIndex), rec->VolSessionId,
       stream_to_ascii(buf2, rec->Stream, rec->FileIndex), rec->data_len);
 
-   /* Send attributes and digest to Director for Catalog */
-   stream = rec->Stream;
-   if (stream == STREAM_UNIX_ATTRIBUTES || stream == STREAM_UNIX_ATTRIBUTES_EX ||
-       crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
-      if (!jcr->no_attributes) {
-         BSOCK *dir = jcr->dir_bsock;
-         if (are_attributes_spooled(jcr)) {
-            dir->set_spooling();
-         }
-         Dmsg0(850, "Send attributes to dir.\n");
-         if (!dir_update_file_attributes(jcr->dcr, rec)) {
-            dir->clear_spooling();
-            Jmsg(jcr, M_FATAL, 0, _("Error updating file attributes. ERR=%s\n"),
-               dir->bstrerror());
-            return false;
-         }
-         dir->clear_spooling();
-      }
-   }
+   send_attrs_to_dir(jcr, rec);
 
    return true;
 }

@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2009-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2009-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -36,6 +36,7 @@
 
 #include "bacula.h"
 #include "cats/cats.h"
+#include "cats/sql_glue.h"
 #include "cats/bvfs.h"
 #include "findlib/find.h"
  
@@ -78,10 +79,9 @@ static int result_handler(void *ctx, int fields, char **row)
 
    memset(&attr->statp, 0, sizeof(struct stat));
    decode_stat((row[BVFS_LStat] && row[BVFS_LStat][0])?row[BVFS_LStat]:empty,
-               &attr->statp, &attr->LinkFI);
+               &attr->statp, sizeof(attr->statp),  &attr->LinkFI);
 
-   if (bvfs_is_dir(row) || bvfs_is_file(row))
-   {
+   if (bvfs_is_dir(row) || bvfs_is_file(row)) {
       /* display clean stuffs */
 
       if (bvfs_is_dir(row)) {
@@ -203,18 +203,18 @@ int main (int argc, char *argv[])
    }
    JCR *bjcr = new_jcr(sizeof(JCR), NULL);
    bjcr->JobId = getpid();
-   bjcr->set_JobType(JT_CONSOLE);
-   bjcr->set_JobLevel(L_FULL);
+   bjcr->setJobType(JT_CONSOLE);
+   bjcr->setJobLevel(L_FULL);
    bjcr->JobStatus = JS_Running;
    bjcr->client_name = get_pool_memory(PM_FNAME);
    pm_strcpy(bjcr->client_name, "Dummy.Client.Name");
    bstrncpy(bjcr->Job, "bvfs_test", sizeof(bjcr->Job));
    
-   if ((db=db_init_database(NULL, db_name, db_user, db_password,
-                            db_host, 0, NULL, 0)) == NULL) {
+   if ((db = db_init_database(NULL, NULL, db_name, db_user, db_password,
+                              db_host, 0, NULL, false, false)) == NULL) {
       Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
    }
-   Dmsg1(0, "db_type=%s\n", db_get_type());
+   Dmsg1(0, "db_type=%s\n", db_get_type(db));
 
    if (!db_open_database(NULL, db)) {
       Emsg0(M_ERROR_TERM, 0, db_strerror(db));

@@ -5,7 +5,13 @@
 #  Written by Robert Nelson, June 2006
 #
 
-include ../Makefile.inc
+#
+# Change the following depending on where this directory is located
+#  in the Bacula tree.	It should point to the src/win32 directory.
+BUILDDIR = ..
+
+
+include $(BUILDDIR)/Makefile.inc
 
 INCLUDES = \
 	-I. \
@@ -17,11 +23,13 @@ INCLUDES = \
 	$(INCLUDE_ICONS)
 
 DEFINES = \
-	-DHAVE_TRAY_MONITOR \
 	-DUSING_DLL \
 	-DWIN32_VSS \
 	-DWINVER=0x500 \
 	$(HAVES)
+
+#	-DHAVE_TRAY_MONITOR \
+
 
 vpath %.c $(MAINDIR)/src/filed $(BUILDDIR)/libwin32
 vpath %.cpp $(MAINDIR)/src/filed $(BUILDDIR)/libwin32
@@ -47,13 +55,15 @@ FILED_OBJS = \
 	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/vss_W2K3.o \
 	$(OBJDIR)/vss_Vista.o \
-	$(OBJDIR)/aboutDialog.o \
 	$(OBJDIR)/service.o \
-	$(OBJDIR)/statusDialog.o \
-	$(OBJDIR)/trayMonitor.o \
 	$(OBJDIR)/xattr.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/bacula.res
+
+#	$(OBJDIR)/trayMonitor.o \
+#	$(OBJDIR)/aboutDialog.o \
+#	$(OBJDIR)/statusDialog.o \
+
 
 ALL_OBJS = $(FILED_OBJS)
 
@@ -87,9 +97,9 @@ clean:
 $(BINDIR)/bacula-fd.exe: $(FILED_OBJS) $(LIBS_BACULA)
 	$(call link_winapp,$(FILED_LIBS))
 
-$(OBJDIR)/winres.res: ../libwin32/winres.rc
+$(OBJDIR)/winres.res: $(BUILDDIR)/libwin32/winres.rc
 	@echo "Compiling $@"
 	$(call checkdir,$@)
 	$(ECHO_CMD)$(WINDRES) $(INCLUDE_ICONS) -O coff $< -o $@
 
-include ../Makefile.rules
+include $(BUILDDIR)/Makefile.rules

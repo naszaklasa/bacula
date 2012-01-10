@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -43,7 +42,11 @@
 
 /* Exported functions */
 
-int get_cmd(UAContext *ua, const char *prompt)
+/* 
+ * If subprompt is set, we send a BNET_SUB_PROMPT signal otherwise
+ *   send a BNET_TEXT_INPUT signal.
+ */
+int get_cmd(UAContext *ua, const char *prompt, bool subprompt)
 {
    BSOCK *sock = ua->UA_sock;
    int stat;
@@ -52,8 +55,13 @@ int get_cmd(UAContext *ua, const char *prompt)
    if (!sock || ua->batch) {          /* No UA or batch mode */
       return 0;
    }
+   if (!subprompt && ua->api) {
+      sock->signal(BNET_TEXT_INPUT);
+   }
    sock->fsend("%s", prompt);
-   sock->signal(BNET_PROMPT);         /* request more input */
+   if (!ua->api || subprompt) {
+      sock->signal(BNET_SUB_PROMPT);
+   }
    for ( ;; ) {
       stat = sock->recv();
       if (stat == BNET_SIGNAL) {
@@ -191,4 +199,40 @@ int get_enabled(UAContext *ua, const char *val)
 void parse_ua_args(UAContext *ua)
 {
    parse_args(ua->cmd, &ua->args, &ua->argc, ua->argk, ua->argv, MAX_CMD_ARGS);
+}
+
+/*
+ * Check if the comment has legal characters
+ * If ua is non-NULL send the message
+ */
+bool is_comment_legal(UAContext *ua, const char *name)
+{
+   int len;
+   const char *p;
+   const char *forbid = "'<>&\\\"";
+
+   /* Restrict the characters permitted in the comment */
+   for (p=name; *p; p++) {
+      if (!strchr(forbid, (int)(*p))) {
+         continue;
+      }
+      if (ua) {
+         ua->error_msg(_("Illegal character \"%c\" in a comment.\n"), *p);
+      }
+      return 0;
+   }
+   len = strlen(name);
+   if (len >= MAX_NAME_LENGTH) {
+      if (ua) {
+         ua->error_msg(_("Comment too long.\n"));
+      }
+      return 0;
+   }
+   if (len == 0) {
+      if (ua) {
+         ua->error_msg(_("Comment must be at least one character long.\n"));
+      }
+      return 0;
+   }
+   return 1;
 }

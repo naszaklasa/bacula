@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -30,8 +30,6 @@
  *
  *    Kern Sibbald, August MMI
  *
- *   Version $Id$
- *
  */
 
 #include "bacula.h"
@@ -39,6 +37,9 @@
 #include "lib/status.h"
 
 extern void *start_heap;
+
+extern bool GetWindowsVersionString(char *buf, int maxsiz);
+
 
 /* Forward referenced functions */
 static void  list_terminated_jobs(STATUS_PKT *sp);
@@ -85,10 +86,15 @@ static void  list_status_header(STATUS_PKT *sp)
               my_name, VERSION, BDATE, VSS, HOST_OS, DISTNAME, DISTVER);
    sendit(msg.c_str(), len, sp);
    bstrftime_nc(dt, sizeof(dt), daemon_start_time);
-   len = Mmsg(msg, _("Daemon started %s, %d Job%s run since started.\n"),
-        dt, num_jobs_run, num_jobs_run == 1 ? "" : "s");
+   len = Mmsg(msg, _("Daemon started %s. Jobs: run=%d running=%d.\n"),
+        dt, num_jobs_run, job_count());
    sendit(msg.c_str(), len, sp);
 #if defined(HAVE_WIN32)
+   char buf[300];
+   if (GetWindowsVersionString(buf, sizeof(buf))) {
+      len = Mmsg(msg, "%s\n", buf);
+      sendit(msg.c_str(), len, sp);
+   }
    if (debug_level > 0) {
       if (!privs) {
          privs = enable_backup_privileges(NULL, 1);
@@ -140,14 +146,15 @@ static void  list_status_header(STATUS_PKT *sp)
          edit_uint64_with_commas(sm_buffers, b4),
          edit_uint64_with_commas(sm_max_buffers, b5));
    sendit(msg.c_str(), len, sp);
-   len = Mmsg(msg, _(" Sizeof: boffset_t=%d size_t=%d debug=%d trace=%d\n"),
-         sizeof(boffset_t), sizeof(size_t), debug_level, get_trace());
+   len = Mmsg(msg, _(" Sizeof: boffset_t=%d size_t=%d debug=%d trace=%d "),
+                   sizeof(boffset_t), sizeof(size_t),
+              debug_level, get_trace());
    sendit(msg.c_str(), len, sp);
-   if (debug_level > 0 && plugin_list->size() > 0) {
+   if (debug_level > 0 && bplugin_list->size() > 0) {
       Plugin *plugin;
       int len;
       pm_strcpy(msg, "Plugin: ");
-      foreach_alist(plugin, plugin_list) {
+      foreach_alist(plugin, bplugin_list) {
          len = pm_strcat(msg, plugin->file);
          if (len > 80) {
             pm_strcat(msg, "\n   ");
@@ -160,7 +167,7 @@ static void  list_status_header(STATUS_PKT *sp)
    }
 }
 
-static void  list_running_jobs(STATUS_PKT *sp)
+static void  list_running_jobs_plain(STATUS_PKT *sp)
 {
    int sec, bps;
    POOL_MEM msg(PM_MESSAGE);
@@ -173,10 +180,8 @@ static void  list_running_jobs(STATUS_PKT *sp)
     * List running jobs
     */
    Dmsg0(1000, "Begin status jcr loop.\n");
-   if (!sp->api) {
-      len = Mmsg(msg, _("\nRunning Jobs:\n"));
-      sendit(msg.c_str(), len, sp);
-   }
+   len = Mmsg(msg, _("\nRunning Jobs:\n"));
+   sendit(msg.c_str(), len, sp);
    const char *vss = "";
 #ifdef WIN32_VSS
    if (g_pVSSClient && g_pVSSClient->IsInitialized()) {
@@ -232,15 +237,87 @@ static void  list_running_jobs(STATUS_PKT *sp)
    }
    endeach_jcr(njcr);
 
-   if (!sp->api) {
-      if (!found) {
-         len = Mmsg(msg, _("No Jobs running.\n"));
+   if (!found) {
+      len = Mmsg(msg, _("No Jobs running.\n"));
+      sendit(msg.c_str(), len, sp);
+   }
+   sendit(_("====\n"), 5, sp);
+}
+
+static void  list_running_jobs_api(STATUS_PKT *sp)
+{
+   int sec, bps;
+   POOL_MEM msg(PM_MESSAGE);
+   char b1[32], b2[32], b3[32];
+   int len;
+   JCR *njcr;
+   char dt[MAX_TIME_LENGTH];
+   /*
+    * List running jobs for Bat/Bweb (simple to parse)
+    */
+   int vss = 0;
+#ifdef WIN32_VSS
+   if (g_pVSSClient && g_pVSSClient->IsInitialized()) {
+      vss = 1;
+   }
+#endif
+   foreach_jcr(njcr) {
+      bstrutime(dt, sizeof(dt), njcr->start_time);
+      if (njcr->JobId == 0) {
+         len = Mmsg(msg, "DirectorConnected=%s\n", dt);
+      } else {
+         len = Mmsg(msg, "JobId=%d\n Job=%s\n",
+                    njcr->JobId, njcr->Job);
+         sendit(msg.c_str(), len, sp);
+         len = Mmsg(msg," VSS=%d\n Level=%c\n JobType=%c\n JobStarted=%s\n",
+                    vss, njcr->getJobLevel(), 
+                    njcr->getJobType(), dt);
+      }
+      sendit(msg.c_str(), len, sp);
+      if (njcr->JobId == 0) {
+         continue;
+      }
+      sec = time(NULL) - njcr->start_time;
+      if (sec <= 0) {
+         sec = 1;
+      }
+      bps = (int)(njcr->JobBytes / sec);
+      len = Mmsg(msg, " Files=%s\n Bytes=%s\n Bytes/sec=%s\n Errors=%d\n",
+                 edit_uint64(njcr->JobFiles, b1),
+                 edit_uint64(njcr->JobBytes, b2),
+                 edit_uint64(bps, b3),
+                 njcr->JobErrors);
+      sendit(msg.c_str(), len, sp);
+      len = Mmsg(msg, " Files Examined=%s\n",
+           edit_uint64(njcr->num_files_examined, b1));
+      sendit(msg.c_str(), len, sp);
+      if (njcr->JobFiles > 0) {
+         njcr->lock();
+         len = Mmsg(msg, " Processing file=%s\n", njcr->last_fname);
+         njcr->unlock();
          sendit(msg.c_str(), len, sp);
       }
-      sendit(_("====\n"), 5, sp);
+
+      if (njcr->store_bsock) {
+         len = Mmsg(msg, " SDReadSeqNo=%" lld "\n fd=%d\n",
+             njcr->store_bsock->read_seqno, njcr->store_bsock->m_fd);
+         sendit(msg.c_str(), len, sp);
+      } else {
+         len = Mmsg(msg, _(" SDSocket=closed\n"));
+         sendit(msg.c_str(), len, sp);
+      }
    }
+   endeach_jcr(njcr);
 }
-  
+
+static void  list_running_jobs(STATUS_PKT *sp)
+{
+   if (sp->api) {
+      list_running_jobs_api(sp);
+   } else {
+      list_running_jobs_plain(sp);
+   }
+}  
 
 static void list_terminated_jobs(STATUS_PKT *sp)
 {

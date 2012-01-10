@@ -15,7 +15,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -24,7 +24,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -56,6 +56,7 @@
 #include "stored/stored.h"
 #include "findlib/find.h"
 #include "cats/cats.h"
+#include "cats/sql_glue.h"
  
 /* Forward referenced functions */
 static void *do_batch(void *);
@@ -80,6 +81,8 @@ PROG_COPYRIGHT
 " will start 3 thread and load dat1, dat and datx in your catalog\n"
 "See bbatch.c to generate datafile\n\n"
 "Usage: bbatch [ options ] -w working/dir -f datafile\n"
+"       -b                with batch mode\n"
+"       -B                without batch mode\n"
 "       -d <nn>           set debug level to <nn>\n"
 "       -dt               print timestamp in debug output\n"
 "       -n <name>         specify the database name (default bacula)\n"
@@ -87,6 +90,7 @@ PROG_COPYRIGHT
 "       -P <password      specify database password (default none)\n"
 "       -h <host>         specify database host (default NULL)\n"
 "       -w <working>      specify working directory\n"
+"       -r <jobids>       call restore code with given jobids\n"
 "       -v                verbose\n"
 "       -f <file>         specify data file\n"
 "       -?                print this message\n\n"), 2001, VERSION, BDATE);
@@ -96,9 +100,18 @@ PROG_COPYRIGHT
 /* number of thread started */
 int nb=0;
 
+static int list_handler(void *ctx, int num_fields, char **row)
+{
+   uint64_t *a = (uint64_t*) ctx;
+   (*a)++;
+   return 0;
+}
+
 int main (int argc, char *argv[])
 {
    int ch;
+   bool disable_batch = false;
+   char *restore_list=NULL;
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
@@ -112,8 +125,17 @@ int main (int argc, char *argv[])
 
    OSDependentInit();
 
-   while ((ch = getopt(argc, argv, "h:c:d:n:P:Su:vf:w:?")) != -1) {
+   while ((ch = getopt(argc, argv, "bBh:c:d:n:P:Su:vf:w:r:?")) != -1) {
       switch (ch) {
+      case 'r':
+         restore_list=bstrdup(optarg);
+         break;
+      case 'B':
+         disable_batch = true;
+         break;
+      case 'b':
+         disable_batch = false;
+         break;
       case 'd':                    /* debug level */
          if (*optarg == 't') {
             dbg_timestamp = true;
@@ -169,11 +191,36 @@ int main (int argc, char *argv[])
       usage();
    }
 
-#ifdef HAVE_BATCH_FILE_INSERT
-   printf("With new Batch mode\n");
-#else
-   printf("Without new Batch mode\n");
-#endif
+   if (restore_list) {
+      uint64_t nb_file=0;
+      btime_t start, end;
+      /* To use the -r option, the catalog should already contains records */
+      
+      if ((db = db_init_database(NULL, NULL, db_name, db_user, db_password,
+                                 db_host, 0, NULL, false, disable_batch)) == NULL) {
+         Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
+      }
+      if (!db_open_database(NULL, db)) {
+         Emsg0(M_ERROR_TERM, 0, db_strerror(db));
+      }
+
+      start = get_current_btime();
+      db_get_file_list(NULL, db, restore_list, false, false, list_handler, &nb_file);
+      end = get_current_btime();
+
+      Pmsg3(0, _("Computing file list for jobid=%s files=%lld secs=%d\n"), 
+            restore_list, nb_file, (uint32_t)btime_to_unix(end-start));
+      
+      free(restore_list);
+      return 0;
+   }
+
+   if (disable_batch) {
+      printf("Without new Batch mode\n");
+   } else {
+      printf("With new Batch mode\n");
+   }
+
    i = nb;
    while (--i >= 0) {
       pthread_t thid;
@@ -184,8 +231,8 @@ int main (int argc, char *argv[])
       bjcr->NumReadVolumes = 0;
       bjcr->NumWriteVolumes = 0;
       bjcr->JobId = getpid();
-      bjcr->set_JobType(JT_CONSOLE);
-      bjcr->set_JobLevel(L_FULL);
+      bjcr->setJobType(JT_CONSOLE);
+      bjcr->setJobLevel(L_FULL);
       bjcr->JobStatus = JS_Running;
       bjcr->where = bstrdup(files[i]);
       bjcr->job_name = get_pool_memory(PM_FNAME);
@@ -198,8 +245,8 @@ int main (int argc, char *argv[])
       bjcr->fileset_md5 = get_pool_memory(PM_FNAME);
       pm_strcpy(bjcr->fileset_md5, "Dummy.fileset.md5");
       
-      if ((db=db_init_database(NULL, db_name, db_user, db_password,
-                               db_host, 0, NULL, 0)) == NULL) {
+      if ((db = db_init_database(NULL, NULL, db_name, db_user, db_password,
+                                 db_host, 0, NULL, false, false)) == NULL) {
          Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
       }
       if (!db_open_database(NULL, db)) {
@@ -274,7 +321,7 @@ static void *do_batch(void *jcr)
          printf("\r%i", lineno);
       }
       fill_attr(&ar, data);
-      if (!db_create_file_attributes_record(bjcr, bjcr->db, &ar)) {
+      if (!db_create_attributes_record(bjcr, bjcr->db, &ar)) {
          Emsg0(M_ERROR_TERM, 0, _("Error while inserting file\n"));
       }
    }

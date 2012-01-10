@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -40,9 +40,6 @@
 
                   http://www.fourmilab.ch/smartall/
 
-
-         Version $Id$
-
 */
 
 #define _LOCKMGR_COMPLIANT
@@ -58,6 +55,7 @@
  *  If you want it, simply #ifdef all the
  *  following off.
  */
+#ifdef no_debug_xxxxx
 #undef Dmsg1
 #undef Dmsg2
 #undef Dmsg3
@@ -66,6 +64,7 @@
 #define Dmsg2(l,f,a1,a2)
 #define Dmsg3(l,f,a1,a2,a3)
 #define Dmsg4(l,f,a1,a2,a3,a4)
+#endif
 
 
 uint64_t sm_max_bytes = 0;
@@ -79,8 +78,6 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 extern char my_name[];                /* daemon name */
 
-typedef unsigned short sm_ushort;
-
 #define EOS      '\0'              /* End of string sentinel */
 #define sm_min(a, b) ((a) < (b) ? (a) : (b))
 
@@ -90,9 +87,9 @@ typedef unsigned short sm_ushort;
 
 struct abufhead {
    struct b_queue abq;         /* Links on allocated queue */
-   unsigned ablen;             /* Buffer length in bytes */
+   uint32_t ablen;             /* Buffer length in bytes */
    const char *abfname;        /* File name pointer */
-   sm_ushort ablineno;         /* Line number of allocation */
+   uint32_t ablineno;          /* Line number of allocation */
    bool abin_use;              /* set when malloced and cleared when free */
 };
 
@@ -131,7 +128,7 @@ static void *smalloc(const char *fname, int lineno, unsigned int nbytes)
       qinsert(&abqueue, (struct b_queue *) buf);
       head->ablen = nbytes;
       head->abfname = bufimode ? NULL : fname;
-      head->ablineno = (sm_ushort)lineno;
+      head->ablineno = (uint32_t)lineno;
       head->abin_use = true;
       /* Emplace end-clobber detector at end of buffer */
       buf[nbytes - 1] = (uint8_t)((((intptr_t) buf) & 0xFF) ^ 0xC5);
@@ -163,7 +160,7 @@ void sm_new_owner(const char *fname, int lineno, char *buf)
 {
    buf -= HEAD_SIZE;  /* Decrement to header */
    ((struct abufhead *)buf)->abfname = bufimode ? NULL : fname;
-   ((struct abufhead *)buf)->ablineno = (sm_ushort) lineno;
+   ((struct abufhead *)buf)->ablineno = (uint32_t) lineno;
    ((struct abufhead *)buf)->abin_use = true;
    return;
 }
@@ -177,9 +174,10 @@ void sm_free(const char *file, int line, void *fp)
 {
    char *cp = (char *) fp;
    struct b_queue *qp;
+   uint32_t lineno = line;
 
    if (cp == NULL) {
-      Emsg2(M_ABORT, 0, _("Attempt to free NULL called from %s:%d\n"), file, line);
+      Emsg2(M_ABORT, 0, _("Attempt to free NULL called from %s:%d\n"), file, lineno);
    }
 
    cp -= HEAD_SIZE;
@@ -189,11 +187,11 @@ void sm_free(const char *file, int line, void *fp)
    P(mutex);
    Dmsg4(1150, "sm_free %d at %p from %s:%d\n",
          head->ablen, fp,
-         head->abfname, head->ablineno);
+         get_basename(head->abfname), head->ablineno);
 
    if (!head->abin_use) {
       V(mutex);
-      Emsg2(M_ABORT, 0, _("double free from %s:%d\n"), file, line);
+      Emsg2(M_ABORT, 0, _("double free from %s:%d\n"), file, lineno);
    }
    head->abin_use = false;
 
@@ -201,11 +199,11 @@ void sm_free(const char *file, int line, void *fp)
       of an address which isn't an allocated buffer. */
    if (qp->qnext->qprev != qp) {
       V(mutex);
-      Emsg2(M_ABORT, 0, _("qp->qnext->qprev != qp called from %s:%d\n"), file, line);
+      Emsg2(M_ABORT, 0, _("qp->qnext->qprev != qp called from %s:%d\n"), file, lineno);
    }
    if (qp->qprev->qnext != qp) {
       V(mutex);
-      Emsg2(M_ABORT, 0, _("qp->qprev->qnext != qp called from %s:%d\n"), file, line);
+      Emsg2(M_ABORT, 0, _("qp->qprev->qnext != qp called from %s:%d\n"), file, lineno);
    }
 
    /* The following assertion detects storing off the  end  of  the
@@ -214,7 +212,8 @@ void sm_free(const char *file, int line, void *fp)
 
    if (((unsigned char *)cp)[head->ablen - 1] != ((((intptr_t) cp) & 0xFF) ^ 0xC5)) {
       V(mutex);
-      Emsg2(M_ABORT, 0, _("Buffer overrun called from %s:%d\n"), file, line);
+      Emsg6(M_ABORT, 0, _("Overrun buffer: len=%d addr=%p allocated: %s:%d called from %s:%d\n"), 
+         head->ablen, fp, get_basename(head->abfname), head->ablineno, file, line);
    }
    if (sm_buffers > 0) {
       sm_buffers--;
@@ -289,7 +288,7 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
    void *buf;
    char *cp = (char *) ptr;
 
-   Dmsg4(400, "sm_realloc %s:%d %p %d\n", fname, lineno, ptr, size);
+   Dmsg4(1400, "sm_realloc %s:%d %p %d\n", get_basename(fname), (uint32_t)lineno, ptr, size);
    if (size <= 0) {
       e_msg(fname, lineno, M_ABORT, 0, _("sm_realloc size: %d\n"), size);
    }
@@ -329,7 +328,7 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
       /* All done.  Free and dechain the original buffer. */
       sm_free(fname, lineno, ptr);
    }
-   Dmsg4(150, _("sm_realloc %d at %p from %s:%d\n"), size, buf, fname, lineno);
+   Dmsg4(4150, _("sm_realloc %d at %p from %s:%d\n"), size, buf, get_basename(fname), (uint32_t)lineno);
    return buf;
 }
 
@@ -360,7 +359,7 @@ void *actuallycalloc(unsigned int nelem, unsigned int elsize)
 
 void *actuallyrealloc(void *ptr, unsigned int size)
 {
-   Dmsg2(400, "Actuallyrealloc %p %d\n", ptr, size);
+   Dmsg2(1400, "Actuallyrealloc %p %d\n", ptr, size);
    return realloc(ptr, size);
 }
 
@@ -374,8 +373,6 @@ void actuallyfree(void *cp)
 
 /*  SM_DUMP  --  Print orphaned buffers (and dump them if BUFDUMP is
  *               True).
- *  N.B. DO NOT USE any Bacula print routines (Dmsg, Jmsg, Emsg, ...)
- *    as they have all been shut down at this point.
  */
 void sm_dump(bool bufdump, bool in_use) 
 {
@@ -390,7 +387,7 @@ void sm_dump(bool bufdump, bool in_use)
       if ((ap == NULL) ||
           (ap->abq.qnext->qprev != (struct b_queue *) ap) ||
           (ap->abq.qprev->qnext != (struct b_queue *) ap)) {
-         fprintf(stderr, _(
+         Pmsg1(0, _(
             "\nOrphaned buffers exist.  Dump terminated following\n"
             "  discovery of bad links in chain of orphaned buffers.\n"
             "  Buffer address with bad links: %p\n"), ap);
@@ -398,16 +395,13 @@ void sm_dump(bool bufdump, bool in_use)
       }
 
       if (ap->abfname != NULL) {
-         unsigned memsize = ap->ablen - (HEAD_SIZE + 1);
          char errmsg[500];
+         uint32_t memsize = ap->ablen - (HEAD_SIZE + 1);
          char *cp = ((char *)ap) + HEAD_SIZE;
 
-         bsnprintf(errmsg, sizeof(errmsg),
-           _("%s buffer:  %s %6u bytes buf=%p allocated at %s:%d\n"),
+         Pmsg6(0, "%s buffer: %s %d bytes at %p from %s:%d\n", 
             in_use?"In use":"Orphaned",
-            my_name, memsize, cp, ap->abfname, ap->ablineno
-         );
-         fprintf(stderr, "%s", errmsg);
+            my_name, memsize, cp, get_basename(ap->abfname), ap->ablineno);
          if (bufdump) {
             char buf[20];
             unsigned llen = 0;
@@ -417,7 +411,7 @@ void sm_dump(bool bufdump, bool in_use)
                if (llen >= 16) {
                   bstrncat(errmsg, "\n", sizeof(errmsg));
                   llen = 0;
-                  fprintf(stderr, "%s", errmsg);
+                  Pmsg1(0, "%s", errmsg);
                   errmsg[0] = EOS;
                }
                bsnprintf(buf, sizeof(buf), " %02X",
@@ -426,7 +420,7 @@ void sm_dump(bool bufdump, bool in_use)
                llen++;
                memsize--;
             }
-            fprintf(stderr, "%s\n", errmsg);
+            Pmsg1(0, "%s\n", errmsg);
          }
       }
       ap = (struct abufhead *) ap->abq.qnext;
@@ -440,7 +434,7 @@ void sm_check(const char *fname, int lineno, bool bufdump)
 {
    if (!sm_check_rtn(fname, lineno, bufdump)) {
       Emsg2(M_ABORT, 0, _("Damaged buffer found. Called from %s:%d\n"),
-            fname, lineno);
+            get_basename(fname), (uint32_t)lineno);
    }
 }
 
@@ -471,34 +465,34 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
       }
       badbuf |= bad;
       if (bad) {
-         fprintf(stderr,
-            _("\nDamaged buffers found at %s:%d\n"), fname, lineno);
+         Pmsg2(0, 
+            _("\nDamaged buffers found at %s:%d\n"), get_basename(fname), (uint32_t)lineno);
 
          if (bad & 0x1) {
-            fprintf(stderr, _("  discovery of bad prev link.\n"));
+            Pmsg0(0,  _("  discovery of bad prev link.\n"));
          }
          if (bad & 0x2) {
-            fprintf(stderr, _("  discovery of bad next link.\n"));
+            Pmsg0(0, _("  discovery of bad next link.\n"));
          }
          if (bad & 0x4) {
-            fprintf(stderr, _("  discovery of data overrun.\n"));
+            Pmsg0(0, _("  discovery of data overrun.\n"));
          }
          if (bad & 0x8) {
-            fprintf(stderr, _("  NULL pointer.\n"));
+            Pmsg0(0, _("  NULL pointer.\n"));
          }
 
          if (!ap) {
             goto get_out;
          }
-         fprintf(stderr, _("  Buffer address: %p\n"), ap);
+         Pmsg1(0, _("  Buffer address: %p\n"), ap);
 
          if (ap->abfname != NULL) {
-            unsigned memsize = ap->ablen - (HEAD_SIZE + 1);
+            uint32_t memsize = ap->ablen - (HEAD_SIZE + 1);
             char errmsg[80];
 
-            fprintf(stderr,
+            Pmsg4(0, 
               _("Damaged buffer:  %6u bytes allocated at line %d of %s %s\n"),
-               memsize, ap->ablineno, my_name, ap->abfname
+               memsize, ap->ablineno, my_name, get_basename(ap->abfname)
             );
             if (bufdump) {
                unsigned llen = 0;
@@ -509,7 +503,7 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
                   if (llen >= 16) {
                      strcat(errmsg, "\n");
                      llen = 0;
-                     fprintf(stderr, "%s", errmsg);
+                     Pmsg1(0, "%s", errmsg);
                      errmsg[0] = EOS;
                   }
                   if (*cp < 0x20) {
@@ -522,7 +516,7 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
                   llen++;
                   memsize--;
                }
-               fprintf(stderr, "%s\n", errmsg);
+               Pmsg1(0, "%s\n", errmsg);
             }
          }
       }

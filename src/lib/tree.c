@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -36,6 +36,9 @@
 #include "bacula.h"
 #include "findlib/find.h"
 
+#define B_PAGE_SIZE 4096
+#define MAX_PAGES 2400
+#define MAX_BUF_SIZE (MAX_PAGES * B_PAGE_SIZE)  /* approx 10MB */
 
 /* Forward referenced subroutines */
 static TREE_NODE *search_and_insert_tree_node(char *fname, int type,
@@ -90,8 +93,8 @@ TREE_ROOT *new_tree(int count)
    memset(root, 0, sizeof(TREE_ROOT));
    /* Assume filename + node  = 40 characters average length */
    size = count * (BALIGN(sizeof(TREE_NODE)) + 40);
-   if (count > 1000000 || size > 10000000) {
-      size = 10000000;
+   if (count > 1000000 || size > (MAX_BUF_SIZE / 2)) {
+      size = MAX_BUF_SIZE;
    }
    Dmsg2(400, "count=%d size=%d\n", count, size);
    malloc_buf(root, size);
@@ -111,6 +114,7 @@ static TREE_NODE *new_tree_node(TREE_ROOT *root)
    int size = sizeof(TREE_NODE);
    node = (TREE_NODE *)tree_alloc(root, size);
    memset(node, 0, size);
+   node->delta_seq = -1;
    return node;
 }
 
@@ -125,7 +129,16 @@ static void free_tree_node(TREE_ROOT *root)
    root->mem->mem -= asize;
 }
 
-
+void tree_remove_node(TREE_ROOT *root, TREE_NODE *node)
+{
+   int asize = BALIGN(sizeof(TREE_NODE));
+   node->parent->child.remove(node);
+   if ((root->mem->mem - asize) == (char *)node) {
+      free_tree_node(root);
+   } else {
+      Dmsg0(0, "Can't release tree node\n");
+   }
+}
 
 /*
  * Allocate bytes for filename in tree structure.
@@ -139,10 +152,10 @@ static char *tree_alloc(TREE_ROOT *root, int size)
 
    if (root->mem->rem < asize) {
       uint32_t mb_size;
-      if (root->total_size >= 1000000) {
-         mb_size = 1000000;
+      if (root->total_size >= (MAX_BUF_SIZE / 2)) {
+         mb_size = MAX_BUF_SIZE;
       } else {
-         mb_size = 100000;
+         mb_size = MAX_BUF_SIZE / 2;
       }
       malloc_buf(root, mb_size);
    }
@@ -157,21 +170,36 @@ static char *tree_alloc(TREE_ROOT *root, int size)
 void free_tree(TREE_ROOT *root)
 {
    struct s_mem *mem, *rel;
+   uint32_t freed_blocks = 0;
 
    for (mem=root->mem; mem; ) {
       rel = mem;
       mem = mem->next;
       free(rel);
+      freed_blocks++;
    }
    if (root->cached_path) {
       free_pool_memory(root->cached_path);
       root->cached_path = NULL;
    }
-   Dmsg2(400, "Total size=%u blocks=%d\n", root->total_size, root->blocks);
+   Dmsg3(100, "Total size=%u blocks=%u freed_blocks=%u\n", root->total_size, root->blocks, freed_blocks);
    free(root);
+   garbage_collect_memory();
    return;
 }
 
+/* Add Delta part for this node */
+void tree_add_delta_part(TREE_ROOT *root, TREE_NODE *node,
+                         JobId_t JobId, int32_t FileIndex)
+{
+   struct delta_list *elt = 
+      (struct delta_list*) tree_alloc(root, sizeof(struct delta_list));
+
+   elt->next = node->delta_list;
+   elt->JobId = JobId;
+   elt->FileIndex = FileIndex;
+   node->delta_list = elt;
+}
 
 /*
  * Insert a node in the tree. This is the main subroutine

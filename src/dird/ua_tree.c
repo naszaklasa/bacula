@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -33,7 +33,6 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -130,7 +129,7 @@ bool user_select_files_from_tree(TREE_CTX *tree)
    ua->send_msg(_("cwd is: %s\n"), cwd);
    for ( ;; ) {
       int found, len, i;
-      if (!get_cmd(ua, "$ ")) {
+      if (!get_cmd(ua, "$ ", true)) {
          break;
       }
       if (ua->api) user->signal(BNET_CMD_BEGIN);
@@ -151,6 +150,10 @@ bool user_select_files_from_tree(TREE_CTX *tree)
             break;
          }
       if (!found) {
+         if (*ua->argk[0] == '.') {
+            /* Some unknow dot command -- probably .messages, ignore it */
+            continue;
+         }
          ua->warning_msg(_("Invalid command \"%s\". Enter \"done\" to exit.\n"), ua->cmd);
          if (ua->api) user->signal(BNET_CMD_FAILED);
          continue;
@@ -178,7 +181,7 @@ bool user_select_files_from_tree(TREE_CTX *tree)
  *
  *   See uar_sel_files in sql_cmds.c for query that calls us.
  *      row[0]=Path, row[1]=Filename, row[2]=FileIndex
- *      row[3]=JobId row[4]=LStat
+ *      row[3]=JobId row[4]=LStat row[5]=DeltaSeq
  */
 int insert_tree_handler(void *ctx, int num_fields, char **row)
 {
@@ -188,10 +191,11 @@ int insert_tree_handler(void *ctx, int num_fields, char **row)
    int type;
    bool hard_link, ok;
    int FileIndex;
+   int32_t delta_seq;
    JobId_t JobId;
 
-   Dmsg4(400, "Path=%s%s FI=%s JobId=%s\n", row[0], row[1],
-      row[2], row[3]);
+   Dmsg4(100, "Path=%s%s FI=%s JobId=%s\n", row[0], row[1],
+         row[2], row[3]);
    if (*row[1] == 0) {                 /* no filename => directory */
       if (!IsPathSeparator(*row[0])) { /* Must be Win32 directory */
          type = TN_DIR_NLS;
@@ -201,11 +205,32 @@ int insert_tree_handler(void *ctx, int num_fields, char **row)
    } else {
       type = TN_FILE;
    }
-   hard_link = (decode_LinkFI(row[4], &statp) != 0);
+   hard_link = (decode_LinkFI(row[4], &statp, sizeof(statp)) != 0);
    node = insert_tree_node(row[0], row[1], type, tree->root, NULL);
    JobId = str_to_int64(row[3]);
    FileIndex = str_to_int64(row[2]);
-   Dmsg2(400, "JobId=%s FileIndex=%s\n", row[3], row[2]);
+   delta_seq = str_to_int64(row[5]);
+   Dmsg5(100, "node=0x%p JobId=%s FileIndex=%s Delta=%s node.delta=%d\n",
+         node, row[3], row[2], row[5], node->delta_seq);
+
+   /* TODO: check with hardlinks */
+   if (delta_seq > 0) {
+      if (delta_seq == (node->delta_seq + 1)) {
+         tree_add_delta_part(tree->root, node, node->JobId, node->FileIndex);
+
+      } else {
+         /* File looks to be deleted */
+         if (node->delta_seq == -1) { /* just created */
+            tree_remove_node(tree->root, node);
+
+         } else {
+            Dmsg3(0, "Something is wrong with Delta, skipt it "
+                  "fname=%s d1=%d d2=%d\n", 
+                  row[1], node->delta_seq, delta_seq);
+         }
+         return 0;
+      }
+   }
    /*
     * - The first time we see a file (node->inserted==true), we accept it.
     * - In the same JobId, we accept only the first copy of a
@@ -229,6 +254,8 @@ int insert_tree_handler(void *ctx, int num_fields, char **row)
       node->JobId = JobId;
       node->type = type;
       node->soft_link = S_ISLNK(statp.st_mode) != 0;
+      node->delta_seq = delta_seq;
+
       if (tree->all) {
          node->extract = true;          /* extract all by default */
          if (type == TN_DIR || type == TN_DIR_NLS) {
@@ -295,7 +322,7 @@ static int set_extract(UAContext *ua, TREE_NODE *node, TREE_CTX *tree, bool extr
       fdbr.JobId = node->JobId;
       if (node->hard_link && db_get_file_attributes_record(ua->jcr, ua->db, cwd, NULL, &fdbr)) {
          int32_t LinkFI;
-         decode_stat(fdbr.LStat, &statp, &LinkFI); /* decode stat pkt */
+         decode_stat(fdbr.LStat, &statp, sizeof(statp), &LinkFI); /* decode stat pkt */
          /*
           * If we point to a hard linked file, traverse the tree to
           * find that file, and mark it to be restored as well. It
@@ -532,14 +559,24 @@ static int dot_lsmarkcmd(UAContext *ua, TREE_CTX *tree)
 }
 
 /*
- * Ls command that lists only the marked files
+ * This recursive ls command that lists only the marked files
  */
-static void rlsmark(UAContext *ua, TREE_NODE *tnode)
+static void rlsmark(UAContext *ua, TREE_NODE *tnode, int level)
 {
    TREE_NODE *node;
+   const int max_level = 100;
+   char indent[max_level*2+1];
+   int i, j;
    if (!tree_node_has_child(tnode)) {
       return;
    }
+   level = MIN(level, max_level);
+   j = 0;
+   for (i=0; i<level; i++) {
+      indent[j++] = ' ';
+      indent[j++] = ' ';
+   }
+   indent[j] = 0;
    foreach_child(node, tnode) {
       if ((ua->argc == 1 || fnmatch(ua->argk[1], node->fname, 0) == 0) &&
           (node->extract || node->extract_dir)) {
@@ -551,9 +588,9 @@ static void rlsmark(UAContext *ua, TREE_NODE *tnode)
          } else {
             tag = "";
          }
-         ua->send_msg("%s%s%s\n", tag, node->fname, tree_node_has_child(node)?"/":"");
+         ua->send_msg("%s%s%s%s\n", indent, tag, node->fname, tree_node_has_child(node)?"/":"");
          if (tree_node_has_child(node)) {
-            rlsmark(ua, node);
+            rlsmark(ua, node, level+1);
          }
       }
    }
@@ -561,7 +598,7 @@ static void rlsmark(UAContext *ua, TREE_NODE *tnode)
 
 static int lsmarkcmd(UAContext *ua, TREE_CTX *tree)
 {
-   rlsmark(ua, tree->node);
+   rlsmark(ua, tree->node, 0);
    return 1;
 }
 
@@ -668,7 +705,7 @@ static int do_dircmd(UAContext *ua, TREE_CTX *tree, bool dot_cmd)
          }
          if (db_get_file_attributes_record(ua->jcr, ua->db, pcwd, NULL, &fdbr)) {
             int32_t LinkFI;
-            decode_stat(fdbr.LStat, &statp, &LinkFI); /* decode stat pkt */
+            decode_stat(fdbr.LStat, &statp, sizeof(statp), &LinkFI); /* decode stat pkt */
          } else {
             /* Something went wrong getting attributes -- print name */
             memset(&statp, 0, sizeof(statp));
@@ -713,7 +750,7 @@ static int estimatecmd(UAContext *ua, TREE_CTX *tree)
             fdbr.JobId = node->JobId;
             if (db_get_file_attributes_record(ua->jcr, ua->db, cwd, NULL, &fdbr)) {
                int32_t LinkFI;
-               decode_stat(fdbr.LStat, &statp, &LinkFI); /* decode stat pkt */
+               decode_stat(fdbr.LStat, &statp, sizeof(statp), &LinkFI); /* decode stat pkt */
                if (S_ISREG(statp.st_mode) && statp.st_size > 0) {
                   total_bytes += statp.st_size;
                }

@@ -34,6 +34,21 @@
 SIMULATE_BARCODE=true
 BARCODE_FILE=/usr/local/etc/bacula-barcodes
 
+TMPDIR=/tmp
+
+make_temp_file() 
+{
+  TMPFILE=`mktemp ${TMPDIR}/mtx$1.XXXXXXXXXX 2> /dev/null`
+  if test $? -ne 0 || test x${TMPFILE} = x; then
+     TMPFILE="${TMPDIR}/mtx$1.$$"
+     if test -f ${TMPFILE}; then
+        echo "ERROR: Temp file security problem on: ${TMPFILE}"
+        exit 1
+     fi
+  fi
+}
+
+
 me=$(basename $0)
 fullpath_me=$0
 
@@ -129,14 +144,15 @@ case ${COMMAND} in
 
     loaded)
         # echo "Request loaded"
-        ${MTX} -f ${CHANGER} status -S > /tmp/mtx.$$
+        make_temp_file
+        ${MTX} -f ${CHANGER} status -S > ${TMPFILE}
         rtn=$?
-        cat /tmp/mtx.$$ | grep "^slot .: <ACCESS>" | awk '{print $2+1}' | tr -d ":"
-        drive=`cat /tmp/mtx.$$ | grep "^drive .: <ACCESS>"`
+        cat ${TMPFILE} | grep "^slot .: <ACCESS>" | awk '{print $2+1}' | tr -d ":"
+        drive=`cat ${TMPFILE}| grep "^drive .: <ACCESS>"`
         if [ -n "$drive" ]; then
                 echo 0
         fi
-        rm -f /tmp/mtx.$$
+        rm -f ${TMPFILE}
         exit $rtn
         ;;
 

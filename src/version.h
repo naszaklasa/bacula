@@ -1,21 +1,21 @@
 
 #undef  VERSION
-#define VERSION "5.0.2"
-#define BDATE   "28 April 2010"
-#define LSMDATE "28Apr10"
+#define VERSION "5.2.3"
+#define BDATE   "16 December 2011"
+#define LSMDATE "16Dec11"
 
-#define PROG_COPYRIGHT "Copyright (C) %d-2010 Free Software Foundation Europe e.V.\n"
-#define BYEAR "2010"       /* year for copyright messages in progs */
+#define PROG_COPYRIGHT "Copyright (C) %d-2011 Free Software Foundation Europe e.V.\n"
+#define BYEAR "2011"       /* year for copyright messages in progs */
 
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -24,38 +24,27 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
    Bacula® is a registered trademark of Kern Sibbald.
+
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 
 /* Shared object library versions */
-#define LIBBAC_LT_CURRENT  5
-#define LIBBAC_LT_REVISION 0
-#define LIBBAC_LT_AGE 1
 
-#define LIBBACCFG_LT_CURRENT 5
-#define LIBBACCFG_LT_REVISION 0
-#define LIBBACCFG_LT_AGE 1
-
-#define LIBBACPY_LT_CURRENT 5
-#define LIBBACPY_LT_REVISION 0
-#define LIBBACPY_LT_AGE 1
-
-#define LIBBACSQL_LT_CURRENT 5
-#define LIBBACSQL_LT_REVISION 0
-#define LIBBACSQL_LT_AGE 1
-
-#define LIBBACFIND_LT_CURRENT 5
-#define LIBBACFIND_LT_REVISION 0
-#define LIBBACFIND_LT_AGE 1
-
+/* Uncomment to overwrite default value from VERSION */
+/* #define LIBBAC_LT_RELEASE     "5.1.0" */
+/* #define LIBBACCFG_LT_RELEASE  "5.1.0" */
+/* #define LIBBACPY_LT_RELEASE   "5.1.0" */
+/* #define LIBBACSQL_LT_RELEASE  "5.1.0" */
+/* #define LIBBACCATS_LT_RELEASE  "5.1.0" */
+/* #define LIBBACFIND_LT_RELEASE "5.1.0" */
 
 
 /* Debug flags */
@@ -66,6 +55,13 @@
 
 /* If this is set stdout will not be closed on startup */
 /* #define DEVELOPER 1 */
+
+/* adjust DEVELOPER_MODE for status command */
+#ifdef DEVELOPER
+# define DEVELOPER_MODE 1
+#else
+# define DEVELOPER_MODE 0
+#endif
 
 /*
  * SMCHECK does orphaned buffer checking (memory leaks)
@@ -94,6 +90,14 @@
  *  deadlock, so turn this on only for debugging.
  */
 #define USE_LOCKMGR_PRIORITY
+
+/*
+ * Enable thread verification before kill 
+ *
+ * Note, this extra check have a high cost when using
+ * dozens of thread, so turn this only for debugging.
+ */
+/* #define USE_LOCKMGR_SAFEKILL */
 #endif  /* DEVELOPER */
 
 #if !HAVE_LINUX_OS && !HAVE_SUN_OS && !HAVE_DARWIN_OS && !HAVE_FREEBSD_OS
@@ -107,6 +111,11 @@
 #ifdef HAVE_LINUX_OS
 # define USE_VTAPE
 #endif
+
+/*
+ * USE_FTP is a ftp driver for the FD using curl.
+ */
+// #define USE_FTP
 
 /* 
  * for fastest speed but you must have a UPS to avoid unwanted shutdowns
@@ -137,6 +146,7 @@
 /* #define TRACE_RES 1 */
 /* #define DEBUG_MEMSET 1 */
 /* #define DEBUG_MUTEX 1 */
+#define BEEF 0
 
 /*
  * Set SMALLOC_SANITY_CHECK to zero to turn off, otherwise

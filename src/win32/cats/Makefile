@@ -31,6 +31,7 @@ SQL_OBJS = \
 	sql_delete.o \
 	sql_find.o \
 	sql_get.o \
+	sql_glue.o \
 	sql_list.o \
 	sql_update.o \
 	bvfs.o

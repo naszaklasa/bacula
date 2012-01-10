@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -29,6 +29,9 @@
 /*
   How to use mutex with bad order usage detection
  ------------------------------------------------
+
+ Note: see file mutex_list.h for current mutexes with 
+       defined priorities.
 
  Instead of using:
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -707,6 +710,41 @@ int pthread_mutex_destroy(bthread_mutex_t *m)
    return pthread_mutex_destroy(&m->mutex);
 }
 
+/* 
+ * Replacement for pthread_kill (only with USE_LOCKMGR_SAFEKILL)
+ */
+int bthread_kill(pthread_t thread, int sig, 
+                 const char *file, int line)
+{
+   bool thread_found_in_process=false;
+   
+   /* We doesn't allow to send signal to ourself */
+   ASSERT(!pthread_equal(thread, pthread_self()));
+
+   /* This loop isn't very efficient with dozens of threads but we don't use
+    * signal very much, and this feature is for testing only
+    */
+   lmgr_p(&lmgr_global_mutex);
+   {
+      lmgr_thread_t *item;
+      foreach_dlist(item, global_mgr) {
+         if (pthread_equal(thread, item->thread_id)) {
+            thread_found_in_process=true;
+            break;
+         }
+      }
+   }
+   lmgr_v(&lmgr_global_mutex);
+
+   /* Sending a signal to non existing thread can create problem
+    * so, we can stop here.
+    */
+   ASSERT(thread_found_in_process == true);
+
+   Dmsg3(100, "%s:%d send kill to existing thread %p\n", file, line, thread);
+   return pthread_kill(thread, sig);
+}
+
 /*
  * Replacement for pthread_mutex_lock()
  * Returns always ok 
@@ -933,8 +971,6 @@ void dbg_print_lock(FILE *fp)
 #ifdef _TEST_IT
 
 #include "lockmgr.h"
-#define BTHREAD_MUTEX_NO_PRIORITY      {PTHREAD_MUTEX_INITIALIZER, 0}
-#define BTHREAD_MUTEX_PRIORITY(p)      {PTHREAD_MUTEX_INITIALIZER, p}
 #undef P
 #undef V
 #define P(x) bthread_mutex_lock_p(&(x), __FILE__, __LINE__)

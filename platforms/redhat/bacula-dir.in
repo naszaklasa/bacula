@@ -4,7 +4,7 @@
 #	       the bacula Director daemon
 #
 # chkconfig: 2345 92 9
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
@@ -61,10 +61,11 @@ case "$1" in
        ;;
     status)
        status @sbindir@/bacula-dir
+       RETVAL=$?
        ;;
     *)
        echo "Usage: $0 {start|stop|restart|status}"
        exit 1
        ;;
 esac
-exit 0
+exit $RETVAL

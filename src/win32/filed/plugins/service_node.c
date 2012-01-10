@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -171,7 +171,7 @@ service_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *r
 {
    storage_group_node_t *curr_sg, *prev_sg;
 
-   _DebugMessage(0, "createFile_SERVICE state = %d\n", state);
+   _DebugMessage(100, "createFile_SERVICE state = %d\n", state);
    if (strcmp(name, "Microsoft Information Store") != 0)
    {
       _JobMessage(M_FATAL, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/" PLUGIN_PATH_PREFIX_SERVICE "/'\n", state);
@@ -215,7 +215,7 @@ service_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *r
 bRC
 service_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_SERVICE state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_SERVICE state = %d\n", state);
    switch(state)
    {
    case 0:

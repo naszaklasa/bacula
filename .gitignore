@@ -1,6 +1,4 @@
-src/cats/make_catalog_backup.pl
-scripts/make_catalog_backup.pl
-src/TAGS
+#
 # git-ls-files --others --exclude-from=.git/info/exclude
 # Lines that start with '#' are comments.
 # For a project mostly in C, the following would be a good set of
@@ -24,7 +22,6 @@ config.log
 config.out
 config.status
 configure.lineno
-console
 console.log
 console.sum
 diff
@@ -55,7 +52,6 @@ kernswinproductionconfig
 Makefile
 newdb
 newtape
-run
 run_clean
 run_clean_tape
 run_two
@@ -146,6 +142,10 @@ platforms/redhat/bacula-dir
 platforms/redhat/bacula-fd
 platforms/redhat/bacula-sd
 
+# platforms/rpms
+platforms/rpms/redhat/*.spec
+platforms/rpms/suse/*.spec
+
 # platforms/suse/
 platforms/suse/Makefile
 platforms/suse/bacula
@@ -170,6 +170,9 @@ po/*.mo
 po/*.gmo
 
 # scripts/
+scripts/breload
+scripts/storage-ctl
+scripts/make_catalog_backup.pl
 scripts/bacula_config
 scripts/wxconsole.console_apps
 scripts/wxconsole.desktop.consolehelper
@@ -227,11 +230,14 @@ src/perlgui
 src/python
 src/pyqt
 src/xqt-console
+src/TAGS
 
 # src/cats/
+src/cats/install-default-backend
 src/cats/1
 src/cats/2
 src/cats/3
+src/cats/make_catalog_backup.pl
 src/cats/Makefile
 src/cats/make_catalog_backup
 src/cats/delete_catalog_backup
@@ -382,6 +388,7 @@ src/plugins/fd/Makefile
 src/plugins/fd/.libs
 
 # src/plugins/sd/
+src/plugins/sd/.libs/
 src/plugins/sd/*.o
 src/plugins/sd/*.so
 src/plugins/sd/main
@@ -467,6 +474,17 @@ src/qt-console/testprogs/putz/ui
 src/qt-console/testprogs/putz/Makefile
 src/qt-console/testprogs/putz/moc
 
+# src/qt-console/tray-monitor
+src/qt-console/tray-monitor/Makefile.mingw32
+src/qt-console/tray-monitor/Makefile.mingw32.Debug
+src/qt-console/tray-monitor/Makefile.mingw32.Release
+src/qt-console/tray-monitor/debug/
+src/qt-console/tray-monitor/release/
+src/qt-console/tray-monitor/moc/
+src/qt-console/tray-monitor/tray-monitor.conf
+src/qt-console/tray-monitor/tray-monitor.pro
+src/qt-console/tray-monitor/ui/
+
 # src/qt-console/ts/
 src/qt-console/ts/bat_fr.qm
 src/qt-console/ts/bat_de.qm
@@ -549,6 +567,7 @@ src/win32/wx-console.res
 src/win32/debug
 src/win32/release32
 src/win32/release64
+src/win32/dll
 
 # src/win32
 src/win32*.user
@@ -756,6 +775,12 @@ src/wx-console/bwx-console.conf
 src/wx-console/.libs
 
 # updatedb/
+updatedb/update_mysql_tables_12_to_14
+updatedb/update_postgresql_tables_12_to_14
+updatedb/update_sqlite3_tables_12_to_14
+updatedb/update_mysql_tables_11_to_12
+updatedb/update_postgresql_tables_11_to_12
+updatedb/update_sqlite3_tables_11_to_12
 updatedb/update_mysql_tables_10_to_11
 updatedb/update_postgresql_tables_10_to_11
 updatedb/update_sqlite3_tables_10_to_11

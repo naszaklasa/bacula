@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -36,7 +36,6 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id$
  *
  */
 
@@ -119,12 +118,12 @@ void run_job(JCR *jcr)
    dir->fsend(Job_start, jcr->Job);
    jcr->start_time = time(NULL);
    jcr->run_time = jcr->start_time;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);          /* update director */
    do_fd_commands(jcr);
    jcr->end_time = time(NULL);
    dequeue_messages(jcr);             /* send any queued messages */
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
    generate_daemon_event(jcr, "JobEnd");
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
       edit_uint64(jcr->JobBytes, ec1), jcr->JobErrors);
@@ -168,7 +167,7 @@ void do_fd_commands(JCR *jcr)
                   } else {
                      Jmsg0(jcr, M_FATAL, 0, _("Command error with FD, hanging up.\n"));
                   }
-                  set_jcr_job_status(jcr, JS_ErrorTerminated);
+                  jcr->setJobStatus(JS_ErrorTerminated);
                }
                quit = true;
             }
@@ -199,7 +198,7 @@ static bool append_data_cmd(JCR *jcr)
    Dmsg1(120, "Append data: %s", fd->msg);
    if (jcr->session_opened) {
       Dmsg1(110, "<bfiled: %s", fd->msg);
-      jcr->set_JobType(JT_BACKUP);
+      jcr->setJobType(JT_BACKUP);
       if (do_append_data(jcr)) {
          return true;
       } else {
@@ -332,7 +331,7 @@ static bool read_open_session(JCR *jcr)
    }
 
    jcr->session_opened = true;
-   jcr->set_JobType(JT_RESTORE);
+   jcr->setJobType(JT_RESTORE);
 
    /* Send "Ticket" to File Daemon */
    fd->fsend(OK_open, jcr->VolSessionId);

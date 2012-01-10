@@ -14,13 +14,13 @@ use strict;
 
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
 
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation plus additions
    that are listed in the file LICENSE.
 
@@ -29,7 +29,7 @@ use strict;
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -41,20 +41,9 @@ use strict;
 
 =cut
 
-$ENV{PATH}="@SQL_BINDIR@:$ENV{PATH}";
-
 my $cat = shift or die "Usage: $0 catalogname";
 my $dir_conf='@sbindir@/dbcheck -B -c @sysconfdir@/bacula-dir.conf';
 my $wd = "@working_dir@";
-
-sub dump_sqlite
-{
-    my %args = @_;
-
-    exec("echo .dump | sqlite '$wd/$args{db_name}.db' > '$wd/$args{db_name}.sql'");
-    print "Error while executing sqlite dump $!\n";
-    return 1;
-}
 
 sub dump_sqlite3
 {
@@ -73,6 +62,9 @@ sub dump_pgsql
 
     if ($args{db_address}) {
         $ENV{PGHOST}=$args{db_address};
+    }
+    if ($args{db_socket}) {
+        $ENV{PGHOST}=$args{db_socket};
     }
     if ($args{db_port}) {
         $ENV{PGPORT}=$args{db_port};
@@ -93,9 +85,15 @@ sub dump_mysql
     unlink("$wd/.my.cnf");
     open(MY, ">$wd/.my.cnf") 
         or die "Can't open $wd/.my.cnf for writing $@";
+
     $args{db_address} = $args{db_address} || "localhost";
+    my $addr = "host=$args{db_address}";
+    if ($args{db_socket}) {     # unix socket is fastest than net socket
+        $addr = "socket=$args{db_socket}";
+    }
+
     print MY "[client]
-host=$args{db_address}
+$addr
 user=$args{db_user}
 password=$args{db_password}
 ";
@@ -113,20 +111,21 @@ password=$args{db_password}
 sub dump_catalog
 {
     my %args = @_;
-    if ($args{db_type} eq 'SQLite') {
-        dump_sqlite(%args);
-    } elsif ($args{db_type} eq 'SQLite3') {
+    if ($args{db_type} eq 'SQLite3') {
+        $ENV{PATH}="@SQLITE_BINDIR@:$ENV{PATH}";
         dump_sqlite3(%args);
     } elsif ($args{db_type} eq 'PostgreSQL') {
+        $ENV{PATH}="@POSTGRESQL_BINDIR@:$ENV{PATH}";
         dump_pgsql(%args);
     } elsif ($args{db_type} eq 'MySQL') {
+        $ENV{PATH}="@MYSQL_BINDIR@:$ENV{PATH}";
         dump_mysql(%args);
     } else {
         die "This database type isn't supported";
     }
 }
 
-open(FP, "$dir_conf|") or die "Can't get catalog information $@";
+open(FP, "$dir_conf -C '$cat'|") or die "Can't get catalog information $@";
 # catalog=MyCatalog
 # db_type=SQLite
 # db_name=regress

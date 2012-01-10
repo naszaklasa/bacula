@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -145,13 +145,14 @@ void e_msg(const char *file, int line, int type, int level, const char *fmt,...)
 void Jmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...);
 void Qmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...);
 bool get_trace(void);
+const char *get_basename(const char *pathname);
 
-struct B_DB;
-typedef void (*sql_query)(JCR *jcr, const char *cmd);
-typedef void (*sql_escape)(JCR *jcr, B_DB* db, char *snew, char *old, int len);
+class B_DB;
+typedef void (*sql_query_func)(JCR *jcr, const char *cmd);
+typedef void (*sql_escape_func)(JCR *jcr, B_DB* db, char *snew, char *old, int len);
 
-extern DLL_IMP_EXP sql_query     p_sql_query;
-extern DLL_IMP_EXP sql_escape    p_sql_escape;
+extern DLL_IMP_EXP sql_query_func     p_sql_query;
+extern DLL_IMP_EXP sql_escape_func    p_sql_escape;
 
 extern DLL_IMP_EXP int           debug_level;
 extern DLL_IMP_EXP bool          dbg_timestamp;          /* print timestamp in debug output */

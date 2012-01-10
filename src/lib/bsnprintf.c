@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -43,6 +43,8 @@
 
 
 #include "bacula.h"
+#include <wchar.h>
+
 #define FP_OUTPUT 1 /* Bacula uses floating point */
 
 /* Define the following if you want all the features of
@@ -63,6 +65,8 @@
 int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args);
 static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
                    const char *value, int flags, int min, int max);
+static int32_t fmtwstr(char *buffer, int32_t currlen, int32_t maxlen,
+                   const wchar_t *value, int flags, int min, int max);
 static int32_t fmtint(char *buffer, int32_t currlen, int32_t maxlen,
                    int64_t value, int base, int min, int max, int flags);
 
@@ -106,10 +110,12 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 #define DP_F_DOT        (1 << 7)
 
 /* Conversion Flags */
-#define DP_C_INT16   1
-#define DP_C_INT32   2
-#define DP_C_LDOUBLE 3
-#define DP_C_INT64   4
+#define DP_C_INT16    1
+#define DP_C_INT32    2
+#define DP_C_LDOUBLE  3
+#define DP_C_INT64    4
+#define DP_C_WCHAR    5      /* wide characters */
+#define DP_C_SIZE_T   6
 
 #define char_to_int(p) ((p)- '0')
 #undef MAX
@@ -139,6 +145,7 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
    char ch;
    int64_t value;
    char *strvalue;
+   wchar_t *wstrvalue;
    int min;
    int max;
    int state;
@@ -237,10 +244,16 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
          case 'l':
             cflags = DP_C_INT32;
             ch = *format++;
-            if (ch == 'l') {       /* It's a long long */
+            if (ch == 's') {
+               cflags = DP_C_WCHAR;
+            } else if (ch == 'l') {       /* It's a long long */
                cflags = DP_C_INT64;
                ch = *format++;
             }
+            break;
+         case 'z':
+            cflags = DP_C_SIZE_T;
+            ch = *format++;
             break;
          case 'L':
             cflags = DP_C_LDOUBLE;
@@ -265,6 +278,8 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
                value = va_arg(args, int32_t);
             } else if (cflags == DP_C_INT64) {
                value = va_arg(args, int64_t);
+            } else if (cflags == DP_C_SIZE_T) {
+               value = va_arg(args, ssize_t);
             } else {
                value = va_arg(args, int);
             }
@@ -291,6 +306,8 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
                value = va_arg(args, uint32_t);
             } else if (cflags == DP_C_INT64) {
                value = va_arg(args, uint64_t);
+            } else if (cflags == DP_C_SIZE_T) {
+               value = va_arg(args, size_t);
             } else {
                value = va_arg(args, unsigned int);
             }
@@ -329,8 +346,20 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
             outch(ch);
             break;
          case 's':
-            strvalue = va_arg(args, char *);
-            currlen = fmtstr(buffer, currlen, maxlen, strvalue, flags, min, max);
+            if (cflags != DP_C_WCHAR) {
+              strvalue = va_arg(args, char *);
+              if (!strvalue) {
+                 strvalue = (char *)"<NULL>";
+              }
+              currlen = fmtstr(buffer, currlen, maxlen, strvalue, flags, min, max);
+            } else {
+              /* %ls means to edit wide characters */
+              wstrvalue = va_arg(args, wchar_t *);
+              if (!wstrvalue) {
+                 wstrvalue = (wchar_t *)L"<NULL>";
+              }
+              currlen = fmtwstr(buffer, currlen, maxlen, wstrvalue, flags, min, max);
+            }
             break;
          case 'p':
             flags |= DP_F_UNSIGNED;
@@ -414,9 +443,6 @@ static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
    } else if (max < 0) {
       max = maxlen;
    }
-   if (!value) {
-      value = "<NULL>";
-   }
    strln = strlen(value);
    if (strln > max) {
       strln = max;                /* truncate to max */
@@ -435,6 +461,48 @@ static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
    }
    while (*value && (cnt < max)) {
       ch = *value++;
+      outch(ch);
+      ++cnt;
+   }
+   while (padlen < 0) {
+      outch(' ');
+      ++padlen;
+   }
+   return currlen;
+}
+
+static int32_t fmtwstr(char *buffer, int32_t currlen, int32_t maxlen,
+                   const wchar_t *value, int flags, int min, int max)
+{
+   int padlen, strln;              /* amount to pad */
+   int cnt = 0;
+   char ch;
+
+
+   if (flags & DP_F_DOT && max < 0) {   /* Max not specified */
+      max = 0;
+   } else if (max < 0) {
+      max = maxlen;
+   }
+   strln = wcslen(value);
+   if (strln > max) {
+      strln = max;                /* truncate to max */
+   }
+   padlen = min - strln;
+   if (padlen < 0) {
+      padlen = 0;
+   }
+   if (flags & DP_F_MINUS) {
+      padlen = -padlen;            /* Left Justify */
+   }
+
+   while (padlen > 0) {
+      outch(' ');
+      --padlen;
+   }
+   while (*value && (cnt < max)) {
+      
+      ch = (*value++) & 0xff;
       outch(ch);
       ++cnt;
    }
@@ -684,6 +752,7 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 
    if (!result) {
       r_length = 0;
+      dummy[0] = 0;
       result = dummy;
    } else {
       r_length = strlen(result);
@@ -886,6 +955,25 @@ int main(int argc, char *argv[])
    };
    const char *s_nums[] = { "abc", "def", "ghi", "123", "4567", "a", "bb", "ccccccc", NULL};
 
+   const char *ls_fmt[] = {
+      "%-1.8ls",
+      "%1.8ls",
+      "%123.9ls",
+      "%5.8ls",
+      "%10.5ls",
+      "% 10.3ls",
+      "%+22.1ls",
+      "%01.3ls",
+      "%ls",
+      "%10ls",
+      "%3ls",
+      "%3.0ls",
+      "%3.ls",
+      NULL
+   };
+   const wchar_t *ls_nums[] = { L"abc", L"def", L"ghi", L"123", L"4567", L"a", L"bb", L"ccccccc", NULL};
+
+
 
    int x, y;
    int fail = 0;
@@ -966,6 +1054,27 @@ int main(int argc, char *argv[])
          num++;
       }
    }
+
+   for (x = 0; ls_fmt[x] != NULL; x++) {
+      for (y = 0; ls_nums[y] != 0; y++) {
+         int pcount, bcount;
+         bcount = bsnprintf(buf1, sizeof(buf1), ls_fmt[x], ls_nums[y]);
+         printf("%s\n", buf1);
+         pcount = sprintf(buf2, ls_fmt[x], ls_nums[y]);
+         if (bcount != pcount) {
+            printf("bsnprintf count %d doesn't match sprintf count %d\n",
+               bcount, pcount);
+         }
+         if (strcmp(buf1, buf2)) {
+            printf
+               ("bsnprintf doesn't match Format: %s\n\tsnprintf = %s\n\tsprintf  = %s\n",
+                ls_fmt[x], buf1, buf2);
+            fail++;
+         }
+         num++;
+      }
+   }
+
 
 
    printf("%d tests failed out of %d.\n", fail, num);

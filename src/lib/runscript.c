@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -29,8 +29,6 @@
  * Manipulation routines for RunScript list
  *
  *  Eric Bollengier, May 2006
- *
- *  Version $Id$
  *
  */
 
@@ -132,9 +130,10 @@ int run_scripts(JCR *jcr, alist *runscripts, const char *label)
       runit = false;
 
       if ((script->when & SCRIPT_Before) && (when & SCRIPT_Before)) {
-         if ((script->on_success 
-            && (jcr->JobStatus == JS_Running || jcr->JobStatus == JS_Created))
-            || (script->on_failure && job_canceled(jcr))
+         if ((script->on_success && 
+              (jcr->JobStatus == JS_Running || jcr->JobStatus == JS_Created))
+            || (script->on_failure && 
+                (job_canceled(jcr) || jcr->JobStatus == JS_Differences))
             )
          {
             Dmsg4(200, "runscript: Run it because SCRIPT_Before (%s,%i,%i,%c)\n", 
@@ -159,7 +158,8 @@ int run_scripts(JCR *jcr, alist *runscripts, const char *label)
       if ((script->when & SCRIPT_After) && (when & SCRIPT_After)) {
          if ((script->on_success &&
               (jcr->JobStatus == JS_Terminated || jcr->JobStatus == JS_Warnings))
-             || (script->on_failure && job_canceled(jcr))
+            || (script->on_failure && 
+                (job_canceled(jcr) || jcr->JobStatus == JS_Differences))
             )
          {
             Dmsg4(200, "runscript: Run it because SCRIPT_After (%s,%i,%i,%c)\n", 
@@ -275,7 +275,7 @@ bool RUNSCRIPT::run(JCR *jcr, const char *name)
 bail_out:
    /* cancel running job properly */
    if (fail_on_error) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
    Dmsg1(100, "runscript failed. fail_on_error=%d\n", fail_on_error);
    return false;

@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -77,7 +77,7 @@ root_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt *sp
    case 999:
       return bRC_Error;
    default:
-      _JobMessage(M_FATAL, "Invalid internal state %d", state);
+      _JobMessage(M_FATAL, "startBackupFile: invalid internal state %d", state);
       state = 999;
    }
    return retval;
@@ -102,7 +102,7 @@ root_node_t::endBackupFile(exchange_fd_context_t *context)
    case 999:
       retval = bRC_Error;
    default:
-      _JobMessage(M_FATAL, "Invalid internal state %d", state);
+      _JobMessage(M_FATAL, "endBackupFile: invalid internal state %d", state);
       state = 999;
       return bRC_Error;
    }
@@ -112,12 +112,10 @@ root_node_t::endBackupFile(exchange_fd_context_t *context)
 bRC
 root_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 {
-   _DebugMessage(0, "createFile_ROOT state = %d\n", state);
-   switch (state)
-   {
+   _DebugMessage(100, "createFile_ROOT state = %d\n", state);
+   switch (state) {
    case 0:
-      if (strcmp(name, PLUGIN_PATH_PREFIX_BASE) != 0)
-      {
+      if (strcmp(name, PLUGIN_PATH_PREFIX_BASE) != 0) {
          _JobMessage(M_FATAL, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/'\n");
          state = 999;
          return bRC_Error;
@@ -128,10 +126,16 @@ root_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
    case 1:
       rp->create_status = CF_CREATED;
       return bRC_OK;
+
+   /* Skip this file */
+   case 900:
+      rp->create_status = CF_SKIP;
+      return bRC_OK;
+   /* Error */
    case 999:
       return bRC_Error;
    default:
-      _JobMessage(M_FATAL, "Invalid internal state %d", state);
+      _JobMessage(M_FATAL, "createFile: invalid internal state %d", state);
       state = 999;
    }
    return bRC_Error;
@@ -140,17 +144,18 @@ root_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 bRC
 root_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_ROOT state = %d\n", state);
-   switch (state)
-   {
+   _DebugMessage(100, "endRestoreFile_ROOT state = %d\n", state);
+   switch (state) {
    case 0:
       delete service_node;
       state = 1;
       return bRC_OK;
    case 1:
       return bRC_OK;
+   case 900:
+      return bRC_OK;
    default:
-      _JobMessage(M_FATAL, "Invalid internal state %d", state);
+      _JobMessage(M_FATAL, "endRestore: invalid internal state %d", state);
       state = 999;
    }
    return bRC_Error;

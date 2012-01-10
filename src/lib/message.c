@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -40,8 +40,8 @@
 #include "bacula.h"
 #include "jcr.h"
 
-sql_query p_sql_query = NULL;
-sql_escape p_sql_escape = NULL;
+sql_query_func p_sql_query = NULL;
+sql_escape_func p_sql_escape = NULL;
 
 #define FULL_LOCATION 1               /* set for file:line in Debug messages */
 
@@ -56,8 +56,10 @@ bool dbg_timestamp = false;           /* print timestamp in debug output */
 bool prt_kaboom = false;              /* Print kaboom output */
 utime_t daemon_start_time = 0;        /* Daemon start time */
 const char *version = VERSION " (" BDATE ")";
-char my_name[30];                     /* daemon name is stored here */
-char host_name[50];                   /* host machine name */
+const char *dist_name = DISTNAME " " DISTVER;
+int beef = BEEF;
+char my_name[30] = {0};               /* daemon name is stored here */
+char host_name[50] = {0};             /* host machine name */
 char *exepath = (char *)NULL;
 char *exename = (char *)NULL;
 int console_msg_pending = false;
@@ -83,11 +85,36 @@ static bool trace = true;
 #else
 static bool trace = false;
 #endif
+static int hangup = 0;
 
 /* Constants */
 const char *host_os = HOST_OS;
 const char *distname = DISTNAME;
 const char *distver = DISTVER;
+
+/* Some message class methods */
+void MSGS::lock()
+{
+   P(fides_mutex);
+}
+
+void MSGS::unlock()
+{
+   V(fides_mutex);
+}
+
+/*
+ * Wait for not in use variable to be clear
+ */
+void MSGS::wait_not_in_use()     /* leaves fides_mutex set */
+{
+   lock();
+   while (m_in_use) {
+      unlock();
+      bmicrosleep(0, 200);         /* wait */
+      lock();
+   }
+}
 
 /*
  * Handle message delivery errors
@@ -165,7 +192,7 @@ void my_name_is(int argc, char *argv[], const char *name)
       } else {
          l = argv[0];
 #if defined(HAVE_WIN32)
-         /* On Windows allow c: junk */
+         /* On Windows allow c: drive specification */
          if (l[1] == ':') {
             l += 2;
          }
@@ -195,12 +222,6 @@ void my_name_is(int argc, char *argv[], const char *name)
       }
       Dmsg2(500, "exepath=%s\nexename=%s\n", exepath, exename);
    }
-}
-
-const char *
-get_db_type(void)
-{
-   return catalog_db != NULL ? catalog_db : "unknown";
 }
 
 void
@@ -300,6 +321,7 @@ init_msg(JCR *jcr, MSGS *msg)
       daemon_msgs->dest_chain = temp_chain;
       memcpy(daemon_msgs->send_msg, msg->send_msg, sizeof(msg->send_msg));
    }
+
    Dmsg2(250, "Copy message resource %p to %p\n", msg, temp_chain);
 
 }
@@ -468,7 +490,15 @@ void close_msg(JCR *jcr)
    if (msgs == NULL) {
       return;
    }
-   P(fides_mutex);
+
+   /* Wait for item to be not in use, then mark closing */
+   if (msgs->is_closing()) {
+      return;
+   }
+   msgs->wait_not_in_use();          /* leaves fides_mutex set */
+   msgs->set_closing();
+   msgs->unlock();
+
    Dmsg1(850, "===Begin close msg resource at %p\n", msgs);
    cmd = get_pool_memory(PM_MESSAGE);
    for (d=msgs->dest_chain; d; ) {
@@ -552,12 +582,13 @@ rem_temp_file:
       }
       d = d->next;                    /* point to next buffer */
    }
-   V(fides_mutex);
    free_pool_memory(cmd);
    Dmsg0(850, "Done walking message chain.\n");
    if (jcr) {
       free_msgs_res(msgs);
       msgs = NULL;
+   } else {
+      msgs->clear_closing();
    }
    Dmsg0(850, "===End close msg resource\n");
 }
@@ -634,6 +665,28 @@ static bool open_dest_file(JCR *jcr, DEST *d, const char *mode)
    return true;
 }
 
+/* Split the output for syslog (it converts \n to ' ' and is
+ *   limited to 1024 characters per syslog message
+ */
+static void send_to_syslog(int mode, const char *msg)
+{
+   int len;
+   char buf[1024];
+   const char *p2;
+   const char *p = msg;
+
+   while (*p && ((p2 = strchr(p, '\n')) != NULL)) {
+      len = MIN((int)sizeof(buf) - 1, p2 - p + 1); /* Add 1 to keep \n */
+      strncpy(buf, p, len);
+      buf[len] = 0;
+      syslog(mode, "%s", buf);
+      p = p2+1;                 /* skip \n */
+   }
+   if (*p != 0) {               /* no \n at the end ? */
+      syslog(mode, "%s", p);
+   }
+}
+
 /*
  * Handle sending the message to the appropriate place
  */
@@ -697,6 +750,18 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
     if (msgs == NULL) {
        msgs = daemon_msgs;
     }
+    /*
+     * If closing this message resource, print and send to syslog,
+     *   then get out.
+     */
+    if (msgs->is_closing()) {
+       fputs(dt, stdout);
+       fputs(msg, stdout);
+       fflush(stdout);
+       syslog(LOG_DAEMON|LOG_ERR, "%s", msg);
+       return;
+    }
+
     for (d=msgs->dest_chain; d; d=d->next) {
        if (bit_is_set(type, d->msg_types)) {
           switch (d->dest_code) {
@@ -753,7 +818,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                 /*
                  * We really should do an openlog() here.
                  */
-                syslog(LOG_DAEMON|LOG_ERR, "%s", msg);
+                send_to_syslog(LOG_DAEMON|LOG_ERR, msg);
                 break;
              case MD_OPERATOR:
                 Dmsg1(850, "OPERATOR for following msg: %s\n", msg);
@@ -778,7 +843,10 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
              case MD_MAIL_ON_ERROR:
              case MD_MAIL_ON_SUCCESS:
                 Dmsg1(850, "MAIL for following msg: %s", msg);
-                P(fides_mutex);
+                if (msgs->is_closing()) {
+                   break;
+                }
+                msgs->set_in_use();
                 if (!d->fd) {
                    POOLMEM *name = get_pool_memory(PM_MESSAGE);
                    make_unique_mail_filename(jcr, name, d);
@@ -788,7 +856,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                       delivery_error(_("Msg delivery error: fopen %s failed: ERR=%s\n"), name,
                             be.bstrerror());
                       free_pool_memory(name);
-                      V(fides_mutex);
+                      msgs->clear_in_use();
                       break;
                    }
                    d->mail_filename = name;
@@ -799,7 +867,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                    d->max_len = len;      /* keep max line length */
                 }
                 fputs(msg, d->fd);
-                V(fides_mutex);
+                msgs->clear_in_use();
                 break;
              case MD_APPEND:
                 Dmsg1(850, "APPEND for following msg: %s", msg);
@@ -809,9 +877,12 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                 Dmsg1(850, "FILE for following msg: %s", msg);
                 mode = "w+b";
 send_to_file:
-                P(fides_mutex);
+                if (msgs->is_closing()) {
+                   break;
+                }
+                msgs->set_in_use();
                 if (!d->fd && !open_dest_file(jcr, d, mode)) {
-                   V(fides_mutex);
+                   msgs->clear_in_use();
                    break;
                 }
                 fputs(dt, d->fd);
@@ -825,7 +896,7 @@ send_to_file:
                       fputs(msg, d->fd);
                    }
                 }
-                V(fides_mutex);
+                msgs->clear_in_use();
                 break;
              case MD_DIRECTOR:
                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);
@@ -859,27 +930,25 @@ send_to_file:
 
 /*********************************************************************
  *
- *  This subroutine returns the filename portion of a Windows 
- *  path.  It is used because Microsoft Visual Studio sets __FILE__ 
- *  to the full path.
+ *  This subroutine returns the filename portion of a path.  
+ *  It is used because some compilers set __FILE__ 
+ *  to the full path.  Try to return base + next higher path.
  */
 
-inline const char *
-get_basename(const char *pathname)
+const char *get_basename(const char *pathname)
 {
-#if defined(_MSC_VER)
-   const char *basename;
+   const char *basename, *basename2;
    
-   if ((basename = strrchr(pathname, '\\')) == NULL) {
+   if ((basename = strrchr(pathname, PathSeparator)) == NULL) {
       basename = pathname;
+      if ((basename2 = strrchr(pathname, PathSeparator)) != NULL) {
+         basename = basename2 + 1;
+      }
    } else {
       basename++;
    }
 
    return basename;
-#else
-   return pathname;
-#endif
 }
 
 /*
@@ -900,14 +969,15 @@ static void pt_out(char *buf)
        if (trace_fd) {
           fputs(buf, trace_fd);
           fflush(trace_fd);
+          return;
        } else {
           /* Some problem, turn off tracing */
           trace = false;
        }
-    } else {   /* not tracing */
-       fputs(buf, stdout);
-       fflush(stdout);
     }
+    /* not tracing */
+    fputs(buf, stdout);
+    fflush(stdout);
 }
 
 /*********************************************************************
@@ -941,7 +1011,7 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
           len = strlen(buf);
           buf[len++] = ' ';
           buf[len] = 0;
-          fputs(buf, stdout);
+          pt_out(buf);
        }
     
 #ifdef FULL_LOCATION
@@ -980,6 +1050,20 @@ void set_trace(int trace_flag)
       bmicrosleep(0, 100000);         /* yield to prevent seg faults */
       fclose(ltrace_fd);
    }
+}
+
+void set_hangup(int hangup_value)
+{
+   if (hangup_value < 0) {
+      return;
+   } else {
+      hangup = hangup_value;
+   }
+}
+
+int get_hangup(void)
+{
+   return hangup;
 }
 
 bool get_trace(void)
@@ -1164,11 +1248,24 @@ Jmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...)
        return;
     }
 
+    /* The watchdog thread can't use Jmsg directly, we always queued it */
+    if (is_watchdog()) {
+       va_start(arg_ptr, fmt);
+       bvsnprintf(rbuf,  sizeof(rbuf), fmt, arg_ptr);
+       va_end(arg_ptr);
+       Qmsg(jcr, type, mtime, "%s", rbuf);
+       return;
+    }
+
     msgs = NULL;
     if (!jcr) {
        jcr = get_jcr_from_tsd();
     }
     if (jcr) {
+       if (!jcr->dequeuing_msgs) { /* Avoid recursion */
+          /* Dequeue messages to keep the original order  */
+          dequeue_messages(jcr); 
+       }
        msgs = jcr->jcr_msgs;
        JobId = jcr->JobId;
     }
@@ -1194,7 +1291,10 @@ Jmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...)
     case M_FATAL:
        len = bsnprintf(rbuf, sizeof(rbuf), _("%s JobId %u: Fatal error: "), my_name, JobId);
        if (jcr) {
-          set_jcr_job_status(jcr, JS_FatalError);
+          jcr->setJobStatus(JS_FatalError);
+       }
+       if (jcr && jcr->JobErrors == 0) {
+          jcr->JobErrors = 1;
        }
        break;
     case M_ERROR:
@@ -1452,7 +1552,7 @@ void q_msg(const char *file, int line, JCR *jcr, int type, utime_t mtime, const 
    POOLMEM *pool_buf;
 
    pool_buf = get_pool_memory(PM_EMSG);
-   i = Mmsg(pool_buf, "%s:%d ", file, line);
+   i = Mmsg(pool_buf, "%s:%d ", get_basename(file), line);
 
    for (;;) {
       maxlen = sizeof_pool_memory(pool_buf) - i - 1;

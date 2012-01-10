@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -187,6 +187,9 @@ void jobstatus_to_ascii(int JobStatus, char *msg, int maxlen)
       break;
    case JS_Terminated:
       jobstat = _("OK");
+      break;
+   case JS_Incomplete:
+      jobstat = _("Error: incomplete job");
       break;
    case JS_FatalError:
    case JS_ErrorTerminated:
@@ -397,9 +400,9 @@ const char *job_type_to_str(int type)
 
 /* Convert ActionOnPurge to string (Truncate, Erase, Destroy)
  */
-char *aop_to_str(int aop, POOL_MEM &ret)
+char *action_on_purge_to_string(int aop, POOL_MEM &ret)
 {
-   if (aop & AOP_TRUNCATE) {
+   if (aop & ON_PURGE_TRUNCATE) {
       pm_strcpy(ret, _("Truncate"));
    }
    if (!aop) {
@@ -418,6 +421,7 @@ const char *job_level_to_str(int level)
    switch (level) {
    case L_BASE:
       str = _("Base");
+      break;
    case L_FULL:
       str = _("Full");
       break;
@@ -718,6 +722,8 @@ void decode_session_key(char *decode, char *session, char *key, int maxlen)
  *  %t = Job type (Backup, ...)
  *  %r = Recipients
  *  %v = Volume name
+ *  %b = Job Bytes
+ *  %F = Job Files
  *
  *  omsg = edited output message
  *  imsg = input string containing edit codes (%x)
@@ -728,7 +734,7 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_co
 {
    char *p, *q;
    const char *str;
-   char add[20];
+   char add[50];
    char name[MAX_NAME_LENGTH];
    int i;
 
@@ -802,6 +808,12 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_co
             } else {
                str = _("*none*");
             }
+            break;
+         case 'F':                    /* Job Files */
+            str = edit_uint64(jcr->JobFiles, add);
+            break;
+         case 'b':                    /* Job Bytes */
+            str = edit_uint64(jcr->JobBytes, add);
             break;
          case 't':
             if (jcr) {

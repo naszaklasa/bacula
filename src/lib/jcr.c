@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -357,13 +357,14 @@ JCR *new_jcr(int size, JCR_free_HANDLER *daemon_free_jcr)
    jcr->VolumeName[0] = 0;
    jcr->errmsg = get_pool_memory(PM_MESSAGE);
    jcr->errmsg[0] = 0;
+   jcr->comment = get_pool_memory(PM_FNAME);
+   jcr->comment[0] = 0;
    /* Setup some dummy values */
    bstrncpy(jcr->Job, "*System*", sizeof(jcr->Job));
    jcr->JobId = 0;
    jcr->setJobType(JT_SYSTEM);           /* internal job until defined */
    jcr->setJobLevel(L_NONE);
    jcr->setJobStatus(JS_Created);        /* ready to run */
-   set_jcr_in_tsd(jcr);
    sigtimer.sa_flags = 0;
    sigtimer.sa_handler = timeout_handler;
    sigfillset(&sigtimer.sa_mask);
@@ -411,6 +412,7 @@ static void free_common_jcr(JCR *jcr)
 {
    /* Uses jcr lock/unlock */
    remove_jcr_from_tsd(jcr);
+   jcr->set_killable(false);
 
    jcr->destroy_mutex();
 
@@ -470,6 +472,10 @@ static void free_common_jcr(JCR *jcr)
    if (jcr->id_list) {
       free_guid_list(jcr->id_list);
       jcr->id_list = NULL;
+   }
+   if (jcr->comment) {
+      free_pool_memory(jcr->comment);
+      jcr->comment = NULL;
    }
    free(jcr);
 }
@@ -570,7 +576,6 @@ void free_jcr(JCR *jcr)
 
    free_common_jcr(jcr);
    close_msg(NULL);                   /* flush any daemon messages */
-   garbage_collect_memory_pool();
    Dmsg0(dbglvl, "Exit free_jcr\n");
 }
 
@@ -582,12 +587,21 @@ void remove_jcr_from_tsd(JCR *jcr)
 {
    JCR *tjcr = get_jcr_from_tsd();
    if (tjcr == jcr) { 
-      jcr->lock();
-      jcr->my_thread_running = false;
-      memset(&jcr->my_thread_id, 0, sizeof(jcr->my_thread_id));
-      jcr->unlock();
       set_jcr_in_tsd(INVALID_JCR);
    }
+}
+
+void JCR::set_killable(bool killable)
+{
+   JCR *jcr = this;
+   jcr->lock();
+   jcr->my_thread_killable = killable;
+   if (killable) {
+      jcr->my_thread_id = pthread_self();
+   } else {
+      memset(&jcr->my_thread_id, 0, sizeof(jcr->my_thread_id));
+   }
+   jcr->unlock();
 }
 
 /*
@@ -595,7 +609,7 @@ void remove_jcr_from_tsd(JCR *jcr)
  *  if update_thread_info is true and the jcr is valide,
  *  we update the my_thread_id in the JCR
  */
-void set_jcr_in_tsd(JCR *jcr, bool update_thread_info)
+void set_jcr_in_tsd(JCR *jcr)
 {
    int status = pthread_setspecific(jcr_key, (void *)jcr);
    if (status != 0) {
@@ -603,30 +617,18 @@ void set_jcr_in_tsd(JCR *jcr, bool update_thread_info)
       Jmsg1(jcr, M_ABORT, 0, _("pthread_setspecific failed: ERR=%s\n"), 
             be.bstrerror(status));
    }
-
-   /* We explicitly ask to set a jcr in tsd, we can update jcr->my_thread
-    */
-   if (update_thread_info && jcr && jcr != INVALID_JCR) {
-      Dmsg2(100, "setting my_thread_stuffs 0x%p => 0x%p\n", 
-            jcr->my_thread_id, pthread_self());
-      jcr->lock();
-      //ASSERT(jcr->my_thread_running == false);
-      jcr->my_thread_id = pthread_self();
-      jcr->my_thread_running = true;
-      jcr->unlock();
-   }
 }
 
 void JCR::my_thread_send_signal(int sig)
 {
    this->lock();
-   if (   this->my_thread_running 
-       && !pthread_equal(this->my_thread_id, pthread_self()))
+   if (this->is_killable() &&
+       !pthread_equal(this->my_thread_id, pthread_self()))
    {
       Dmsg1(800, "Send kill to jid=%d\n", this->JobId);
       pthread_kill(this->my_thread_id, sig);
 
-   } else if (!this->my_thread_running) {
+   } else if (!this->is_killable()) {
       Dmsg1(10, "Warning, can't send kill to jid=%d\n", this->JobId);
    }
    this->unlock();
@@ -843,11 +845,13 @@ static int get_status_priority(int JobStatus)
 {
    int priority = 0;
    switch (JobStatus) {
+   case JS_Incomplete:
+      priority = 10;
+      break;
    case JS_ErrorTerminated:
    case JS_FatalError:
    case JS_Canceled:
-   case JS_Incomplete:
-      priority = 10;
+      priority = 9;
       break;
    case JS_Error:
       priority = 8;
@@ -857,12 +861,6 @@ static int get_status_priority(int JobStatus)
       break;
    }
    return priority;
-}
-
-
-void set_jcr_job_status(JCR *jcr, int JobStatus)
-{
-   jcr->setJobStatus(JobStatus);
 }
 
 void JCR::setJobStatus(int newJobStatus)
@@ -898,7 +896,7 @@ void JCR::setJobStatus(int newJobStatus)
    }
 
    if (oldJobStatus != jcr->JobStatus) {
-      Dmsg2(800, "leave set_job_status old=%c new=%c\n", oldJobStatus, newJobStatus);
+      Dmsg2(800, "leave setJobStatus old=%c new=%c\n", oldJobStatus, newJobStatus);
 //    generate_plugin_event(jcr, bEventStatusChange, NULL);
    }
 }
@@ -1006,6 +1004,24 @@ void jcr_walk_end(JCR *jcr)
    }
 }
 
+/*
+ * Return number of Jobs
+ */
+int job_count()
+{
+   JCR *jcr;
+   int count = 0;
+
+   lock_jcr_chain();
+   for (jcr = (JCR *)jcrs->first(); (jcr = (JCR *)jcrs->next(jcr)); ) {
+      if (jcr->JobId > 0) {
+         count++;
+      }
+   }
+   unlock_jcr_chain();
+   return count;
+}
+
 
 /*
  * Setup to call the timeout check routine every 30 seconds
@@ -1050,7 +1066,7 @@ static void jcr_timeout_check(watchdog_t *self)
             Qmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading Storage daemon.\n"),
                  watchdog_time - timer_start);
-            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
+            jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
          }
       }
       bs = jcr->file_bsock;
@@ -1062,7 +1078,7 @@ static void jcr_timeout_check(watchdog_t *self)
             Qmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading File daemon.\n"),
                  watchdog_time - timer_start);
-            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
+            jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
          }
       }
       bs = jcr->dir_bsock;
@@ -1074,7 +1090,7 @@ static void jcr_timeout_check(watchdog_t *self)
             Qmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading Director.\n"),
                  watchdog_time - timer_start);
-            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
+            jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
          }
       }
    }
@@ -1152,11 +1168,15 @@ void dbg_print_jcr(FILE *fp)
       return;
    }
 
-   fprintf(fp, "Attempt to dump current JCRs\n");
+   fprintf(fp, "Attempt to dump current JCRs. njcrs=%d\n", jcrs->size());
 
    for (JCR *jcr = (JCR *)jcrs->first(); jcr ; jcr = (JCR *)jcrs->next(jcr)) {
-      fprintf(fp, "JCR=%p JobId=%d name=%s JobStatus=%c\n", 
-              jcr, (int)jcr->JobId, jcr->Job, jcr->JobStatus);
+      fprintf(fp, "threadid=%p JobId=%d JobStatus=%c jcr=%p name=%s\n", 
+              (void *)jcr->my_thread_id, (int)jcr->JobId, jcr->JobStatus, jcr, jcr->Job);
+      fprintf(fp, "threadid=%p killable=%d JobId=%d JobStatus=%c "
+                  "jcr=%p name=%s\n",
+              (void *)jcr->my_thread_id, jcr->is_killable(),
+              (int)jcr->JobId, jcr->JobStatus, jcr, jcr->Job);
       fprintf(fp, "\tuse_count=%i\n", jcr->use_count());
       fprintf(fp, "\tJobType=%c JobLevel=%c\n",
               jcr->getJobType(), jcr->getJobLevel());

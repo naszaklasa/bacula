@@ -3,17 +3,9 @@
 @MCOMMON@
 
 # Define library versions
-LIBBAC_LT_CURRENT = @LIBBAC_LT_CURRENT@
-LIBBAC_LT_REVISION = @LIBBAC_LT_REVISION@
-LIBBAC_LT_AGE = @LIBBAC_LT_AGE@
-
-LIBBACCFG_LT_CURRENT = @LIBBACCFG_LT_CURRENT@
-LIBBACCFG_LT_REVISION = @LIBBACCFG_LT_REVISION@
-LIBBACCFG_LT_AGE = @LIBBACCFG_LT_AGE@
-
-LIBBACPY_LT_CURRENT = @LIBBACPY_LT_CURRENT@
-LIBBACPY_LT_REVISION = @LIBBACPY_LT_REVISION@
-LIBBACPY_LT_AGE = @LIBBACPY_LT_AGE@
+LIBBAC_LT_RELEASE = @LIBBAC_LT_RELEASE@
+LIBBACCFG_LT_RELEASE = @LIBBACCFG_LT_RELEASE@
+LIBBACPY_LT_RELEASE = @LIBBACPY_LT_RELEASE@
 
 #
 python = @PYTHON_INCDIR@
@@ -29,8 +21,9 @@ topdir = ../..
 # this dir relative to top dir
 thisdir = src/lib
 
-DEBUG=@DEBUG@
+DEBUG = @DEBUG@
 CAP_LIBS = @CAP_LIBS@
+ZLIBS = @ZLIBS@
 
 first_rule: all
 dummy:
@@ -44,28 +37,29 @@ INCLUDE_FILES = ../baconfig.h ../bacula.h ../bc_types.h \
 		berrno.h bits.h bpipe.h breg.h bregex.h \
 		bsock.h btime.h btimers.h crypto.h dlist.h \
 		fnmatch.h guid_to_name.h htable.h lex.h \
-		lib.h md5.h mem_pool.h message.h openssl.h \
-		plugins.h protos.h queue.h rblist.h \
+		lib.h md5.h mem_pool.h message.h mntent_cache.h \
+		openssl.h plugins.h protos.h queue.h rblist.h \
 		runscript.h rwlock.h serial.h sha1.h \
 		smartall.h status.h tls.h tree.h var.h \
 		waitq.h watchdog.h workq.h \
 		parse_conf.h \
-		pythonlib.h lockmgr.h
+		pythonlib.h lockmgr.h devlock.h
 
 #
 # libbac
 #
-LIBBAC_SRCS = attr.c base64.c berrno.c bsys.c bget_msg.c \
+LIBBAC_SRCS = attr.c base64.c berrno.c bsys.c binflate.c bget_msg.c \
 	      bnet.c bnet_server.c runscript.c \
 	      bsock.c bpipe.c bsnprintf.c btime.c \
 	      cram-md5.c crc32.c crypto.c daemon.c edit.c fnmatch.c \
 	      guid_to_name.c hmac.c jcr.c lex.c alist.c dlist.c \
-	      md5.c message.c mem_pool.c openssl.c \
+	      md5.c message.c mem_pool.c mntent_cache.c openssl.c \
 	      plugins.c priv.c queue.c bregex.c \
 	      rwlock.c scan.c serial.c sha1.c \
 	      signal.c smartall.c rblist.c tls.c tree.c \
 	      util.c var.c watchdog.c workq.c btimers.c \
-	      address_conf.c breg.c htable.c lockmgr.c
+	      address_conf.c breg.c htable.c lockmgr.c devlock.c
+
 LIBBAC_OBJS = $(LIBBAC_SRCS:.c=.o)
 LIBBAC_LOBJS = $(LIBBAC_SRCS:.c=.lo)
 
@@ -126,7 +120,7 @@ libbac.a: $(LIBBAC_OBJS)
 
 libbac.la: Makefile $(LIBBAC_LOBJS)
 	@echo "Making $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBAC_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBAC_LT_CURRENT).$(LIBBAC_LT_REVISION).$(LIBBAC_LT_AGE) $(WRAPLIBS) $(CAP_LIBS)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBAC_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBAC_LT_RELEASE) $(WRAPLIBS) $(CAP_LIBS) $(ZLIBS) $(OPENSSL_LIBS) $(LIBS)
 
 libbaccfg.a: $(LIBBACCFG_OBJS) 
 	@echo "Making $@ ..."
@@ -135,7 +129,7 @@ libbaccfg.a: $(LIBBACCFG_OBJS)
 
 libbaccfg.la: Makefile $(LIBBACCFG_LOBJS) 
 	@echo "Making $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACCFG_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACCFG_LT_CURRENT).$(LIBBACCFG_LT_REVISION).$(LIBBACCFG_LT_AGE)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACCFG_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACCFG_LT_RELEASE) $(OPENSSL_LIBS) $(LIBS)
 
 libbacpy.a: $(LIBBACPY_OBJS) 
 	@echo "Making $@ ..."
@@ -144,7 +138,7 @@ libbacpy.a: $(LIBBACPY_OBJS)
 
 libbacpy.la: Makefile $(LIBBACPY_LOBJS) 
 	@echo "Making $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACPY_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACPY_LT_CURRENT).$(LIBBACPY_LT_REVISION).$(LIBBACPY_LT_AGE) $(PYTHON_LIBS)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACPY_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACPY_LT_RELEASE) $(PYTHON_LIBS) $(OPENSSL_LIBS) $(LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -163,6 +157,27 @@ rwlock_test: Makefile
 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ rwlock.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
 	rm -f rwlock.o
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) rwlock.c
+
+devlock_test: Makefile
+	rm -f devlock.o
+	$(CXX) -DTEST_devlock $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) devlock.c
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ devlock.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
+	rm -f devlock.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) devlock.c
+
+htable_test: Makefile
+	rm -f htable.o
+	$(CXX) -DTEST_SMALL_HTABLE -DTEST_NON_CHAR -DTEST_PROGRAM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) htable.c
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ htable.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
+	rm -f htable.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) htable.c
+
+crc32sum: Makefile crc32.o	 
+	rm -f crc32.o
+	$(CXX) -DCRC32_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) crc32.c
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ crc32.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
+	rm -f crc32.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) crc32.c
 
 md5sum: Makefile md5.o	 
 	rm -f md5.o
@@ -198,9 +213,9 @@ uninstall-includes:
 
 libtool-install: all
 	$(MKDIR) $(DESTDIR)$(libdir)
-	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_PROGRAM) libbac.la $(DESTDIR)$(libdir)
-	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_PROGRAM) libbaccfg.la $(DESTDIR)$(libdir)
-	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_PROGRAM) libbacpy.la $(DESTDIR)$(libdir)
+	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_LIB) libbac.la $(DESTDIR)$(libdir)
+	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_LIB) libbaccfg.la $(DESTDIR)$(libdir)
+	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_LIB) libbacpy.la $(DESTDIR)$(libdir)
 
 libtool-uninstall:
 	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(libdir)/libbac.la
@@ -237,7 +252,7 @@ depend:
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
 	@for src in $(LIBBAC_SRCS) $(LIBBACCFG_SRCS) $(LIBBACPY_SRCS); do \
-	    $(CXX) -S -M -MT `basename $$src .c`$(DEFAULT_OBJECT_TYPE) $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) $$src >> Makefile; \
+	    $(CXX) -S -M -MT `basename $$src .c`$(DEFAULT_OBJECT_TYPE) $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $$src >> Makefile; \
 	done
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \

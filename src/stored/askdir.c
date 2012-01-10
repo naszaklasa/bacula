@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -73,7 +73,7 @@ static char Device_update[] = "DevUpd Job=%s device=%s "
    "changer_name=%s media_type=%s volume_name=%s\n";
 
 
-/* Send update information about a device to Director */
+/** Send update information about a device to Director */
 bool dir_update_device(JCR *jcr, DEVICE *dev)
 {
    BSOCK *dir = jcr->dir_bsock;
@@ -142,7 +142,7 @@ bool dir_update_changer(JCR *jcr, AUTOCHANGER *changer)
 #endif
 
 
-/*
+/**
  * Send current JobStatus to Director
  */
 bool dir_send_job_status(JCR *jcr)
@@ -150,7 +150,7 @@ bool dir_send_job_status(JCR *jcr)
    return jcr->dir_bsock->fsend(Job_status, jcr->Job, jcr->JobStatus);
 }
 
-/*
+/**
  * Common routine for:
  *   dir_get_volume_info()
  * and
@@ -208,7 +208,7 @@ static bool do_get_volume_info(DCR *dcr)
 }
 
 
-/*
+/**
  * Get Volume info for a specific volume from the Director's Database
  *
  * Returns: true  on success   (Director guarantees that Pool and MediaType
@@ -237,7 +237,7 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw writing)
 
 
 
-/*
+/**
  * Get info on the next appendable volume in the Director's database
  *
  * Returns: true  on success dcr->VolumeName is volume
@@ -314,7 +314,7 @@ get_out:
 }
 
 
-/*
+/**
  * After writing a Volume, send the updated statistics
  * back to the director. The information comes from the
  * dev record.
@@ -385,7 +385,7 @@ bail_out:
    return ok;
 }
 
-/*
+/**
  * After writing a Volume, create the JobMedia record.
  */
 bool dir_create_jobmedia_record(DCR *dcr, bool zero)
@@ -440,8 +440,21 @@ bool dir_create_jobmedia_record(DCR *dcr, bool zero)
 }
 
 
-/*
+/**
  * Update File Attribute data
+ * We do the following:
+ *  1. expand the bsock buffer to be large enough 
+ *  2. Write a "header" into the buffer with serialized data
+ *    VolSessionId
+ *    VolSeesionTime
+ *    FileIndex
+ *    Stream
+ *    data length that follows
+ *    start of raw byte data from the Device record.
+ * Note, this is primarily for Attribute data, but can
+ *   also handle any device record. The Director must know
+ *   the raw byte data format that is defined for each Stream.
+ * Now Restore Objects pass through here STREAM_RESTORE_OBJECT
  */
 bool dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec)
 {
@@ -466,15 +479,11 @@ bool dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec)
    ser_bytes(rec->data, rec->data_len);
    dir->msglen = ser_length(dir->msg);
    Dmsg1(1800, ">dird %s\n", dir->msg);    /* Attributes */
-   if (rec->Stream == STREAM_UNIX_ATTRIBUTES || 
-       rec->Stream == STREAM_UNIX_ATTRIBUTES_EX) {
-      dir->set_data_end();                 /* set offset of last valid data */
-   }
    return dir->send();
 }
 
 
-/*
+/**
  *   Request the sysop to create an appendable volume
  *
  *   Entered with device blocked.
@@ -532,7 +541,7 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
          }
       }
 
-      set_jcr_job_status(jcr, JS_WaitMedia);
+      jcr->setJobStatus(JS_WaitMedia);
       dir_send_job_status(jcr);
 
       stat = wait_for_sysop(dcr);
@@ -562,13 +571,13 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
    }
 
 get_out:
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
    Dmsg0(100, "leave dir_ask_sysop_to_mount_create_appendable_volume\n");
    return true;
 }
 
-/*
+/**
  *   Request to mount specific Volume
  *
  *   Entered with device blocked and dcr->VolumeName is desired
@@ -609,7 +618,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int mode)
        *   Otherwise skip it.
        */
       if (!dev->poll && (stat == W_TIMEOUT || stat == W_MOUNT)) {
-         const char *msg;
+         char *msg;
          if (mode == ST_APPEND) {
             msg = _("Please mount Volume \"%s\" or label a new one for:\n"
               "    Job:          %s\n"
@@ -633,7 +642,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int mode)
                dcr->VolumeName, dev->print_name(), jcr->Job);
       }
 
-      set_jcr_job_status(jcr, JS_WaitMount);
+      jcr->setJobStatus(JS_WaitMount);
       dir_send_job_status(jcr);
 
       stat = wait_for_sysop(dcr);          /* wait on device */
@@ -665,7 +674,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int mode)
    }
 
 get_out:
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
    Dmsg0(400, "leave dir_ask_sysop_to_mount_volume\n");
    return true;

@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -94,6 +94,7 @@ enum {
    B_DVD_DEV,
    B_FIFO_DEV,
    B_VTAPE_DEV,                       /* change to B_TAPE_DEV after init */
+   B_FTP_DEV,
    B_VTL_DEV
 };
 
@@ -196,7 +197,6 @@ struct VOLUME_CAT_INFO {
    char VolCatName[MAX_NAME_LENGTH];  /* Desired volume to mount */
 };
 
-
 class DEVRES;                        /* Device resource defined in stored_conf.h */
 class DCR; /* forward reference */
 class VOLRES; /* forward reference */
@@ -206,9 +206,10 @@ class VOLRES; /* forward reference */
  *  each physical device. Everything here is "global" to
  *  that device and effects all jobs using the device.
  */
-class DEVICE {
-private:
+class DEVICE: public SMARTALLOC {
+protected:
    int m_fd;                          /* file descriptor */
+private:
    int m_blocked;                     /* set if we must wait (i.e. change tape) */
    int m_count;                       /* Mutex use count -- DEBUG only */
    int m_num_reserved;                /* counter of device reservations */
@@ -218,6 +219,8 @@ private:
    bool m_load;                       /* set when Volume must be loaded */
 
 public:
+   DEVICE() {};
+   virtual ~DEVICE() {};
    DEVICE * volatile swap_dev;        /* Swap vol from this device */
    dlist *attached_dcrs;              /* attached DCR list */
    bthread_mutex_t m_mutex;           /* access control */
@@ -313,6 +316,7 @@ public:
    int is_removable() const { return capabilities & CAP_REM; }
    int is_tape() const { return (dev_type == B_TAPE_DEV || 
                                  dev_type == B_VTAPE_DEV); }
+   int is_ftp() const { return dev_type == B_FTP_DEV; }
    int is_file() const { return dev_type == B_FILE_DEV; }
    int is_fifo() const { return dev_type == B_FIFO_DEV; }
    int is_dvd() const  { return dev_type == B_DVD_DEV; }
@@ -405,12 +409,10 @@ public:
    void clear_volhdr();          /* in dev.c */
    void close();                 /* in dev.c */
    void close_part(DCR *dcr);    /* in dev.c */
-   bool truncate(DCR *dcr);      /* in dev.c */
    int open(DCR *dcr, int mode); /* in dev.c */
    void term(void);              /* in dev.c */
    ssize_t read(void *buf, size_t len); /* in dev.c */
    ssize_t write(const void *buf, size_t len);  /* in dev.c */
-   bool rewind(DCR *dcr);        /* in dev.c */
    bool mount(int timeout);      /* in dev.c */
    bool unmount(int timeout);    /* in dev.c */
    void edit_mount_codes(POOL_MEM &omsg, const char *imsg); /* in dev.c */
@@ -428,8 +430,6 @@ public:
    bool scan_dir_for_volume(DCR *dcr); /* in scan.c */
    bool reposition(DCR *dcr, uint32_t rfile, uint32_t rblock); /* in dev.c */
    void clrerror(int func);      /* in dev.c */
-   boffset_t lseek(DCR *dcr, boffset_t offset, int whence); /* in dev.c */
-   bool update_pos(DCR *dcr);    /* in dev.c */
    void set_slot(int32_t slot);  /* in dev.c */
    void clear_slot();            /* in dev.c */
 
@@ -441,13 +441,16 @@ public:
    int fd() const { return m_fd; };
 
    /* low level operations */
-   void init_backend();
-   int (*d_open)(const char *pathname, int flags, ...);
-   int (*d_close)(int fd);
-   int (*d_ioctl)(int fd, ioctl_req_t request, ...);
-   ssize_t (*d_read)(int fd, void *buffer, size_t count);
-   ssize_t (*d_write)(int fd, const void *buffer, size_t count);
-
+   virtual int d_ioctl(int fd, ioctl_req_t request, char *mt_com=NULL);
+   virtual int d_open(const char *pathname, int flags);
+   virtual int d_close(int fd);
+   virtual ssize_t d_read(int fd, void *buffer, size_t count);
+   virtual ssize_t d_write(int fd, const void *buffer, size_t count);
+   virtual boffset_t lseek(DCR *dcr, boffset_t offset, int whence);
+   virtual bool update_pos(DCR *dcr);
+   virtual bool rewind(DCR *dcr);
+   virtual bool truncate(DCR *dcr);
+   virtual void open_device(DCR *dcr, int omode);
    /* 
     * Locking and blocking calls
     */
@@ -476,7 +479,6 @@ private:
    void set_mode(int omode);                      /* in dev.c */
    void open_tape_device(DCR *dcr, int omode);    /* in dev.c */
    void open_file_device(DCR *dcr, int omode);    /* in dev.c */
-   void open_dvd_device(DCR *dcr, int omode);     /* in dev.c */
 };
 
 inline const char *DEVICE::strerror() const { return errmsg; }

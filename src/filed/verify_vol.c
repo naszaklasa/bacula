@@ -1,21 +1,12 @@
 /*
- *  Bacula File Daemon  verify-vol.c Verify files on a Volume
- *    versus attributes in Catalog
- *
- *    Kern Sibbald, July MMII
- *
- *   Version $Id$
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -24,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -34,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula File Daemon  verify-vol.c Verify files on a Volume
+ *    versus attributes in Catalog
+ *
+ *    Kern Sibbald, July MMII
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
@@ -63,11 +61,11 @@ void do_verify_volume(JCR *jcr)
    sd = jcr->store_bsock;
    if (!sd) {
       Jmsg(jcr, M_FATAL, 0, _("Storage command not issued before Verify.\n"));
-      set_jcr_job_status(jcr, JS_FatalError);
+      jcr->setJobStatus(JS_FatalError);
       return;
    }
    dir = jcr->dir_bsock;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    LockRes();
    CLIENT *client = (CLIENT *)GetNextRes(R_CLIENT, NULL);
@@ -79,7 +77,7 @@ void do_verify_volume(JCR *jcr)
       buf_size = 0;                   /* use default */
    }
    if (!bnet_set_buffer_size(sd, buf_size, BNET_SETBUF_WRITE)) {
-      set_jcr_job_status(jcr, JS_FatalError);
+      jcr->setJobStatus(JS_FatalError);
       return;
    }
    jcr->buf_size = sd->msglen;
@@ -248,11 +246,11 @@ void do_verify_volume(JCR *jcr)
 
       } /* end switch */
    } /* end while bnet_get */
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
    goto ok_out;
 
 bail_out:
-   set_jcr_job_status(jcr, JS_ErrorTerminated);
+   jcr->setJobStatus(JS_ErrorTerminated);
 
 ok_out:
    if (jcr->compress_buf) {

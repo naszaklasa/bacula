@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -44,10 +44,13 @@
  *
  *           Kern E. Sibbald
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
+
+#ifdef HAVE_MALLOC_TRIM
+extern "C" int malloc_trim (size_t pad);
+#endif
 
 struct s_pool_ctl {
    int32_t size;                      /* default size */
@@ -70,7 +73,8 @@ static struct s_pool_ctl pool_ctl[] = {
    {  NLEN, NLEN,0, 0, NULL },        /* PM_NAME Bacula name */
    {  256,  256, 0, 0, NULL },        /* PM_FNAME filename buffers */
    {  512,  512, 0, 0, NULL },        /* PM_MESSAGE message buffer */
-   { 1024, 1024, 0, 0, NULL }         /* PM_EMSG error message buffer */
+   { 1024, 1024, 0, 0, NULL },        /* PM_EMSG error message buffer */
+  {  4096, 4096, 0, 0, NULL }         /* PM_BSOCK message buffer */
 };
 #else
 
@@ -80,7 +84,8 @@ static struct s_pool_ctl pool_ctl[] = {
    {  NLEN, NLEN,0, 0, NULL },        /* PM_NAME Bacula name */
    {   20,   20, 0, 0, NULL },        /* PM_FNAME filename buffers */
    {   20,   20, 0, 0, NULL },        /* PM_MESSAGE message buffer */
-   {   20,   20, 0, 0, NULL }         /* PM_EMSG error message buffer */
+   {   20,   20, 0, 0, NULL },        /* PM_EMSG error message buffer */
+   {   20,   20, 0, 0, NULL }         /* PM_BSOCK message buffer */
 };
 #endif
 
@@ -378,13 +383,13 @@ void garbage_collect_memory_pool()
    if (now >= last_garbage_collection + garbage_interval) {
       last_garbage_collection = now;
       V(mutex);
-      close_memory_pool();
+      garbage_collect_memory();
    } else {
       V(mutex);
    }
 }
 
-/* Release all pooled memory */
+/* Release all freed pooled memory */
 void close_memory_pool()
 {
    struct abufhead *buf, *next;
@@ -405,15 +410,33 @@ void close_memory_pool()
       }
       pool_ctl[i].free_buf = NULL;
    }
-   Dmsg2(100, "Freed mem_pool count=%d size=%s\n", count, edit_uint64_with_commas(bytes, ed1));
+   Dmsg2(001, "Freed mem_pool count=%d size=%s\n", count, edit_uint64_with_commas(bytes, ed1));
+   if (debug_level >= 1) {
+      print_memory_pool_stats();
+   }
    V(mutex);
 
+}
+
+/*
+ * Garbage collect and trim memory if possible
+ *  This should be called after all big memory usages
+ *  if possible.
+ */
+void garbage_collect_memory()
+{
+   close_memory_pool();         /* release free chain */
+#ifdef HAVE_MALLOC_TRIM
+   P(mutex);
+   malloc_trim(8192);
+   V(mutex);
+#endif
 }
 
 #ifdef DEBUG
 static const char *pool_name(int pool)
 {
-   static const char *name[] = {"NoPool", "NAME  ", "FNAME ", "MSG   ", "EMSG  "};
+   static const char *name[] = {"NoPool", "NAME  ", "FNAME ", "MSG   ", "EMSG  ", "BSOCK "};
    static char buf[30];
 
    if (pool >= 0 && pool <= PM_MAX) {

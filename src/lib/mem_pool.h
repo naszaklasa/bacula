@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -30,7 +30,6 @@
  *
  *  Kern Sibbald, MM
  *
- *   Version $Id$
  */
 
 #ifndef __MEM_POOL_H_
@@ -77,6 +76,7 @@ extern void garbage_collect_memory_pool();
 extern void  close_memory_pool();
 extern void  print_memory_pool_stats();
 
+extern void garbage_collect_memory();
 
 
 #define PM_NOPOOL  0                  /* nonpooled memory */
@@ -84,7 +84,8 @@ extern void  print_memory_pool_stats();
 #define PM_FNAME   2                  /* file name buffer */
 #define PM_MESSAGE 3                  /* daemon message */
 #define PM_EMSG    4                  /* error message */
-#define PM_MAX     PM_EMSG            /* Number of types */
+#define PM_BSOCK   5                  /* BSOCK buffer */
+#define PM_MAX     PM_BSOCK           /* Number of types */
 
 class POOL_MEM {
    char *mem;

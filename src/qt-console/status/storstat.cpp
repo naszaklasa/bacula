@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -26,7 +26,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: storstat.cpp 5880 2007-11-09 01:20:40Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -37,6 +36,8 @@
 #include "storstat.h"
 #include "mount/mount.h"
 #include "label/label.h"
+
+static bool working = false;     /* prevent timer recursion */
 
 /*
 .status storage=<storage-name> <keyword>
@@ -56,6 +57,7 @@ spooling
  * Constructor for the class
  */
 StorStat::StorStat(QString &storage, QTreeWidgetItem *parentTreeWidgetItem)
+   : Pages()
 {
    m_storage = storage;
    setupUi(this);
@@ -113,12 +115,14 @@ void StorStat::timerTriggered()
 {
    double value = timerDisplay->value();
    value -= 1;
-   if (value == 0) {
+   if (value <= 0 && !working) {
+      working = true;
       value = spinBox->value();
       bool iscurrent = mainWin->tabWidget->currentIndex() == mainWin->tabWidget->indexOf(this);
       if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
          populateAll();
       }
+      working = false;
    }
    timerDisplay->display(value);
 }
@@ -267,7 +271,7 @@ void StorStat::populateTerminated()
                   p_tableitem->setBackground(Qt::green);
                else
                   p_tableitem->setBackground(Qt::red);
-	    }
+            }
             terminatedTable->setItem(row, column, p_tableitem);
             column += 1;
          }

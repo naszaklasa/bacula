@@ -6,11 +6,11 @@ echo " "
 echo "This script will update a Bacula PostgreSQL database from version 10 to 11"
 echo " which is needed to convert from Bacula version 2.0.0 to 3.0.x or higher"
 echo " "
-bindir=@SQL_BINDIR@
-db_name=@db_name@
+bindir=@POSTGRESQL_BINDIR@
+PATH="$bindir:$PATH"
+db_name=${db_name:-@db_name@}
 
-if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
-
+psql -f - -d ${db_name} $* <<END-OF-DATA
 -- The alter table operation can be faster with a big maintenance_work_mem
 -- Uncomment and adapt this value to your environment
 -- SET maintenance_work_mem = '1GB';

@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -92,8 +92,8 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    jcr->NumReadVolumes = 0;
    jcr->NumWriteVolumes = 0;
    jcr->JobId = 0;
-   jcr->set_JobType(JT_CONSOLE);
-   jcr->set_JobLevel(L_FULL);
+   jcr->setJobType(JT_CONSOLE);
+   jcr->setJobLevel(L_FULL);
    jcr->JobStatus = JS_Terminated;
    jcr->where = bstrdup("");
    jcr->job_name = get_pool_memory(PM_FNAME);
@@ -105,6 +105,8 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    pm_strcpy(jcr->fileset_name, "Dummy.fileset.name");
    jcr->fileset_md5 = get_pool_memory(PM_FNAME);
    pm_strcpy(jcr->fileset_md5, "Dummy.fileset.md5");
+   jcr->comment = get_pool_memory(PM_MESSAGE);
+   *jcr->comment = '\0';
    init_autochangers();
    create_volume_lists();
 
@@ -220,6 +222,10 @@ static void my_free_jcr(JCR *jcr)
    if (jcr->fileset_md5) {
       free_pool_memory(jcr->fileset_md5);
       jcr->fileset_md5 = NULL;
+   }
+   if (jcr->comment) {
+      free_pool_memory(jcr->comment);
+      jcr->comment = NULL;
    }
    if (jcr->VolList) {
       free_restore_volume_list(jcr);

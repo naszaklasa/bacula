@@ -12,13 +12,20 @@
 # Commit all changes, update the language files, 
 #    export the release, make a release tar.
 #
-cwd=`pwd`
-reltype=release
+# source config
+. ./config
+
 tagbase=Release-
+base_dir=bacula
 base_pkg=bacula
-if [ $# != 2 ] ; then
-  echo "Need $0 <source-directory> <branch>"
-  echo "e.g. $0 release-source 3.0.3"
+
+remote=$2
+branch=$3
+ver=$4
+
+if [ $# != 4 ] ; then
+  echo "Need $0 <source-directory> <remote-name> <branch> <version>"
+  echo "e.g. $0 release-source bee Branch-4.0 4.0.3"
   exit 1
 fi
 cd $1
@@ -27,25 +34,24 @@ if [ $? -ne 0 ]; then
    exit 1
 fi
 src=`pwd` 
-cd $base_pkg 
+current=`git branch | awk '/*/ { print $2 }'`
+cd $base_dir 
 if [ $?  -ne 0 ]; then
    echo "Directory: $1 does not exist"
    exit 1
 fi
-branch=$2
 git checkout ${branch}
-git pull origin ${branch}
+git pull ${remote} ${branch}
 if [ $? -ne 0 ]; then
    echo "Checkout of branch ${branch} failed."
    exit 1
 fi
-ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
 fulltag=$tagbase$ver
 echo " "
 echo "Making $reltype for $base_pkg-$ver ..."
 echo " "
-echo "OK?  ctl-c to stop"
-read a
+#echo "OK?  ctl-c to stop"
+#read a
 rm -rf Release-$ver
 if [ $reltype != "beta" ] ; then
    cd src
@@ -59,8 +65,8 @@ if [ a$updatepo != ano ]; then
    cd po
    make update-po
    cd ${src}   
-   git commit -am "Final po changes for ${fulltag}"
 fi
+
 git tag -d ${fulltag}
 echo "Creating new tag -- $fulltag"
 git tag $fulltag
@@ -76,6 +82,7 @@ rm -rf $base_pkg-$ver $base_pkg-$ver.tar.gz $base_pkg-$ver.tar.gz.sig
 rm -rf $fulltag
 cd ${src}
 git archive --format=tar --prefix=$base_pkg-$ver/ $fulltag | gzip >${cwd}/$base_pkg-$ver.tar.gz
+
 if [ $? != 0 ] ; then
   echo " "
   echo "Non-zero return status from Git"
@@ -83,23 +90,33 @@ if [ $? != 0 ] ; then
   exit 1
 fi
 echo "Exported release into ${cwd}/$base_pkg-$ver.tar.gz"
-git checkout master
 cd ${cwd}
 tar xfz $base_pkg-$ver.tar.gz 
-cd $base_pkg-$ver/
+# First remove Enterprise Win32 plugin source
+cd $base_pkg-$ver/bacula
+cp -fp ReleaseNotes ${cwd}/ReleaseNotes
+
+cd ${cwd}/$base_pkg-$ver
+# Move directories to release names including version
 mv bacula $base_pkg-$ver
 mv gui $base_pkg-gui-$ver
 mv regress $base_pkg-regress-$ver
+# Tar each component individually
 tar cvfz ../$base_pkg-$ver.tar.gz $base_pkg-$ver
 tar cvfz ../$base_pkg-gui-$ver.tar.gz $base_pkg-gui-$ver
 tar cvfz ../$base_pkg-regress-$ver.tar.gz $base_pkg-regress-$ver
 cd ..
+rm -rf $base_pkg-$ver
 ./sign $base_pkg-$ver.tar.gz
 ./sign $base_pkg-gui-$ver.tar.gz
 ./sign $base_pkg-regress-$ver.tar.gz
 
 if [ a$push != ano ]; then
    cd ${src}
-   git push origin $branch
-   git push origin tag $fulltag
+   git push ${remote} ${branch}
+   git push ${remote} tag ${fulltag}
+   echo "Pushed ${remote} and push tag ${fulltag}"
 fi
+
+cd ${src}
+git checkout ${current}

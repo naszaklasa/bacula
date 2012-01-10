@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -142,9 +142,36 @@ init_dev(JCR *jcr, DEVRES *device)
          device->dev_type = B_DVD_DEV;
       }
    }
-
-   dev = (DEVICE *)malloc(sizeof(DEVICE));
-   memset(dev, 0, sizeof(DEVICE));
+   switch (device->dev_type) {
+   case B_DVD_DEV:
+      Jmsg0(jcr, M_FATAL, 0, _("DVD support is now deprecated\n"));
+      return NULL;
+   case B_VTAPE_DEV:
+      dev = New(vtape);
+      break;
+#ifdef USE_FTP
+   case B_FTP_DEV:
+      dev = New(ftp_device);
+      break;
+#endif
+#ifdef HAVE_WIN32
+/* TODO: defined in src/win32/stored/mtops.cpp */
+   case B_TAPE_DEV:
+      dev = New(win32_tape_device);
+      break;
+   case B_FILE_DEV:
+      dev = New(win32_file_device);
+      break;
+#else
+   case B_TAPE_DEV:
+   case B_FILE_DEV:
+   case B_FIFO_DEV:
+      dev = New(DEVICE);
+      break;
+#endif
+   default:
+         return NULL;
+   }
    dev->clear_slot();         /* unknown */
 
    /* Copy user supplied device parameters from Resource */
@@ -169,7 +196,6 @@ init_dev(JCR *jcr, DEVRES *device)
    dev->drive_index = device->drive_index;
    dev->autoselect = device->autoselect;
    dev->dev_type = device->dev_type;
-   dev->init_backend();
    if (dev->is_tape()) { /* No parts on tapes */
       dev->max_part_size = 0;
    } else {
@@ -191,7 +217,7 @@ init_dev(JCR *jcr, DEVRES *device)
     * - Check that the mount point is available 
     * - Check that (un)mount commands are defined
     */
-   if ((dev->is_file() || dev->is_dvd()) && dev->requires_mount()) {
+   if (dev->is_file() && dev->requires_mount()) {
       if (!device->mount_point || stat(device->mount_point, &statp) < 0) {
          berrno be;
          dev->dev_errno = errno;
@@ -201,11 +227,6 @@ init_dev(JCR *jcr, DEVRES *device)
    
       if (!device->mount_command || !device->unmount_command) {
          Jmsg0(jcr, M_ERROR_TERM, 0, _("Mount and unmount commands must defined for a device which requires mount.\n"));
-      }
-   }
-   if (dev->is_dvd()) {
-      if (!device->write_part_command) {
-         Jmsg0(jcr, M_ERROR_TERM, 0, _("Write part command must be defined for a device which requires mount.\n"));
       }
    }
 
@@ -225,11 +246,11 @@ init_dev(JCR *jcr, DEVRES *device)
       dev->max_block_size = 0;
    }
    if (dev->max_block_size % TAPE_BSIZE != 0) {
-      Jmsg2(jcr, M_WARNING, 0, _("Max block size %u not multiple of device %s block size.\n"),
-         dev->max_block_size, dev->print_name());
+      Jmsg3(jcr, M_WARNING, 0, _("Max block size %u not multiple of device %s block size=%d.\n"),
+         dev->max_block_size, dev->print_name(), TAPE_BSIZE);
    }
    if (dev->max_volume_size != 0 && dev->max_volume_size < (dev->max_block_size << 4)) {
-      Jmsg(jcr, M_ERROR_TERM, 0, _("Max Vol Size < 8 * Max Block Size on device %s\n"), 
+      Jmsg(jcr, M_ERROR_TERM, 0, _("Max Vol Size < 8 * Max Block Size for device %s\n"), 
            dev->print_name());
    }
 
@@ -287,42 +308,30 @@ init_dev(JCR *jcr, DEVRES *device)
    return dev;
 }
 
-/* Choose the right backend */
-void DEVICE::init_backend()
+/* default primitives are designed for file */
+int DEVICE::d_open(const char *pathname, int flags)
 {
+   return ::open(pathname, flags);
+}
 
-#ifdef HAVE_WIN32
-   if (is_tape()) {
-      d_open  = win32_tape_open;
-      d_write = win32_tape_write;
-      d_close = win32_tape_close;
-      d_ioctl = win32_tape_ioctl;
-      d_read  = win32_tape_read;
+int DEVICE::d_close(int fd)
+{
+   return ::close(fd);
+}
 
-   } else {
-      d_open  = ::open;
-      d_close = ::close;
-      d_ioctl = win32_ioctl;    /* dummy function */
-      d_write = win32_write;    /* win32 read/write are not POSIX */
-      d_read  = win32_read;
-   }
+int DEVICE::d_ioctl(int fd, ioctl_req_t request, char *mt_com)
+{
+   return ::ioctl(fd, request, mt_com);
+}
 
-#else  /* POSIX / UNIX Interface */
-   if (is_vtape()) {            /* test backend */
-      d_open  = vtape_open;     /* vtape isn't available for WIN32 or FreeBSD */
-      d_write = vtape_write;
-      d_close = vtape_close;
-      d_ioctl = vtape_ioctl;
-      d_read  = vtape_read;
+ssize_t DEVICE::d_read(int fd, void *buffer, size_t count)
+{
+   return ::read(fd, buffer, count);
+}
 
-   } else {                     /* tape and file are using normal io */
-      d_open  = ::open;
-      d_write = ::write;
-      d_close = ::close;
-      d_ioctl = ::ioctl;
-      d_read  = ::read;
-   }
-#endif
+ssize_t DEVICE::d_write(int fd, const void *buffer, size_t count)
+{
+   return ::write(fd, buffer, count);
 }
 
 /*
@@ -361,11 +370,11 @@ DEVICE::open(DCR *dcr, int omode)
          print_name(), getVolCatName(), mode_to_str(omode));
    state &= ~(ST_LABEL|ST_APPEND|ST_READ|ST_EOT|ST_WEOT|ST_EOF);
    label_type = B_BACULA_LABEL;
+
    if (is_tape() || is_fifo()) {
       open_tape_device(dcr, omode);
-   } else if (is_dvd()) {
-      Dmsg1(100, "call open_dvd_device mode=%s\n", mode_to_str(omode));
-      open_dvd_device(dcr, omode);
+   } else if (is_ftp()) {
+      open_device(dcr, omode);
    } else {
       Dmsg1(100, "call open_file_device mode=%s\n", mode_to_str(omode));
       open_file_device(dcr, omode);
@@ -500,6 +509,10 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
    Dmsg1(100, "open dev: tape %d opened\n", m_fd);
 }
 
+void DEVICE::open_device(DCR *dcr, int omode)
+{
+   /* do nothing waiting to split open_file/tape_device */
+}
 
 /*
  * Open a file device
@@ -559,206 +572,6 @@ void DEVICE::open_file_device(DCR *dcr, int omode)
 }
 
 /*
- * Open a DVD device. N.B. at this point, dcr->getVolCatName() 
- *  (NB:??? I think it's getVolCatName() that is right)
- *  has the desired Volume name, but there is NO assurance that
- *  any other field of VolCatInfo is correct.
- */
-void DEVICE::open_dvd_device(DCR *dcr, int omode) 
-{
-   POOL_MEM archive_name(PM_FNAME);
-   struct stat filestat;
-
-   /*
-    * Handle opening of DVD Volume
-    */     
-   Dmsg2(100, "Enter: open_dvd_dev: DVD vol=%s mode=%s\n", 
-         &dcr->VolCatInfo, mode_to_str(omode));
-
-   /*
-    * For a DVD we must always pull the state info from dcr->VolCatInfo
-    *  This is a bit ugly, but is necessary because we need to open/close/re-open
-    *  the dvd file in order to properly mount/unmount and access the
-    *  DVD. So we store the state of the DVD as far as is known in the 
-    *  catalog in dcr->VolCatInfo, and thus we refresh the dev->VolCatInfo
-    *  copy here, when opening.
-    */
-   VolCatInfo = dcr->VolCatInfo;         /* structure assignment */
-   Dmsg1(100, "Volume=%s\n", getVolCatName());
-
-   if (VolCatInfo.VolCatName[0] == 0) {
-      Dmsg1(10,  "Could not open DVD device %s. No Volume name given.\n",
-         print_name());
-      Mmsg(errmsg, _("Could not open DVD device %s. No Volume name given.\n"),
-         print_name());
-      clear_opened();
-      return;
-   }
-
-   if (part == 0) {
-      Dmsg0(100, "Set part=1\n");
-      part = 1;                       /* count from 1 */
-      file_size = 0;
-   }
-   part_size = 0;
-   if (num_dvd_parts != VolCatInfo.VolCatParts) {
-      num_dvd_parts = VolCatInfo.VolCatParts;
-   }
-
-   /*
-    * If we are not trying to access the last part, set mode to 
-    *   OPEN_READ_ONLY as writing would be an error.
-    */
-   Dmsg2(100, "open DVD part=%d num_dvd_parts=%d\n", part, num_dvd_parts);
-   /* Now find the name of the part that we want to access */
-   if (part <= num_dvd_parts) {
-      omode = OPEN_READ_ONLY;
-      make_mounted_dvd_filename(this, archive_name);
-      set_part_spooled(false);
-   } else {
-      omode = OPEN_READ_WRITE;
-      make_spooled_dvd_filename(this, archive_name);
-      set_part_spooled(true);
-   }
-   set_mode(omode);
-
-   // Clear any previous blank_dvd status - we will recalculate it here
-   blank_dvd = false;
-
-   Dmsg3(99, "open_dvd_device: part=%d num_dvd_parts=%d, VolCatInfo.VolCatParts=%d\n",
-      part, num_dvd_parts, dcr->VolCatInfo.VolCatParts);
-     
-   if (mount(1)) {
-      Dmsg0(99, "DVD device mounted.\n");
-      if (num_dvd_parts == 0 && !truncating) {
-         /*
-          * If we can mount the device, and we are not truncating the DVD, 
-          * we usually want to abort. There is one exception, if there is 
-          * only one 0-sized file on the DVD, with the right volume name,
-          * we continue (it's the method used by truncate_dvd to truncate a volume).   
-          */
-         if (!check_can_write_on_non_blank_dvd(dcr)) {
-            Mmsg(errmsg, _("The DVD in device %s contains data, please blank it before writing.\n"), print_name());
-            Emsg0(M_FATAL, 0, errmsg);
-            unmount(1); /* Unmount the device, so the operator can change it. */
-            clear_opened();
-            return;
-         }
-         blank_dvd = true;
-      } else {
-         /*
-          * Ensure that we have the correct DVD loaded by looking for part1.
-          * We only succeed the open if it exists. Failure to do this could
-          * leave us trying to add a part to a different DVD!
-          */
-         uint32_t oldpart = part;
-         struct stat statp;
-         POOL_MEM part1_name(PM_FNAME);
-         part = 1;
-         make_mounted_dvd_filename(this, part1_name);
-         part = oldpart;
-         if (stat(part1_name.c_str(), &statp) < 0) {
-            berrno be;
-            Mmsg(errmsg, _("Unable to stat DVD part 1 file %s: ERR=%s\n"),
-               part1_name.c_str(), be.bstrerror());
-            Emsg0(M_FATAL, 0, errmsg);
-            clear_opened();
-            return;
-         }
-         if (!S_ISREG(statp.st_mode)) {
-            /* It is not a regular file */
-            Mmsg(errmsg, _("DVD part 1 is not a regular file %s.\n"),
-               part1_name.c_str());
-            Emsg0(M_FATAL, 0, errmsg);
-            clear_opened();
-            return;
-         }
-      }
-   } else {
-      Dmsg0(99, "DVD device mount failed.\n");
-      /* We cannot mount the device */
-      if (num_dvd_parts == 0) {
-         /* Run free space, check there is a media. */
-         if (!update_freespace()) {
-            Emsg0(M_FATAL, 0, errmsg);
-            clear_opened();
-            return;
-         }
-         if (have_media()) {
-            Dmsg1(100, "Could not mount device %s, this is not a problem (num_dvd_parts == 0), and have media.\n", print_name());
-         } else {
-            Mmsg(errmsg, _("There is no valid DVD in device %s.\n"), print_name());
-            Emsg0(M_FATAL, 0, errmsg);
-            clear_opened();
-            return;
-         }
-      }  else {
-         Mmsg(errmsg, _("Could not mount DVD device %s.\n"), print_name());
-         Emsg0(M_FATAL, 0, errmsg);
-         clear_opened();
-         return;
-      }
-   }
-   
-   Dmsg5(100, "open dev: DVD dev=%s mode=%s part=%d npart=%d volcatnparts=%d\n", 
-      archive_name.c_str(), mode_to_str(omode),
-      part, num_dvd_parts, dcr->VolCatInfo.VolCatParts);
-   openmode = omode;
-   Dmsg2(100, "openmode=%d %s\n", openmode, mode_to_str(openmode));
-   
-
-   /* If creating file, give 0640 permissions */
-   Dmsg3(100, "mode=%s open(%s, 0x%x, 0640)\n", mode_to_str(omode), 
-         archive_name.c_str(), mode);
-   /* Use system open() */
-   if ((m_fd = ::open(archive_name.c_str(), mode, 0640)) < 0) {
-      berrno be;
-      Mmsg2(errmsg, _("Could not open: %s, ERR=%s\n"), archive_name.c_str(), 
-            be.bstrerror());
-      // Should this be set if we try the create/open below
-      dev_errno = EIO; /* Interpreted as no device present by acquire.c:acquire_device_for_read(). */
-      Dmsg1(100, "open failed: %s", errmsg);
-      
-      /* Previous open failed. See if we can recover */
-      if ((omode == OPEN_READ_ONLY || omode == OPEN_READ_WRITE) &&
-          (part > num_dvd_parts)) {
-         /* If the last part (on spool), doesn't exist when accessing,
-          * create it. In read/write mode a write will be allowed (higher
-          * level software thinks that we are extending a pre-existing
-          * media. Reads for READ_ONLY will report immediately an EOF 
-          * Sometimes it is better to finish with an EOF than with an error. */
-         Dmsg1(100, "Creating last part on spool: %s\n", archive_name.c_str());
-         omode = CREATE_READ_WRITE;
-         set_mode(CREATE_READ_WRITE);
-         m_fd = ::open(archive_name.c_str(), mode, 0640);
-         set_mode(omode);
-      }
-   }
-   Dmsg1(100, "after open fd=%d\n", m_fd);
-   if (is_open()) {
-      if (omode == OPEN_READ_WRITE || omode == CREATE_READ_WRITE) {
-         set_append();
-      }
-      /* Get size of file */
-      if (fstat(m_fd, &filestat) < 0) {
-         berrno be;
-         dev_errno = errno;
-         Mmsg2(errmsg, _("Could not fstat: %s, ERR=%s\n"), archive_name.c_str(), 
-               be.bstrerror());
-         Dmsg1(100, "open failed: %s", errmsg);
-         /* Use system close() */
-         d_close(m_fd);
-         clear_opened();
-      } else {
-         part_size = filestat.st_size;
-         dev_errno = 0;
-         update_pos(dcr);                    /* update position */
-      }
-   }
-}
-
-
-/*
  * Rewind the device.
  *  Returns: true  on success
  *           false on failure
@@ -775,12 +588,6 @@ bool DEVICE::rewind(DCR *dcr)
    file_size = 0;
    file_addr = 0;
    if (m_fd < 0) {
-      if (!is_dvd()) { /* In case of major error, the fd is not open on DVD, so we don't want to abort. */
-         dev_errno = EBADF;
-         Mmsg1(errmsg, _("Bad call to rewind. Device %s not open\n"),
-            print_name());
-         Emsg0(M_ABORT, 0, errmsg);
-      }
       return false;
    }
    if (is_tape()) {
@@ -832,7 +639,7 @@ bool DEVICE::rewind(DCR *dcr)
          }
          break;
       }
-   } else if (is_file() || is_dvd()) {
+   } else if (is_file()) {
       if (lseek(dcr, (boffset_t)0, SEEK_SET) < 0) {
          berrno be;
          dev_errno = errno;
@@ -1047,8 +854,7 @@ bool DEVICE::update_pos(DCR *dcr)
       return false;
    }
 
-   /* Find out where we are */
-   if (is_file() || is_dvd()) {
+   if (is_file()) {
       file = 0;
       file_addr = 0;
       pos = lseek(dcr, (boffset_t)0, SEEK_CUR);
@@ -1057,7 +863,7 @@ bool DEVICE::update_pos(DCR *dcr)
          dev_errno = errno;
          Pmsg1(000, _("Seek error: ERR=%s\n"), be.bstrerror());
          Mmsg2(errmsg, _("lseek error on %s. ERR=%s.\n"),
-            print_name(), be.bstrerror());
+               print_name(), be.bstrerror());
          ok = false;
       } else {
          file_addr = pos;
@@ -1880,7 +1686,7 @@ void DEVICE::clrerror(int func)
 }
 #endif
 
-/* Clear Subsystem Exception OSF1 */
+/* Clear Subsystem Exception TRU64 */
 #ifdef MTCSE
 {
    struct mtop mt_com;
@@ -1990,8 +1796,6 @@ void DEVICE::close_part(DCR * /*dcr*/)
 boffset_t DEVICE::lseek(DCR *dcr, boffset_t offset, int whence)
 {
    switch (dev_type) {
-   case B_DVD_DEV:
-      return lseek_dvd(dcr, offset, whence);
    case B_FILE_DEV:
 #if defined(HAVE_WIN32)
       return ::_lseeki64(m_fd, (__int64)offset, whence);
@@ -2014,8 +1818,6 @@ bool DEVICE::truncate(DCR *dcr) /* We need the DCR for DVD-writing */
    case B_TAPE_DEV:
       /* maybe we should rewind and write and eof ???? */
       return true;                    /* we don't really truncate tapes */
-   case B_DVD_DEV:
-      return truncate_dvd(dcr);
    case B_FILE_DEV:
       if (ftruncate(m_fd, 0) != 0) {
          berrno be;
@@ -2100,7 +1902,6 @@ bool DEVICE::mount(int timeout)
       }
       break;
    case B_FILE_DEV:
-   case B_DVD_DEV:
       if (requires_mount() && device->mount_command) {
          return do_file_mount(1, timeout);
       }
@@ -2157,7 +1958,7 @@ bool DEVICE::do_tape_mount(int mount, int dotimeout)
    int status, tries;
    berrno be;
 
-   Dsm_check(1);
+   Dsm_check(200);
    if (mount) {
       icmd = device->mount_command;
    } else {
@@ -2191,7 +1992,7 @@ bool DEVICE::do_tape_mount(int mount, int dotimeout)
       set_mounted(false);
       free_pool_memory(results);
       Dmsg0(200, "============ mount=0\n");
-      Dsm_check(1);
+      Dsm_check(200);
       return false;
    }
 
@@ -2214,7 +2015,7 @@ bool DEVICE::do_file_mount(int mount, int dotimeout)
    int status, tries, name_max, count;
    berrno be;
 
-   Dsm_check(1);
+   Dsm_check(200);
    if (mount) {
       icmd = device->mount_command;
    } else {
@@ -2314,7 +2115,7 @@ get_out:
       set_mounted(false);
       free_pool_memory(results);
       Dmsg0(200, "============ mount=0\n");
-      Dsm_check(1);
+      Dsm_check(200);
       return false;
    }
    
@@ -2509,7 +2310,7 @@ void DEVICE::term(void)
    if (device) {
       device->dev = NULL;
    }
-   free((char *)this);
+   delete this;
 }
 
 /*

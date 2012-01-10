@@ -1,85 +1,140 @@
+/*
+   Bacula® - The Network Backup Solution
+   Copyright (C) 2009-2010 Free Software Foundation Europe e.V.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version three of the GNU Affero General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+   You should have received a copy of the GNU Affero General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+   Bacula® is a registered trademark of Kern Sibbald.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
+ * Bacula Catalog Database routines specific to Ingres
+ *   These are Ingres specific routines
+ *
+ *    Stefan Reddig, June 2009 with help of Marco van Wieringen April 2010
+ */
 #include "bacula.h"
-/* # line 3 "myingres.sc" */	
+/* # line 37 "myingres.sc" */	
 #ifdef HAVE_INGRES
 #include <eqpname.h>
 #include <eqdefcc.h>
 #include <eqsqlca.h>
-extern IISQLCA sqlca;   /* SQL Communications Area */
 #include <eqsqlda.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "myingres.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+IISQLCA *IIsqlca();
+#ifdef __cplusplus
+}
+#endif
+#define sqlca (*(IIsqlca()))
+
 /*
  * ---Implementations---
  */
-int INGcheck()
+int INGgetCols(INGconn *dbconn, const char *query, bool explicit_commit)
 {
-   return (sqlca.sqlcode < 0) ? sqlca.sqlcode : 0;
-}
-short INGgetCols(const char *stmt)
-{
-/* # line 23 "myingres.sc" */	
+/* # line 52 "myingres.sc" */	
   
-  char *stmtd;
-/* # line 25 "myingres.sc" */	
+  int sess_id;
+  char *stmt;
+/* # line 55 "myingres.sc" */	
   
-   short number = 1;
    IISQLDA *sqlda;
-   sqlda = (IISQLDA *)malloc(IISQDA_HEAD_SIZE + (number * IISQDA_VAR_SIZE));
-   memset(sqlda, 0, (IISQDA_HEAD_SIZE + (number * IISQDA_VAR_SIZE)));
+   int number = -1;
+   sqlda = (IISQLDA *)malloc(IISQDA_HEAD_SIZE + IISQDA_VAR_SIZE);
+   memset(sqlda, 0, (IISQDA_HEAD_SIZE + IISQDA_VAR_SIZE));
    sqlda->sqln = number;
-   stmtd = (char*)malloc(strlen(stmt)+1);
-   bstrncpy(stmtd,stmt,strlen(stmt)+1);
-/* # line 38 "myingres.sc" */	/* prepare */
+   stmt = bstrdup(query);
+/* # line 68 "myingres.sc" */	/* host code */
+   /*
+    * Switch to the correct default session for this thread.
+    */
+   sess_id = dbconn->session_id;
+/* # line 72 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(sess_id),&sess_id);
+  }
+/* # line 74 "myingres.sc" */	/* prepare */
   {
     IIsqInit(&sqlca);
-    IIsqPrepare(0,(char *)"s1",(char *)0,0,stmtd);
+    IIsqPrepare(0,(char *)"s1",sqlda,0,stmt);
+    if (sqlca.sqlcode < 0) 
+      goto bail_out;
   }
-/* # line 39 "myingres.sc" */	/* host code */
-   if (INGcheck() < 0) {
-      free(stmtd);
-      free(sqlda);
-      return -1;
-   }
-/* # line 44 "myingres.sc" */	/* describe */
-  {
-    IIsqInit(&sqlca);
-    IIsqDescribe(0,(char *)"s1",sqlda,0);
-  }
-/* # line 45 "myingres.sc" */	/* host code */
-   if (INGcheck() < 0) {
-      free(stmtd);
-      free(sqlda);
-      return -1;
-   }
+/* # line 78 "myingres.sc" */	/* host code */
    number = sqlda->sqld;
-   free(stmtd);
+bail_out:
+   /*
+    * If explicit_commit is set we commit our work now.
+    */
+   if (explicit_commit) {
+/* # line 85 "myingres.sc" */	/* commit */
+  {
+    IIsqInit(&sqlca);
+    IIxact(3);
+  }
+/* # line 86 "myingres.sc" */	/* host code */
+   }
+   /*
+    * Switch to no default session for this thread.
+    */
+/* # line 91 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 92 "myingres.sc" */	/* host code */
+   free(stmt);
    free(sqlda);
    return number;
 }
-IISQLDA *INGgetDescriptor(short numCols, const char *stmt)
+static inline IISQLDA *INGgetDescriptor(int numCols, const char *query)
 {
-/* # line 59 "myingres.sc" */	
+/* # line 99 "myingres.sc" */	
   
-  char *stmtd;
-/* # line 61 "myingres.sc" */	
+  char *stmt;
+/* # line 101 "myingres.sc" */	
   
    int i;
    IISQLDA *sqlda;
    sqlda = (IISQLDA *)malloc(IISQDA_HEAD_SIZE + (numCols * IISQDA_VAR_SIZE));
    memset(sqlda, 0, (IISQDA_HEAD_SIZE + (numCols * IISQDA_VAR_SIZE)));
    sqlda->sqln = numCols;
-   stmtd = (char *)malloc(strlen(stmt)+1);
-   bstrncpy(stmtd,stmt,strlen(stmt)+1);
-/* # line 74 "myingres.sc" */	/* prepare */
+   stmt = bstrdup(query);
+/* # line 112 "myingres.sc" */	/* prepare */
   {
     IIsqInit(&sqlca);
-    IIsqPrepare(0,(char *)"s2",sqlda,0,stmtd);
+    IIsqPrepare(0,(char *)"s2",sqlda,0,stmt);
   }
-/* # line 76 "myingres.sc" */	/* host code */
-   free(stmtd);
+/* # line 114 "myingres.sc" */	/* host code */
    for (i = 0; i < sqlda->sqld; ++i) {
+      /*
+       * Negative type indicates nullable columns, so an indicator
+       * is allocated, otherwise it's null
+       */
+      if (sqlda->sqlvar[i].sqltype > 0) {
+         sqlda->sqlvar[i].sqlind = NULL;
+      } else {
+         sqlda->sqlvar[i].sqlind = (short *)malloc(sizeof(short));
+      }
       /*
        * Alloc space for variable like indicated in sqllen
        * for date types sqllen is always 0 -> allocate by type
@@ -95,18 +150,22 @@ IISQLDA *INGgetDescriptor(short numCols, const char *stmt)
          sqlda->sqlvar[i].sqldata = (char *)malloc(IISQ_TSTMP_LEN);
          break;
       default:
-         sqlda->sqlvar[i].sqldata = (char *)malloc(sqlda->sqlvar[i].sqllen);
+         /*
+          * plus one to avoid zero mem allocs
+          */
+         sqlda->sqlvar[i].sqldata = (char *)malloc(sqlda->sqlvar[i].sqllen + 1);
          break;
       }
    }
+   free(stmt);
    return sqlda;
 }
-void INGfreeDescriptor(IISQLDA *sqlda)
+static void INGfreeDescriptor(IISQLDA *sqlda)
 {
+   int i;
    if (!sqlda) {
       return;
    }
-   int i;
    for (i = 0; i < sqlda->sqld; ++i) {
       if (sqlda->sqlvar[i].sqldata) {
          free(sqlda->sqlvar[i].sqldata);
@@ -116,15 +175,17 @@ void INGfreeDescriptor(IISQLDA *sqlda)
       }
    }
    free(sqlda);
-   sqlda = NULL;
 }
-int INGgetTypeSize(IISQLVAR *ingvar)
+static inline int INGgetTypeSize(IISQLVAR *ingvar)
 {
    int inglength = 0;
-   /*
-    * TODO: add date types (at least TSTMP,TSW TSWO)
-    */
    switch (ingvar->sqltype) {
+   case IISQ_TSWO_TYPE:
+      inglength = 20;
+      break;
+   case IISQ_TSW_TYPE:
+      inglength = 20;
+      break;
    case IISQ_DTE_TYPE:
       inglength = 25;
       break;
@@ -137,133 +198,35 @@ int INGgetTypeSize(IISQLVAR *ingvar)
    }
    return inglength;
 }
-INGresult *INGgetINGresult(IISQLDA *sqlda)
+static inline INGresult *INGgetINGresult(int numCols, const char *query)
 {
-   if (!sqlda) {
+   int i;
+   INGresult *ing_res;
+   ing_res = (INGresult *)malloc(sizeof(INGresult));
+   memset(ing_res, 0, sizeof(INGresult));
+   if ((ing_res->sqlda = INGgetDescriptor(numCols, query)) == NULL) {
       return NULL;
    }
-   int i;
-   INGresult *result = NULL;
-   result = (INGresult *)malloc(sizeof(INGresult));
-   memset(result, 0, sizeof(INGresult));
-   result->sqlda = sqlda;
-   result->num_fields = sqlda->sqld;
-   result->num_rows = 0;
-   result->first_row = NULL;
-   result->status = ING_EMPTY_RESULT;
-   result->act_row = NULL;
-   memset(result->numrowstring, 0, sizeof(result->numrowstring));
-   if (result->num_fields) {
-      result->fields = (INGRES_FIELD *)malloc(sizeof(INGRES_FIELD) * result->num_fields);
-      memset(result->fields, 0, sizeof(INGRES_FIELD) * result->num_fields);
-      for (i = 0; i < result->num_fields; ++i) {
-         memset(result->fields[i].name, 0, 34);
-         bstrncpy(result->fields[i].name, sqlda->sqlvar[i].sqlname.sqlnamec, sqlda->sqlvar[i].sqlname.sqlnamel);
-         result->fields[i].max_length = INGgetTypeSize(&sqlda->sqlvar[i]);
-         result->fields[i].type = abs(sqlda->sqlvar[i].sqltype);
-         result->fields[i].flags = (abs(sqlda->sqlvar[i].sqltype)<0) ? 1 : 0;
+   ing_res->num_fields = ing_res->sqlda->sqld;
+   ing_res->num_rows = 0;
+   ing_res->first_row = NULL;
+   ing_res->status = ING_EMPTY_RESULT;
+   ing_res->act_row = NULL;
+   if (ing_res->num_fields) {
+      ing_res->fields = (INGRES_FIELD *)malloc(sizeof(INGRES_FIELD) * ing_res->num_fields);
+      memset(ing_res->fields, 0, sizeof(INGRES_FIELD) * ing_res->num_fields);
+      for (i = 0; i < ing_res->num_fields; ++i) {
+         ing_res->fields[i].name = (char *)malloc(ing_res->sqlda->sqlvar[i].sqlname.sqlnamel + 1);
+         bstrncpy(ing_res->fields[i].name, ing_res->sqlda->sqlvar[i].sqlname.sqlnamec, ing_res->sqlda->sqlvar[i].sqlname.sqlnamel + 1);
+         ing_res->fields[i].name[ing_res->sqlda->sqlvar[i].sqlname.sqlnamel] = '\0';
+         ing_res->fields[i].max_length = INGgetTypeSize(&ing_res->sqlda->sqlvar[i]);
+         ing_res->fields[i].type = abs(ing_res->sqlda->sqlvar[i].sqltype);
+         ing_res->fields[i].flags = (ing_res->sqlda->sqlvar[i].sqltype < 0) ? 1 : 0;
       }
    }
-   return result;
+   return ing_res;
 }
-void INGfreeINGresult(INGresult *ing_res)
-{
-   if (!ing_res) {
-      return;
-   }
-   int rows;
-   ING_ROW *rowtemp;
-   /*
-    * Free all rows and fields, then res, not descriptor!
-    */
-   if (ing_res != NULL) {
-      /*
-       * Use of rows is a nasty workaround til I find the reason,
-       * why aggregates like max() don't work
-       */
-      rows = ing_res->num_rows;
-      ing_res->act_row = ing_res->first_row;
-      while (ing_res->act_row != NULL && rows > 0) {
-         rowtemp = ing_res->act_row->next;
-         INGfreeRowSpace(ing_res->act_row, ing_res->sqlda);
-         ing_res->act_row = rowtemp;
-         --rows;
-      }
-      if (ing_res->fields) {
-         free(ing_res->fields);
-      }
-   }
-   free(ing_res);
-   ing_res = NULL;
-}
-ING_ROW *INGgetRowSpace(INGresult *ing_res)
-{
-   int i;
-   unsigned short len; /* used for VARCHAR type length */
-   IISQLDA *sqlda = ing_res->sqlda;
-   ING_ROW *row = NULL;
-   IISQLVAR *vars = NULL;
-   row = (ING_ROW *)malloc(sizeof(ING_ROW));
-   memset(row, 0, sizeof(ING_ROW));
-   vars = (IISQLVAR *)malloc(sizeof(IISQLVAR) * sqlda->sqld);
-   memset(vars, 0, sizeof(IISQLVAR) * sqlda->sqld);
-   row->sqlvar = vars;
-   row->next = NULL;
-   for (i = 0; i < sqlda->sqld; ++i) {
-      /*
-       * Make strings out of the data, then the space and assign 
-       * (why string? at least it seems that way, looking into the sources)
-       */
-      switch (ing_res->fields[i].type) {
-      case IISQ_VCH_TYPE:
-         len = ((ING_VARCHAR *)sqlda->sqlvar[i].sqldata)->len;
-         vars[i].sqldata = (char *)malloc(len+1);
-         memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata+2,len);
-         vars[i].sqldata[len] = '\0';
-         break;
-      case IISQ_CHA_TYPE:
-         vars[i].sqldata = (char *)malloc(ing_res->fields[i].max_length+1);
-         memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata,sqlda->sqlvar[i].sqllen);
-         vars[i].sqldata[ing_res->fields[i].max_length] = '\0';
-         break;
-      case IISQ_INT_TYPE:
-         vars[i].sqldata = (char *)malloc(20);
-         memset(vars[i].sqldata, 0, 20);
-         switch (sqlda->sqlvar[i].sqllen) {
-         case 2:
-            bsnprintf(vars[i].sqldata, 20, "%d",*(short*)sqlda->sqlvar[i].sqldata);
-            break;
-         case 4:
-            bsnprintf(vars[i].sqldata, 20, "%ld",*(int*)sqlda->sqlvar[i].sqldata);
-            break;
-         case 8:
-            bsnprintf(vars[i].sqldata, 20, "%lld",*(long*)sqlda->sqlvar[i].sqldata);
-            break;
-         }
-         break;
-      case IISQ_TSTMP_TYPE:
-         vars[i].sqldata = (char *)malloc(IISQ_TSTMP_LEN+1);
-         vars[i].sqldata[IISQ_TSTMP_LEN] = '\0';
-         break;
-      case IISQ_TSWO_TYPE:
-         vars[i].sqldata = (char *)malloc(IISQ_TSWO_LEN+1);
-         vars[i].sqldata[IISQ_TSWO_LEN] = '\0';
-         break;
-      case IISQ_TSW_TYPE:
-         vars[i].sqldata = (char *)malloc(IISQ_TSW_LEN+1);
-         vars[i].sqldata[IISQ_TSW_LEN] = '\0';
-         break;
-      }
-      vars[i].sqlind = (short *)malloc(sizeof(short));
-      if (sqlda->sqlvar[i].sqlind) {
-         memcpy(vars[i].sqlind,sqlda->sqlvar[i].sqlind,sizeof(short));
-      } else {
-         *vars[i].sqlind = 0;
-      }
-   }
-   return row;
-}
-void INGfreeRowSpace(ING_ROW *row, IISQLDA *sqlda)
+static inline void INGfreeRowSpace(ING_ROW *row, IISQLDA *sqlda)
 {
    int i;
    if (row == NULL || sqlda == NULL) {
@@ -280,41 +243,174 @@ void INGfreeRowSpace(ING_ROW *row, IISQLDA *sqlda)
    free(row->sqlvar);
    free(row);
 }
-int INGfetchAll(const char *stmt, INGresult *ing_res)
+static void INGfreeINGresult(INGresult *ing_res)
 {
-   int linecount = 0;
+   int i;
+   int rows;
+   ING_ROW *rowtemp;
+   if (!ing_res) {
+      return;
+   }
+   /*
+    * Use of rows is a nasty workaround til I find the reason,
+    * why aggregates like max() don't work
+    */
+   rows = ing_res->num_rows;
+   ing_res->act_row = ing_res->first_row;
+   while (ing_res->act_row != NULL && rows > 0) {
+      rowtemp = ing_res->act_row->next;
+      INGfreeRowSpace(ing_res->act_row, ing_res->sqlda);
+      ing_res->act_row = rowtemp;
+      --rows;
+   }
+   if (ing_res->fields) {
+      for (i = 0; i < ing_res->num_fields; ++i) {
+         free(ing_res->fields[i].name);
+      }
+      free(ing_res->fields);
+   }
+   INGfreeDescriptor(ing_res->sqlda);
+   free(ing_res);
+}
+static inline ING_ROW *INGgetRowSpace(INGresult *ing_res)
+{
+   int i;
+   unsigned short len; /* used for VARCHAR type length */
+   unsigned short th, tm, ts;
+   IISQLDA *sqlda;
+   ING_ROW *row = NULL;
+   ING_TIMESTAMP *tsp;
+   IISQLVAR *vars = NULL;
+   row = (ING_ROW *)malloc(sizeof(ING_ROW));
+   memset(row, 0, sizeof(ING_ROW));
+   sqlda = ing_res->sqlda;
+   vars = (IISQLVAR *)malloc(sizeof(IISQLVAR) * sqlda->sqld);
+   memset(vars, 0, sizeof(IISQLVAR) * sqlda->sqld);
+   row->sqlvar = vars;
+   row->next = NULL;
+   for (i = 0; i < sqlda->sqld; ++i) {
+      /*
+       * Make strings out of the data, then the space and assign 
+       * (why string? at least it seems that way, looking into the sources)
+       */
+      vars[i].sqlind = (short *)malloc(sizeof(short));
+      if (sqlda->sqlvar[i].sqlind) {
+         memcpy(vars[i].sqlind,sqlda->sqlvar[i].sqlind,sizeof(short));
+      } else {
+         *vars[i].sqlind = NULL;
+      }
+      /*
+       * if sqlind pointer exists AND points to -1 -> column is 'null'
+       */
+      if ( *vars[i].sqlind && (*vars[i].sqlind == -1)) {
+         vars[i].sqldata = NULL;
+      } else {
+         switch (ing_res->fields[i].type) {
+         case IISQ_VCH_TYPE:
+         case IISQ_LVCH_TYPE:
+         case IISQ_VBYTE_TYPE:
+         case IISQ_LBYTE_TYPE:
+         case IISQ_NVCHR_TYPE:
+         case IISQ_LNVCHR_TYPE:
+            len = ((ING_VARCHAR *)sqlda->sqlvar[i].sqldata)->len;
+            vars[i].sqldata = (char *)malloc(len + 1);
+            memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata + 2,len);
+            vars[i].sqldata[len] = '\0';
+            break;
+         case IISQ_CHA_TYPE:
+         case IISQ_BYTE_TYPE:
+         case IISQ_NCHR_TYPE:
+            vars[i].sqldata = (char *)malloc(ing_res->fields[i].max_length + 1);
+            memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata,sqlda->sqlvar[i].sqllen);
+            vars[i].sqldata[ing_res->fields[i].max_length] = '\0';
+            break;
+         case IISQ_INT_TYPE:
+            switch (sqlda->sqlvar[i].sqllen) {
+            case 2:
+               vars[i].sqldata = (char *)malloc(6);
+               memset(vars[i].sqldata, 0, 6);
+               bsnprintf(vars[i].sqldata, 6, "%d",*(int16_t *)sqlda->sqlvar[i].sqldata);
+               break;
+            case 4:
+               vars[i].sqldata = (char *)malloc(11);
+               memset(vars[i].sqldata, 0, 11);
+               bsnprintf(vars[i].sqldata, 11, "%ld",*(int32_t *)sqlda->sqlvar[i].sqldata);
+               break;
+            case 8:
+               vars[i].sqldata = (char *)malloc(20);
+               memset(vars[i].sqldata, 0, 20);
+               bsnprintf(vars[i].sqldata, 20, "%lld",*(int64_t *)sqlda->sqlvar[i].sqldata);
+               break;
+            }
+            break;
+         case IISQ_TSTMP_TYPE:
+            vars[i].sqldata = (char *)malloc(IISQ_TSTMP_LEN + 1);
+            vars[i].sqldata[IISQ_TSTMP_LEN] = '\0';
+            break;
+         case IISQ_TSWO_TYPE:
+            tsp = (ING_TIMESTAMP *)sqlda->sqlvar[i].sqldata;
+            th = tsp->secs / 3600; /* hours */
+            tm = tsp->secs % 3600; /* remaining seconds */
+            tm = tm / 60; /* minutes */
+            ts = tsp->secs - (th * 3600) - (tm * 60); /* seconds */
+            vars[i].sqldata = (char *)malloc(IISQ_TSTMP_LEN + 1);
+            bsnprintf(vars[i].sqldata, IISQ_TSWO_LEN + 1,
+                      "%04u-%02u-%02u %02u:%02u:%02u",
+                      tsp->year, tsp->month, tsp->day, th, tm, ts);
+            break;
+         case IISQ_TSW_TYPE:
+            tsp = (ING_TIMESTAMP *)sqlda->sqlvar[i].sqldata;
+            th = tsp->secs / 3600; /* hours */
+            tm = tsp->secs % 3600; /* remaining seconds */
+            tm = tm / 60; /* minutes */
+            ts = tsp->secs - (th * 3600) - (tm * 60); /* seconds */
+            vars[i].sqldata = (char *)malloc(IISQ_TSW_LEN + 1);
+            bsnprintf(vars[i].sqldata, IISQ_TSW_LEN + 1,
+                      "%04u-%02u-%02u %02u:%02u:%02u",
+                      tsp->year, tsp->month, tsp->day, th, tm, ts);
+            break;
+         default:
+            Jmsg(NULL, M_FATAL, 0,
+                 "INGgetRowSpace: encountered unhandled database datatype %d please report this as a bug\n",
+                 ing_res->fields[i].type);
+            break;
+         }
+      }
+   }
+   return row;
+}
+static inline int INGfetchAll(INGresult *ing_res)
+{
    ING_ROW *row;
    IISQLDA *desc;
-   int check = -1;
+   int linecount = -1;
    desc = ing_res->sqlda;
-/* # line 317 "myingres.sc" */	/* host code */
-   if ((check = INGcheck()) < 0) {
-      return check;
-   }
-/* # line 321 "myingres.sc" */	/* open */
+/* # line 409 "myingres.sc" */	/* open */
   {
     IIsqInit(&sqlca);
-    IIcsOpen((char *)"c2",9341,8444);
+    IIcsOpen((char *)"c2",20273,8927);
     IIwritio(0,(short *)0,1,32,0,(char *)"s2");
-    IIcsQuery((char *)"c2",9341,8444);
+    IIcsQuery((char *)"c2",20273,8927);
+    if (sqlca.sqlcode < 0) 
+      goto bail_out;
   }
-/* # line 322 "myingres.sc" */	/* host code */
-   if ((check = INGcheck()) < 0) {
-      return check;
-   }
-   /* for (linecount = 0; sqlca.sqlcode == 0; ++linecount) */
+/* # line 413 "myingres.sc" */	/* host code */
+   linecount = 0;
    do {
-/* # line 328 "myingres.sc" */	/* fetch */
+/* # line 415 "myingres.sc" */	/* fetch */
   {
     IIsqInit(&sqlca);
-    if (IIcsRetScroll((char *)"c2",9341,8444,-1,-1) != 0) {
+    if (IIcsRetScroll((char *)"c2",20273,8927,-1,-1) != 0) {
       IIcsDaGet(0,desc);
       IIcsERetrieve();
     } /* IIcsRetrieve */
   }
-/* # line 330 "myingres.sc" */	/* host code */
-      if ( (sqlca.sqlcode == 0) || (sqlca.sqlcode == -40202) ) {
-         row = INGgetRowSpace(ing_res); /* alloc space for fetched row */
+/* # line 417 "myingres.sc" */	/* host code */
+      if (sqlca.sqlcode == 0 || sqlca.sqlcode == -40202) {
+         /*
+          * Allocate space for fetched row
+          */
+         row = INGgetRowSpace(ing_res);
          /*
           * Initialize list when encountered first time
           */
@@ -325,243 +421,492 @@ int INGfetchAll(const char *stmt, INGresult *ing_res)
          }      
          ing_res->act_row->next = row; /* append row to old act_row */
          ing_res->act_row = row; /* set row as act_row */
-         ++linecount;
-         row->row_number = linecount;
+         row->row_number = linecount++;
       }
    } while ( (sqlca.sqlcode == 0) || (sqlca.sqlcode == -40202) );
-/* # line 348 "myingres.sc" */	/* close */
+/* # line 438 "myingres.sc" */	/* close */
   {
     IIsqInit(&sqlca);
-    IIcsClose((char *)"c2",9341,8444);
+    IIcsClose((char *)"c2",20273,8927);
   }
-/* # line 350 "myingres.sc" */	/* host code */
+/* # line 440 "myingres.sc" */	/* host code */
    ing_res->status = ING_COMMAND_OK;
    ing_res->num_rows = linecount;
+bail_out:
    return linecount;
 }
-ING_STATUS INGresultStatus(INGresult *res)
+static inline ING_STATUS INGresultStatus(INGresult *ing_res)
 {
-   if (res == NULL) {return ING_NO_RESULT;}
-   return res->status;
+   if (ing_res == NULL) {
+      return ING_NO_RESULT;
+   } else {
+      return ing_res->status;
+   }
 }
-void INGrowSeek(INGresult *res, int row_number)
+static void INGrowSeek(INGresult *ing_res, int row_number)
 {
    ING_ROW *trow = NULL;
-   if (res->act_row->row_number == row_number) {
+   if (ing_res->act_row->row_number == row_number) {
       return;
    }
    /*
     * TODO: real error handling
     */
-   if (row_number<0 || row_number>res->num_rows) {
+   if (row_number < 0 || row_number > ing_res->num_rows) {
       return;
    }
-   for (trow = res->first_row ; trow->row_number != row_number ; trow = trow->next );
-   res->act_row = trow;
+   for (trow = ing_res->first_row; trow->row_number != row_number; trow = trow->next) ;
+   ing_res->act_row = trow;
    /*
     * Note - can be null - if row_number not found, right?
     */
 }
-char *INGgetvalue(INGresult *res, int row_number, int column_number)
+char *INGgetvalue(INGresult *ing_res, int row_number, int column_number)
 {
-   if (row_number != res->act_row->row_number) {
-      INGrowSeek(res, row_number);
+   if (row_number != ing_res->act_row->row_number) {
+      INGrowSeek(ing_res, row_number);
    }
-   return res->act_row->sqlvar[column_number].sqldata;
+   return ing_res->act_row->sqlvar[column_number].sqldata;
 }
-int INGgetisnull(INGresult *res, int row_number, int column_number)
+bool INGgetisnull(INGresult *ing_res, int row_number, int column_number)
 {
-   if (row_number != res->act_row->row_number) {
-      INGrowSeek(res, row_number);
+   if (row_number != ing_res->act_row->row_number) {
+      INGrowSeek(ing_res, row_number);
    }
-   return (short)*res->act_row->sqlvar[column_number].sqlind;
+   return (*ing_res->act_row->sqlvar[column_number].sqlind == -1) ? true : false;
 }
-int INGntuples(const INGresult *res)
+int INGntuples(const INGresult *ing_res)
 {
-   return res->num_rows;
+   return ing_res->num_rows;
 }
-int INGnfields(const INGresult *res)
+int INGnfields(const INGresult *ing_res)
 {
-   return res->num_fields;
+   return ing_res->num_fields;
 }
-char *INGfname(const INGresult *res, int column_number)
+char *INGfname(const INGresult *ing_res, int column_number)
 {
-   if ((column_number > res->num_fields) || (column_number < 0)) {
+   if ((column_number > ing_res->num_fields) || (column_number < 0)) {
       return NULL;
    } else {
-      return res->fields[column_number].name;
+      return ing_res->fields[column_number].name;
    }
 }
-short INGftype(const INGresult *res, int column_number)
+short INGftype(const INGresult *ing_res, int column_number)
 {
-   return res->fields[column_number].type;
+   return ing_res->fields[column_number].type;
 }
-int INGexec(INGconn *conn, const char *query)
+int INGexec(INGconn *dbconn, const char *query, bool explicit_commit)
 {
-   int check;
-/* # line 425 "myingres.sc" */	
+/* # line 522 "myingres.sc" */	
   
+  int sess_id;
   int rowcount;
+  int errors;
   char *stmt;
-/* # line 428 "myingres.sc" */	
+/* # line 527 "myingres.sc" */	
   
-   stmt = (char *)malloc(strlen(query)+1);
-   bstrncpy(stmt,query,strlen(query)+1);
    rowcount = -1;
-/* # line 434 "myingres.sc" */	/* execute */
+   stmt = bstrdup(query);
+/* # line 534 "myingres.sc" */	/* host code */
+   /*
+    * Switch to the correct default session for this thread.
+    */
+   sess_id = dbconn->session_id;
+/* # line 538 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(sess_id),&sess_id);
+  }
+/* # line 540 "myingres.sc" */	/* execute */
   {
     IIsqInit(&sqlca);
     IIsqExImmed(stmt);
     IIsyncup((char *)0,0);
+    if (sqlca.sqlcode < 0) 
+      goto bail_out;
   }
-/* # line 435 "myingres.sc" */	/* host code */
-   free(stmt);
-   if ((check = INGcheck()) < 0) {
-      return check;
-   }
-/* # line 440 "myingres.sc" */	/* inquire_ingres */
+/* # line 541 "myingres.sc" */	/* inquire_ingres */
   {
     IILQisInqSqlio((short *)0,1,30,sizeof(rowcount),&rowcount,8);
   }
-/* # line 441 "myingres.sc" */	/* host code */
-   if ((check = INGcheck()) < 0) {
-      return check;
+/* # line 543 "myingres.sc" */	/* host code */
+   /*
+    * See if the negative rowcount is due to errors.
+    */
+   if (rowcount < 0) {
+/* # line 547 "myingres.sc" */	/* inquire_ingres */
+  {
+    IILQisInqSqlio((short *)0,1,30,sizeof(errors),&errors,0);
+  }
+/* # line 549 "myingres.sc" */	/* host code */
+      /*
+       * If the number of errors is 0 we got a negative rowcount
+       * because the statement we executed doesn't give a rowcount back.
+       * Lets pretend we have a rowcount of 1 then.
+       */
+      if (errors == 0) {
+         rowcount = 1;
+      }
    }
+/* # line 561 "myingres.sc" */	/* host code */
+bail_out:
+   /*
+    * If explicit_commit is set we commit our work now.
+    */
+   if (explicit_commit) {
+/* # line 566 "myingres.sc" */	/* commit */
+  {
+    IIsqInit(&sqlca);
+    IIxact(3);
+  }
+/* # line 567 "myingres.sc" */	/* host code */
+   }
+   /*
+    * Switch to no default session for this thread.
+    */
+/* # line 572 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 573 "myingres.sc" */	/* host code */
+   free(stmt);
    return rowcount;
 }
-INGresult *INGquery(INGconn *conn, const char *query)
+INGresult *INGquery(INGconn *dbconn, const char *query, bool explicit_commit)
 {
    /*
     * TODO: error handling
     */
-   IISQLDA *desc = NULL;
-   INGresult *res = NULL;
-   int rows = -1;
-   int cols = INGgetCols(query);
-   desc = INGgetDescriptor(cols, query);
-   if (!desc) {
-      return NULL;
+   INGresult *ing_res = NULL;
+   int rows;
+   int cols;
+/* # line 585 "myingres.sc" */	
+  
+  int sess_id;
+/* # line 587 "myingres.sc" */	
+  
+   cols = INGgetCols(dbconn, query, explicit_commit);
+   /*
+    * Switch to the correct default session for this thread.
+    */
+   sess_id = dbconn->session_id;
+/* # line 595 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(sess_id),&sess_id);
+  }
+/* # line 597 "myingres.sc" */	/* host code */
+   ing_res = INGgetINGresult(cols, query);
+   if (!ing_res) {
+      goto bail_out;
    }
-   res = INGgetINGresult(desc);
-   if (!res) {
-      return NULL;
-   }
-   rows = INGfetchAll(query, res);
+   rows = INGfetchAll(ing_res);
    if (rows < 0) {
-     INGfreeINGresult(res);
-     INGfreeDescriptor(desc);
-     return NULL;
+      INGfreeINGresult(ing_res);
+      ing_res = NULL;
+      goto bail_out;
    }
-   return res;
+bail_out:
+   /*
+    * If explicit_commit is set we commit our work now.
+    */
+   if (explicit_commit) {
+/* # line 615 "myingres.sc" */	/* commit */
+  {
+    IIsqInit(&sqlca);
+    IIxact(3);
+  }
+/* # line 616 "myingres.sc" */	/* host code */
+   }
+   /*
+    * Switch to no default session for this thread.
+    */
+/* # line 621 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 622 "myingres.sc" */	/* host code */
+   return ing_res;
 }
-void INGclear(INGresult *res)
+void INGclear(INGresult *ing_res)
 {
-   if (res == NULL) {
+   if (ing_res == NULL) {
       return;
    }
-   IISQLDA *desc = res->sqlda;
-   INGfreeINGresult(res);
-   INGfreeDescriptor(desc);
+   INGfreeINGresult(ing_res);
 }
-INGconn *INGconnectDB(char *dbname, char *user, char *passwd)
+void INGcommit(const INGconn *dbconn)
 {
+/* # line 636 "myingres.sc" */	
+  
+  int sess_id;
+/* # line 638 "myingres.sc" */	
+  
+   if (dbconn != NULL) {
+      /*
+       * Switch to the correct default session for this thread.
+       */
+      sess_id = dbconn->session_id;
+/* # line 645 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(sess_id),&sess_id);
+  }
+/* # line 647 "myingres.sc" */	/* host code */
+      /*
+       * Commit our work.
+       */
+/* # line 650 "myingres.sc" */	/* commit */
+  {
+    IIsqInit(&sqlca);
+    IIxact(3);
+  }
+/* # line 652 "myingres.sc" */	/* host code */
+      /*
+       * Switch to no default session for this thread.
+       */
+/* # line 655 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 656 "myingres.sc" */	/* host code */
+   }
+}
+INGconn *INGconnectDB(char *dbname, char *user, char *passwd, int session_id)
+{
+/* # line 661 "myingres.sc" */	
+  
+  char *ingdbname;
+  char *ingdbuser = NULL;
+  char *ingdbpasswd = NULL;
+  int sess_id;
+/* # line 666 "myingres.sc" */	
+  
+   INGconn *dbconn = NULL;
    if (dbname == NULL || strlen(dbname) == 0) {
       return NULL;
    }
-   INGconn *dbconn = (INGconn *)malloc(sizeof(INGconn));
-   memset(dbconn, 0, sizeof(INGconn));
-/* # line 495 "myingres.sc" */	
-  
-  char ingdbname[24];
-  char ingdbuser[32];
-  char ingdbpasw[32];
-  char conn_name[32];
-  int sess_id;
-/* # line 501 "myingres.sc" */	
-  
-   bstrncpy(ingdbname, dbname, sizeof(ingdbname));
+   sess_id = session_id;
+   ingdbname = dbname;
+/* # line 678 "myingres.sc" */	/* host code */
    if (user != NULL) {
-      bstrncpy(ingdbuser, user, sizeof(ingdbuser));
+      ingdbuser = user;
       if (passwd != NULL) {
-         bstrncpy(ingdbpasw, passwd, sizeof(ingdbpasw));
-      } else {
-         memset(ingdbpasw, 0, sizeof(ingdbpasw));
-      }
-/* # line 512 "myingres.sc" */	/* connect */
+         ingdbpasswd = passwd;
+/* # line 682 "myingres.sc" */	/* connect */
   {
     IIsqInit(&sqlca);
+    IILQsidSessID(sess_id);
     IIsqUser(ingdbuser);
-    IIsqConnect(0,ingdbname,(char *)"-dbms_password",ingdbpasw,(char *)0, 
+    IIsqConnect(0,ingdbname,(char *)"-dbms_password",ingdbpasswd,(char *)0, 
     (char *)0, (char *)0, (char *)0, (char *)0, (char *)0, (char *)0, 
     (char *)0, (char *)0, (char *)0, (char *)0);
+    if (sqlca.sqlcode < 0) 
+      goto bail_out;
   }
-/* # line 516 "myingres.sc" */	/* host code */
-   } else {
-/* # line 517 "myingres.sc" */	/* connect */
+/* # line 687 "myingres.sc" */	/* host code */
+      } else {
+/* # line 688 "myingres.sc" */	/* connect */
   {
     IIsqInit(&sqlca);
+    IILQsidSessID(sess_id);
+    IIsqUser(ingdbuser);
     IIsqConnect(0,ingdbname,(char *)0, (char *)0, (char *)0, (char *)0, 
     (char *)0, (char *)0, (char *)0, (char *)0, (char *)0, (char *)0, 
     (char *)0, (char *)0, (char *)0);
+    if (sqlca.sqlcode < 0) 
+      goto bail_out;
   }
-/* # line 518 "myingres.sc" */	/* host code */
+/* # line 692 "myingres.sc" */	/* host code */
+      }
+   } else {
+/* # line 694 "myingres.sc" */	/* connect */
+  {
+    IIsqInit(&sqlca);
+    IILQsidSessID(sess_id);
+    IIsqConnect(0,ingdbname,(char *)0, (char *)0, (char *)0, (char *)0, 
+    (char *)0, (char *)0, (char *)0, (char *)0, (char *)0, (char *)0, 
+    (char *)0, (char *)0, (char *)0);
+    if (sqlca.sqlcode < 0) 
+      goto bail_out;
+  }
+/* # line 697 "myingres.sc" */	/* host code */
    }   
-/* # line 520 "myingres.sc" */	/* inquire_sql */
-  {
-    IILQisInqSqlio((short *)0,1,32,31,conn_name,13);
-  }
-/* # line 521 "myingres.sc" */	/* inquire_sql */
-  {
-    IILQisInqSqlio((short *)0,1,30,sizeof(sess_id),&sess_id,11);
-  }
-/* # line 523 "myingres.sc" */	/* host code */
-   bstrncpy(dbconn->dbname, ingdbname, sizeof(dbconn->dbname));
-   bstrncpy(dbconn->user, ingdbuser, sizeof(dbconn->user));
-   bstrncpy(dbconn->password, ingdbpasw, sizeof(dbconn->password));
-   bstrncpy(dbconn->connection_name, conn_name, sizeof(dbconn->connection_name));
+/* # line 701 "myingres.sc" */	/* host code */
+   dbconn = (INGconn *)malloc(sizeof(INGconn));
+   memset(dbconn, 0, sizeof(INGconn));
+   dbconn->dbname = bstrdup(ingdbname);
+   if (user != NULL) {
+      dbconn->user = bstrdup(ingdbuser);
+      dbconn->password = bstrdup(ingdbpasswd);
+   }
    dbconn->session_id = sess_id;
-   dbconn->msg = (char*)malloc(257);
+   dbconn->msg = (char *)malloc(257);
    memset(dbconn->msg, 0, 257);
+   /*
+    * Switch to no default session for this thread undo default settings from SQL CONNECT.
+    */
+/* # line 716 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 718 "myingres.sc" */	/* host code */
+bail_out:
    return dbconn;
+}
+void INGsetDefaultLockingMode(INGconn *dbconn)
+{
+   /*
+    * Set the default Ingres session locking mode:
+    *
+    * SET LOCKMODE provides four different parameters to govern
+    * the nature of locking in an INGRES session:
+    *
+    * Level: This refers to the level of granularity desired when
+    * the table is accessed. You can specify any of the following
+    * locking levels:
+    *
+    * row     Specifies locking at the level of the row (subject to
+    *         escalation criteria; see below)
+    * page    Specifies locking at the level of the data page (subject to
+    *         escalation criteria; see below)
+    * table   Specifies table-level locking in the database
+    * session Specifies the current default for your INGRES session
+    * system  Specifies that INGRES will start with page-level locking,
+    *         unless it estimates that more than Maxlocks pages will be
+    *         referenced, in which case table-level locking will be used.
+    *
+    * Readlock: This refers to locking in situations where table access
+    *           is required for reading data only (as opposed to updating
+    *           data). You can specify any of the following Readlock modes:
+    *
+    *    nolock     Specifies no locking when reading data
+    *    shared     Specifies the default mode of locking when reading data
+    *    exclusive  Specifies exclusive locking when reading data (useful in
+    *               "select-for-update" processing within a multi-statement
+    *               transaction)
+    *    system     Specifies the general Readlock default for the INGRES system
+    *
+    * Maxlocks: This refers to an escalation factor, or number of locks on
+    *           data pages, at which locking escalates from page-level
+    *           to table-level. The number of locks available to you is
+    *           dependent upon your system configuration. You can specify the
+    *           following Maxlocks escalation factors:
+    *
+    *    n       A specific (integer) number of page locks to allow before
+    *            escalating to table-level locking. The default "n" is 10,
+    *            and "n" must be greater than 0.
+    *    session Specifies the current Maxlocks default for your INGRES
+    *            session
+    *    system  Specifies the general Maxlocks default for the INGRES system
+    *
+    * Note: If you specify page-level locking, and the number of locks granted
+    * during a query exceeds the system-wide lock limit, or if the operating
+    * system's locking resources are depleted, locking escalates to table-level.
+    * This escalation occurs automatically and is independent of the user.
+    *
+    * Timeout: This refers to a time limit, expressed in seconds, for which
+    * a lock request should remain pending. If INGRES cannot grant the lock
+    * request within the specified time, then the query that requested the
+    * lock aborts. You can specify the following timeout characteristics:
+    *
+    *    n       A specific (integer) number of seconds to wait for a lock
+    *            (setting "n" to 0 requires INGRES to wait indefinitely for
+    *            the lock)
+    *    session Specifies the current timeout default for your INGRES
+    *            session (which is also the INGRES default)
+    *    system  Specifies the general timeout default for the INGRES system
+    *
+    */
+/* # line 786 "myingres.sc" */	
+  
+  int sess_id;
+/* # line 788 "myingres.sc" */	
+  
+   if (dbconn != NULL) {
+      /*
+       * Switch to the correct default session for this thread.
+       */
+      sess_id = dbconn->session_id;
+/* # line 795 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(sess_id),&sess_id);
+  }
+/* # line 797 "myingres.sc" */	/* set */
+  {
+    IIsqInit(&sqlca);
+    IIwritio(0,(short *)0,1,32,0,(char *)
+"set LOCKMODE session where level=row, readlock=nolock");
+    IIsyncup((char *)0,0);
+  }
+/* # line 799 "myingres.sc" */	/* host code */
+      /*
+       * Switch to no default session for this thread.
+       */
+/* # line 802 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 803 "myingres.sc" */	/* host code */
+   }
 }
 void INGdisconnectDB(INGconn *dbconn)
 {
-   /*
-    * TODO: check for any real use of dbconn: maybe whenn multithreaded?
-    */
-/* # line 539 "myingres.sc" */	/* disconnect */
+/* # line 808 "myingres.sc" */	
+  
+  int sess_id;
+/* # line 810 "myingres.sc" */	
+  
+   if (dbconn != NULL) {
+      sess_id = dbconn->session_id;
+/* # line 814 "myingres.sc" */	/* disconnect */
   {
     IIsqInit(&sqlca);
+    IILQsidSessID(sess_id);
     IIsqDisconnect();
   }
-/* # line 540 "myingres.sc" */	/* host code */
-   if (dbconn != NULL) {
+/* # line 816 "myingres.sc" */	/* host code */
+      free(dbconn->dbname);
+      if (dbconn->user) {
+         free(dbconn->user);
+      }
+      if (dbconn->password) {
+         free(dbconn->password);
+      }
       free(dbconn->msg);
       free(dbconn);
    }
 }
-char *INGerrorMessage(const INGconn *conn)
+char *INGerrorMessage(const INGconn *dbconn)
 {
-/* # line 548 "myingres.sc" */	
+/* # line 830 "myingres.sc" */	
   
+  int sess_id;
   char errbuf[256];
-/* # line 550 "myingres.sc" */	
+/* # line 833 "myingres.sc" */	
   
-/* # line 552 "myingres.sc" */	/* inquire_ingres */
+   if (dbconn != NULL) {
+      /*
+       * Switch to the correct default session for this thread.
+       */
+      sess_id = dbconn->session_id;
+/* # line 840 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(sess_id),&sess_id);
+  }
+/* # line 842 "myingres.sc" */	/* inquire_ingres */
   {
     IILQisInqSqlio((short *)0,1,32,255,errbuf,63);
   }
-/* # line 553 "myingres.sc" */	/* host code */
-   memcpy(conn->msg,&errbuf,256);
-   return conn->msg;
+/* # line 843 "myingres.sc" */	/* host code */
+      strncpy(dbconn->msg, errbuf, sizeof(dbconn->msg));
+      /*
+       * Switch to no default session for this thread.
+       */
+/* # line 848 "myingres.sc" */	/* set_sql */
+  {
+    IILQssSetSqlio(11,(short *)0,1,30,sizeof(-97),(void *)IILQint(-97));
+  }
+/* # line 849 "myingres.sc" */	/* host code */
+   }
+   return dbconn->msg;
 }
-char *INGcmdTuples(INGresult *res)
-{
-   return res->numrowstring;
-}
-/* TODO?
-int INGputCopyEnd(INGconn *conn, const char *errormsg);
-int INGputCopyData(INGconn *conn, const char *buffer, int nbytes);
-*/
-/* # line 567 "myingres.sc" */	
+/* # line 854 "myingres.sc" */	
 #endif

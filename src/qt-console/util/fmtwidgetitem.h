@@ -8,7 +8,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -17,7 +17,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -92,6 +92,9 @@ public:
    /* Normal text field. Centers field if center true*/
    void setTextFld(int index, const QString &fld, bool center = false);
 
+   /* Normal date field. Centers field if center true*/
+   void setDateFld(int index, utime_t fld, bool center = false);
+
    /* Right-aligned text field. */
    void setRightFld(int index, const QString &fld);
 
@@ -120,6 +123,9 @@ public:
    /* fld value interpreted as Online/Offline */
    void setInChanger(int index, const QString &InChanger);
   
+   /* fld value interpreted as file or folder */
+   void setFileType(int index, const QString &type);
+
    static void setBytesConversion(BYTES_CONVERSION b) {
       cnvFlag = b;
    }

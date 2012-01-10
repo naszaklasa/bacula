@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -50,6 +50,11 @@ struct s_mem {
 #define first_child(node) \
         ((TREE_NODE *)(node->child.first())
 
+struct delta_list {
+   struct delta_list *next;
+   JobId_t JobId;
+   int32_t FileIndex;
+};
 
 /*
  * Keep this node as small as possible because
@@ -63,6 +68,7 @@ struct s_tree_node {
    char *fname;                       /* file name */
    int32_t FileIndex;                 /* file index */
    uint32_t JobId;                    /* JobId */
+   int32_t delta_seq;                 /* current delta sequence */
    uint16_t fname_len;                /* filename length */
    int type: 8;                       /* node type */
    unsigned int extract: 1;           /* extract item */
@@ -73,6 +79,7 @@ struct s_tree_node {
    unsigned int loaded: 1;            /* set when the dir is in the tree */
    struct s_tree_node *parent;
    struct s_tree_node *next;          /* next hash of FileIndex */
+   struct delta_list *delta_list;     /* delta parts for this node */
 };
 typedef struct s_tree_node TREE_NODE;
 
@@ -84,6 +91,7 @@ struct s_tree_root {
    const char *fname;                 /* file name */
    int32_t FileIndex;                 /* file index */
    uint32_t JobId;                    /* JobId */
+   int32_t delta_seq;                 /* current delta sequence */
    uint16_t fname_len;                /* filename length */
    unsigned int type: 8;              /* node type */
    unsigned int extract: 1;           /* extract item */
@@ -93,6 +101,7 @@ struct s_tree_root {
    unsigned int loaded: 1;            /* set when the dir is in the tree */
    struct s_tree_node *parent;
    struct s_tree_node *next;          /* next hash of FileIndex */
+   struct delta_list *delta_list;     /* delta parts for this node */
 
    /* The above ^^^ must be identical to a TREE_NODE structure */
    struct s_tree_node *first;         /* first entry in the tree */
@@ -121,8 +130,11 @@ TREE_NODE *insert_tree_node(char *path, char *fname, int type,
 TREE_NODE *make_tree_path(char *path, TREE_ROOT *root);
 TREE_NODE *tree_cwd(char *path, TREE_ROOT *root, TREE_NODE *node);
 TREE_NODE *tree_relcwd(char *path, TREE_ROOT *root, TREE_NODE *node);
+void tree_add_delta_part(TREE_ROOT *root, TREE_NODE *node, 
+                         JobId_t JobId, int32_t FileIndex);
 void free_tree(TREE_ROOT *root);
 int tree_getpath(TREE_NODE *node, char *buf, int buf_size);
+void tree_remove_node(TREE_ROOT *root, TREE_NODE *node);
 
 /*
  * Use the following for traversing the whole tree. It will be

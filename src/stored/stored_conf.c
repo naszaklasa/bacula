@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -457,6 +457,7 @@ void free_resource(RES *sres, int type)
       if (res->res_changer.device) {
          delete res->res_changer.device;
       }
+      rwl_destroy(&res->res_changer.changer_lock);
       break; 
    case R_STORAGE:
       if (res->res_store.sdaddrs) {
@@ -473,6 +474,9 @@ void free_resource(RES *sres, int type)
       }
       if (res->res_store.subsys_directory) {
          free(res->res_store.subsys_directory);
+      }
+      if (res->res_store.plugin_directory) {
+         free(res->res_store.plugin_directory);
       }
       if (res->res_store.scripts_directory) {
          free(res->res_store.scripts_directory);
@@ -629,9 +633,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
          foreach_alist(dev, res->res_changer.device) {
             dev->changer_res = (AUTOCHANGER *)&res->res_changer;
          }
-         if ((errstat = pthread_mutex_init(&res->res_changer.changer_mutex, NULL)) != 0) {
+         if ((errstat = rwl_init(&res->res_changer.changer_lock, 
+                                 PRIO_SD_ACH_ACCESS)) != 0)
+         {
             berrno be;
-            Jmsg1(NULL, M_ERROR_TERM, 0, _("Unable to init mutex: ERR=%s\n"), 
+            Jmsg1(NULL, M_ERROR_TERM, 0, _("Unable to init lock: ERR=%s\n"), 
                   be.bstrerror(errstat));
          }
          break;

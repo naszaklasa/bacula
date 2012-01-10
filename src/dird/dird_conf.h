@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -234,6 +234,7 @@ public:
    char *db_name;
    char *db_driver;                   /* Select appropriate driver */
    uint32_t mult_db_connections;      /* set if multiple connections wanted */
+   bool disable_batch_insert;         /* set if batch inserts should be disabled */
 
    /* Methods */
    char *name() const;
@@ -258,8 +259,8 @@ public:
    char *address;
    char *password;
    CAT *catalog;                      /* Catalog resource */
-   uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+   int32_t MaxConcurrentJobs;         /* Maximum concurrent jobs */
+   int32_t NumConcurrentJobs;         /* number of concurrent jobs running */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
@@ -292,9 +293,9 @@ public:
    char *password;
    char *media_type;
    alist *device;                     /* Alternate devices for this Storage */
-   uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
-   uint32_t NumConcurrentReadJobs;    /* number of jobs reading */
+   int32_t MaxConcurrentJobs;         /* Maximum concurrent jobs */
+   int32_t NumConcurrentJobs;         /* number of concurrent jobs running */
+   int32_t NumConcurrentReadJobs;     /* number of jobs reading */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
@@ -397,8 +398,8 @@ public:
    utime_t MaxDiffInterval;           /* Maximum time interval between Diffs */
    utime_t DuplicateJobProximity;     /* Permitted time between duplicicates */
    int64_t spool_size;                /* Size of spool file for this job */
-   uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+   int32_t MaxConcurrentJobs;         /* Maximum concurrent jobs */
+   int32_t NumConcurrentJobs;         /* number of concurrent jobs running */
    bool allow_mixed_priority;         /* Allow jobs with higher priority concurrently with this */
 
    MSGS      *messages;               /* How and where to send messages */
@@ -420,6 +421,7 @@ public:
 
    bool where_use_regexp;             /* true if RestoreWhere is a BREGEXP */
    bool RescheduleOnError;            /* Set to reschedule on error */
+   bool RescheduleIncompleteJobs;     /* Set to reschedule incomplete Jobs */
    bool PrefixLinks;                  /* prefix soft links with Where path */
    bool PruneJobs;                    /* Force pruning of Jobs */
    bool PruneFiles;                   /* Force pruning of Files */
@@ -436,6 +438,9 @@ public:
    bool CancelLowerLevelDuplicates;   /* Cancel lower level backup jobs */
    bool CancelQueuedDuplicates;       /* Cancel queued jobs */
    bool CancelRunningDuplicates;      /* Cancel Running jobs */
+   bool PurgeMigrateJob;              /* Purges source job on completion */
+   bool IgnoreDuplicateJobChecking;   /* Ignore Duplicate Job Checking */
+
    alist *base;                       /* Base jobs */   
 
    /* Methods */

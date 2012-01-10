@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -158,6 +158,12 @@ int lmgr_thread_create(pthread_t *thread,
                        const pthread_attr_t *attr,
                        void *(*start_routine)(void*), void *arg);
 
+/* 
+ * Can use SAFEKILL to check if the argument is a valid threadid
+ */
+int bthread_kill(pthread_t thread, int sig, 
+                 const char *file="*unknown*", int line=0);
+
 #define BTHREAD_MUTEX_NO_PRIORITY      {PTHREAD_MUTEX_INITIALIZER, 0}
 #define BTHREAD_MUTEX_INITIALIZER      BTHREAD_MUTEX_NO_PRIORITY
 
@@ -188,6 +194,10 @@ int lmgr_thread_create(pthread_t *thread,
 # define pthread_mutex_unlock(x)         bthread_mutex_unlock(x)
 # define pthread_cond_wait(x,y)          bthread_cond_wait(x,y)
 # define pthread_cond_timedwait(x,y,z)   bthread_cond_timedwait(x,y,z)
+
+# ifdef USE_LOCKMGR_SAFEKILL
+#  define pthread_kill(a,b)      bthread_kill((a),(b), __FILE__, __LINE__)
+# endif
 #endif
 
 #else   /* _USE_LOCKMGR */

@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -33,7 +33,6 @@
  *
  *   Kern Sibbald, March 2005
  *
- *   Version $Id$
  */
 
 
@@ -134,6 +133,13 @@ int wait_for_sysop(DCR *dcr)
          Jmsg1(jcr, M_FATAL, 0, _("pthread timedwait error. ERR=%s\n"), be.bstrerror(stat));
          stat = W_ERROR;               /* error */
          break;
+      }
+
+      /*
+       * Continue waiting if operator is labeling volumes 
+       */
+      if (dev->blocked() == BST_WRITING_LABEL) {
+         continue;
       }
 
       if (dev->rem_wait_sec <= 0) {  /* on exceeding wait time return */

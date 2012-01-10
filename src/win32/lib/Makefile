@@ -74,6 +74,7 @@ LIB_OBJS = \
 	$(OBJDIR)/md5.o \
 	$(OBJDIR)/mem_pool.o \
 	$(OBJDIR)/message.o \
+	$(OBJDIR)/mntent_cache.o \
 	$(OBJDIR)/openssl.o \
 	$(OBJDIR)/plugins.o \
 	$(OBJDIR)/priv.o \
@@ -93,6 +94,7 @@ LIB_OBJS = \
 	$(OBJDIR)/var.o \
 	$(OBJDIR)/watchdog.o \
 	$(OBJDIR)/workq.o \
+	$(OBJDIR)/binflate.o \
 	$(OBJDIR)/lockmgr.o
 
 DLL_OBJS = \
@@ -148,6 +150,11 @@ $(BINDIR)/bacula.dll: $(DLL_OBJS) bacula$(WIN_VERSION).def
 	@echo "Linking $@"
 	$(call checkdir,$@)
 	$(ECHO_CMD)$(CXX) $(LDFLAGS) -mdll -mwindows -Wl,--out-implib,$(OBJDIR)/bacula.a $^ $(LIBS_DLL) -o $@
+
+#bacula$(WIN_VERSION).def: $(DLL_OBJS)
+#	 ./make_def $(DLL_OBJS) >bacula$(WIN_VERSION).def.new && \
+#	 mv bacula$(WIN_VERSION).def.new bacula$(WIN_VERSION).def
+
 
 include ../Makefile.rules
 

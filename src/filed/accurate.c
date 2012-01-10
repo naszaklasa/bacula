@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -40,6 +40,7 @@ typedef struct PrivateCurFile {
    char *fname;
    char *lstat;
    char *chksum;
+   int32_t delta_seq;
    bool seen;
 } CurFile;
 
@@ -115,7 +116,7 @@ static bool accurate_send_base_file_list(JCR *jcr)
       if (elt->seen) {
          Dmsg2(dbglvl, "base file fname=%s seen=%i\n", elt->fname, elt->seen);
          /* TODO: skip the decode and use directly the lstat field */
-         decode_stat(elt->lstat, &statc, &LinkFIc); /* decode catalog stat */  
+         decode_stat(elt->lstat, &statc, sizeof(statc), &LinkFIc); /* decode catalog stat */  
          ff_pkt->fname = elt->fname;
          ff_pkt->statp = statc;
          encode_and_send_attributes(jcr, ff_pkt, stream);
@@ -157,7 +158,7 @@ static bool accurate_send_deleted_list(JCR *jcr)
       }
       Dmsg2(dbglvl, "deleted fname=%s seen=%i\n", elt->fname, elt->seen);
       /* TODO: skip the decode and use directly the lstat field */
-      decode_stat(elt->lstat, &statc, &LinkFIc); /* decode catalog stat */
+      decode_stat(elt->lstat, &statc, sizeof(statc), &LinkFIc); /* decode catalog stat */
       ff_pkt->fname = elt->fname;
       ff_pkt->statp.st_mtime = statc.st_mtime;
       ff_pkt->statp.st_ctime = statc.st_ctime;
@@ -181,16 +182,22 @@ void accurate_free(JCR *jcr)
 /* Send the deleted or the base file list and cleanup  */
 bool accurate_finish(JCR *jcr)
 {
-   bool ret=true;
+   bool ret = true;
+
+   if (jcr->is_canceled() || jcr->is_incomplete()) {
+      accurate_free(jcr);
+      return ret;
+   }
    if (jcr->accurate) {
-      if (jcr->getJobLevel() == L_FULL) {
-         ret = accurate_send_base_file_list(jcr);
+      if (jcr->is_JobLevel(L_FULL)) {
+         if (!jcr->rerunning) {
+            ret = accurate_send_base_file_list(jcr);
+         }
       } else {
          ret = accurate_send_deleted_list(jcr);
       }
-      
       accurate_free(jcr);
-      if (jcr->getJobLevel() == L_FULL) {
+      if (jcr->is_JobLevel(L_FULL)) {
          Jmsg(jcr, M_INFO, 0, _("Space saved with Base jobs: %lld MB\n"), 
               jcr->base_size/(1024*1024));
       }
@@ -199,17 +206,19 @@ bool accurate_finish(JCR *jcr)
 }
 
 static bool accurate_add_file(JCR *jcr, uint32_t len, 
-                              char *fname, char *lstat, char *chksum)
+                              char *fname, char *lstat, char *chksum,
+                              int32_t delta)
 {
    bool ret = true;
-   CurFile elt;
-   elt.seen = 0;
-
    CurFile *item;
-   /* we store CurFile, fname and ctime/mtime in the same chunk */
-   item = (CurFile *)jcr->file_list->hash_malloc(sizeof(CurFile)+len+3);
-   memcpy(item, &elt, sizeof(CurFile));
 
+   /* we store CurFile, fname and ctime/mtime in the same chunk 
+    * we need one extra byte to handle an empty chksum
+    */
+   item = (CurFile *)jcr->file_list->hash_malloc(sizeof(CurFile)+len+1);
+   item->seen = 0;
+
+   /* TODO: see if we can optimize this part with memcpy instead of strcpy */
    item->fname  = (char *)item+sizeof(CurFile);
    strcpy(item->fname, fname);
 
@@ -219,9 +228,12 @@ static bool accurate_add_file(JCR *jcr, uint32_t len,
    item->chksum = item->lstat+strlen(item->lstat)+1;
    strcpy(item->chksum, chksum);
 
+   item->delta_seq = delta;
+
    jcr->file_list->insert(item->fname, item); 
 
-   Dmsg3(dbglvl, "add fname=<%s> lstat=%s chksum=%s\n", fname, lstat, chksum);
+   Dmsg4(dbglvl, "add fname=<%s> lstat=%s  delta_seq=%i chksum=%s\n", 
+         fname, lstat, delta, chksum);
    return ret;
 }
 
@@ -246,7 +258,9 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
    char *fname;
    CurFile elt;
 
-   if (!jcr->accurate) {
+   ff_pkt->delta_seq = 0;
+
+   if (!jcr->accurate && !jcr->rerunning) {
       return true;
    }
 
@@ -264,14 +278,16 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
       goto bail_out;
    }
 
+   ff_pkt->delta_seq = elt.delta_seq;
+
    if (elt.seen) { /* file has been seen ? */
       Dmsg1(dbglvl, "accurate %s (already seen)\n", fname);
       goto bail_out;
    }
 
-   decode_stat(elt.lstat, &statc, &LinkFIc); /* decode catalog stat */
+   decode_stat(elt.lstat, &statc, sizeof(statc), &LinkFIc); /* decode catalog stat */
 
-   if (jcr->getJobLevel() == L_FULL) {
+   if (!jcr->rerunning && (jcr->getJobLevel() == L_FULL)) {
       opts = ff_pkt->BaseJobOpts;
    } else {
       opts = ff_pkt->AccurateOpts;
@@ -367,7 +383,7 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
 
       /* TODO: cleanup and factorise this function with verify.c */
       case '5':                /* compare MD5 */
-      case '1':                 /* compare SHA1 */
+      case '1':                /* compare SHA1 */
         /*
           * The remainder of the function is all about getting the checksum.
           * First we initialise, then we read files, other streams and Finder Info.
@@ -377,8 +393,8 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
               ff_pkt->flags & (FO_MD5|FO_SHA1|FO_SHA256|FO_SHA512))) 
          {
 
-            if (!*elt.chksum) {
-               Jmsg(jcr, M_WARNING, 0, _("Can't verify checksum for %s\n"),
+            if (!*elt.chksum && !jcr->rerunning) {
+               Jmsg(jcr, M_WARNING, 0, _("Cannot verify checksum for %s\n"),
                     ff_pkt->fname);
                stat = true;
                break;
@@ -431,8 +447,9 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
                   bin_to_base64(digest_buf, BASE64_SIZE(size), md, size, true);
 
                   if (strcmp(digest_buf, elt.chksum)) {
-                     Dmsg3(dbglvl-1, "%s      chksum  diff. Cat: %s File: %s\n",
+                     Dmsg4(dbglvl,"%s      %s chksum  diff. Cat: %s File: %s\n",
                            fname,
+                           digest_name,
                            elt.chksum,
                            digest_buf);
                      stat = true;
@@ -479,6 +496,7 @@ int accurate_cmd(JCR *jcr)
    BSOCK *dir = jcr->dir_bsock;
    int lstat_pos, chksum_pos;
    int32_t nb;
+   uint32_t delta_seq;
 
    if (job_canceled(jcr)) {
       return true;
@@ -494,7 +512,7 @@ int accurate_cmd(JCR *jcr)
 
    /*
     * buffer = sizeof(CurFile) + dirmsg
-    * dirmsg = fname + \0 + lstat + \0 + checksum + \0
+    * dirmsg = fname + \0 + lstat + \0 + checksum + \0 + delta_seq + \0
     */
    /* get current files */
    while (dir->recv() >= 0) {
@@ -504,12 +522,18 @@ int accurate_cmd(JCR *jcr)
 
          if (chksum_pos >= dir->msglen) {
             chksum_pos = lstat_pos - 1;    /* tweak: no checksum, point to the last \0 */
-         } 
+            delta_seq = 0;
+         } else {
+            delta_seq = str_to_int32(dir->msg + 
+                                     chksum_pos + 
+                                     strlen(dir->msg + chksum_pos) + 1);
+         }
 
          accurate_add_file(jcr, dir->msglen, 
                            dir->msg,               /* Path */
                            dir->msg + lstat_pos,   /* LStat */
-                           dir->msg + chksum_pos); /* CheckSum */
+                           dir->msg + chksum_pos,  /* CheckSum */
+                           delta_seq);             /* Delta Sequence */
       }
    }
 
