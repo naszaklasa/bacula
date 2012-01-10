@@ -1,3 +1,13 @@
+bacula (5.2.3-1~bpo50+1) lenny-backports; urgency=low
+
+  * Rebuild for lenny-backports, keeping former changes to debian/control:
+    - libreadline-dev -> libreadline5-dev | libreadline-dev
+    - libmysqlclient-dev -> libmysqlclient15-dev
+    - libpq-dev (>= 8.4) -> libpq-dev
+    - postgresql-server-dev-8.4 -> postgresql-server-dev-8.3
+
+ -- Bartosz Cisek <bartosz.cisek@nasza-klasa.pl>  Tue, 10 Jan 2012 15:18:01 +0000
+
 bacula (5.0.2-1~bpo50+1) lenny-backports; urgency=low
 
   * Rebuild for lenny-backports, keeping former changes to debian/control:
