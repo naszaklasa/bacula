@@ -1,1 +1,2 @@
 debian/tmp-install-mysql/usr/lib/bacula/libbacsql* usr/lib/bacula
+debian/tmp-install-mysql/usr/lib/bacula/libbaccats* usr/lib/bacula
