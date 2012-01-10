@@ -71,8 +71,7 @@ ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
 CONF_ALL	+= --disable-acl --disable-xattr
 endif
 
-CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite \
-			--enable-tray-monitor --enable-bat
+CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite 
 CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
 CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
 
@@ -195,9 +194,8 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	dh_install -pbacula-director-common
 
 	dh_install -pbacula-fd
-	dh_install -pbacula-console -pbacula-console-qt
+	dh_install -pbacula-console 
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
-	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/.libs/bat debian/bacula-console-qt/usr/bin/bat
 
 ######### dbconfig-common stuff
 #	$(call ext-upgrade-all,7_to_8,1.36.0)
@@ -260,8 +258,8 @@ install-indep: build install-stamp
 install-arch: build install-stamp
 	dh_install -a
 	dh_link -pbacula-common
-	for f in bconsole.conf bat.conf \
-		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
+	for f in bconsole.conf \
+		bacula-sd.conf bacula-fd.conf ; do \
 		debian/patches/fix_config \
 			debian/tmp-install-sqlite3/etc/bacula/$$f \
 			debian/bacula-common/usr/share/bacula-common/defconfig/$$f; \

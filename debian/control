@@ -298,34 +298,3 @@ Description: network backup, recovery and verification - text console
  .
  This package provides the text-interface version of the console.
 
-Package: bacula-console-qt
-Section: utils
-Architecture: any
-Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: Bacula Administration Tool Console
- Bacula is a set of programs to manage backup, recovery and verification of
- data across a network of computers of different kinds.
- .
- The management console allows the administrator or user to
- communicate with the Bacula Director.
- .
- This package provides the most advanced GUI to bacula: the Bacula
- Administration Tool (BAT) console.
- .
- This GUI interface has been designed to ease restore operations as much as
- possible as compared to the basic text console.
-
-Package: bacula-traymonitor
-Architecture: any
-Depends: ${shlibs:Depends}, bacula-common (= ${binary:Version}), ${misc:Depends}
-Suggests: kde|gnome-desktop-environment
-Description: network backup, recovery and verification - tray monitor
- Bacula is a set of programs to manage backup, recovery and verification of
- data across a network of computers of different kinds.
- .
- This package provides a tray monitor for the Bacula backup system. It is
- FreeDesktop-compatible, which means it will work under both KDE and
- GNOME.
- .
- The monitor constantly displays Bacula's status.
