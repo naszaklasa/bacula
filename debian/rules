@@ -51,7 +51,6 @@ CONF_ALL	= --enable-smartalloc \
 		--libdir=\$${prefix}/lib/bacula \
 	--enable-batch-insert \
 	--disable-bwx-console \
-	--without-qwt \
 	--enable-ipv6 \
 	--with-dir-password=XXX_DIRPASSWORD_XXX \
 	--with-fd-password=XXX_FDPASSWORD_XXX \
@@ -71,9 +70,9 @@ ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
 CONF_ALL	+= --disable-acl --disable-xattr
 endif
 
-CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite 
-CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
-CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
+CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql 
+CONF_mysql	= --with-mysql --without-postgresql --without-sqlite3 $(CONF_common)
+CONF_pgsql	= --with-postgresql --without-mysql --without-sqlite3 $(CONF_common)
 
 ###########################################################################
 
