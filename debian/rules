@@ -105,9 +105,7 @@ override_dh_shlibdeps:
 override_dh_installinit:
 	dh_installinit -pbacula-sd -- defaults 90 10
 	dh_installinit -pbacula-fd -- defaults 91 9
-	dh_installinit --name=bacula-director -pbacula-director-pgsql --no-start -- defaults 92 8
-	dh_installinit --name=bacula-director -pbacula-director-mysql --no-start -- defaults 92 8
-	dh_installinit --name=bacula-director -pbacula-director-sqlite3 --no-start -- defaults 92 8
+	dh_installinit --name=bacula-director -pbacula-director-common --no-start -- defaults 92 8
 
 override_dh_install:
 	chmod 755 debian/additions/postinst-common
