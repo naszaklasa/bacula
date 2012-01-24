@@ -76,8 +76,13 @@
 #define FT_BASE      24               /* Duplicate base file entry */
 #define FT_RESTORE_FIRST 25           /* Restore this "object" first */
 #define FT_JUNCTION  26               /* Win32 Junction point */
+#define FT_PLUGIN_CONFIG 27           /* Object for Plugin configuration */
+#define FT_PLUGIN_CONFIG_FILLED 28    /* Object for Plugin configuration filled by Director */
 
 /* Definitions for upper part of type word (see above). */
 #define AR_DATA_STREAM (1<<16)        /* Data stream id present */
+
+/* Quick way to know if a Filetype is about a plugin "Object" */
+#define IS_FT_OBJECT(x) (((x) == FT_RESTORE_FIRST) || ((x) == FT_PLUGIN_CONFIG_FILLED) || ((x) == FT_PLUGIN_CONFIG))
 
 #endif /* __BFILETYPES_H */

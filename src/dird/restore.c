@@ -394,7 +394,7 @@ bool restore_bootstrap(JCR *jcr)
          fd = jcr->file_bsock;
       }
 
-      jcr->setJobStatus(JS_WaitSD);
+      jcr->setJobStatus(JS_Running);
 
       /*
        * Send the bootstrap file -- what Volumes/files to restore

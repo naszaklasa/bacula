@@ -53,6 +53,7 @@ extern int job_setattr(PyObject *self, char *attrname, PyObject *value);
 void terminate_dird(int sig);
 static bool check_resources();
 static void dir_sql_query(JCR *jcr, const char *cmd);
+static void cleanup_old_files();
   
 /* Exported subroutines */
 extern "C" void reload_config(int sig);
@@ -281,6 +282,8 @@ int main (int argc, char *argv[])
    load_dir_plugins(director->plugin_directory);
 
    drop(uid, gid, false);                    /* reduce privileges if requested */
+
+   cleanup_old_files();
 
    /* If we are in testing mode, we don't try to fix the catalog */
    cat_op mode=(test_config)?CHECK_CONNECTION:UPDATE_AND_FIX;
@@ -1119,4 +1122,33 @@ static bool check_catalog(cat_op mode)
       db_close_database(NULL, db);
    }
    return OK;
+}
+
+static void copy_base_name(POOLMEM *cleanup)
+{
+   int len = strlen(director->working_directory);
+#if defined(HAVE_WIN32)
+   pm_strcpy(cleanup, "del /q ");
+#else
+   pm_strcpy(cleanup, "/bin/rm -f ");
+#endif
+   pm_strcat(cleanup, director->working_directory);
+   if (len > 0 && !IsPathSeparator(director->working_directory[len-1])) {
+      pm_strcat(cleanup, "/");
+   }
+   pm_strcat(cleanup, my_name);
+}
+
+static void cleanup_old_files()
+{
+   POOLMEM *cleanup = get_pool_memory(PM_MESSAGE);
+   POOLMEM *results = get_pool_memory(PM_MESSAGE);
+   copy_base_name(cleanup);
+   pm_strcat(cleanup, "*.restore.*.bsr");
+   run_program(cleanup, 0, results);
+   copy_base_name(cleanup);
+   pm_strcat(cleanup, "*.mail");
+   run_program(cleanup, 0, results);
+   free_pool_memory(cleanup);
+   free_pool_memory(results);
 }

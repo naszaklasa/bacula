@@ -1,26 +1,28 @@
 # Bacula RPM spec file
 #
-# Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
+# Copyright (C) 2000-2012 Bacula Systems SA
 
 # Platform Build Configuration
 
 # basic defines for every build
 %define _release           1
-%define _version           5.2.1
-%define _packager Kern Sibbald <kern@sibbald.com>
-%define depkgs_version 15May10
+%define _version           @VERSION@
+%define product            bacula
+%define _packager Kern Sibbald <kern@baculasystems.com>
+%define depkgs_version 24Dec11
 
-# postgresql defines - defaults for most platforms
-# pass changes if required
-# versions less than 8 are no longer supported
 %define postgres_version 8
-%{?postgresql_version:%define postgres_version %{postgresql_version}}
+%define pgre84 0
+%{?build_rhel5:%define pgre84 1}
+%if %{pgre84}
 %define postgres_package postgresql84
-%{?postgresql_package:%define postgres_package %{postgresql_package}}
 %define postgres_server_package postgresql84-server
-%{?postgresql_server_package:%define postgres_server_package %{postgresql_server_package}}
 %define postgres_devel_package postgresql84-devel
-%{?postgresql_devel_package:%define postgres_devel_package %{postgresql_devel_package}}
+%else
+%define postgres_package postgresql
+%define postgres_server_package postgresql-server
+%define postgres_devel_package postgresql-devel
+%endif
 
 %define single_dir 1
 %{?single_dir_install:%define single_dir 1}
@@ -89,10 +91,6 @@
 #Mandriva 2006          %if 0%{?mandriva_version} == 2006       
 #Mandriva 2007          %if 0%{?mandriva_version} == 2007       
 #Mandriva 2008          %if 0%{?mandriva_version} == 2008       
-#SCIENTIFIC LINUX 3     %if 0%{?sl_version} == 3
-#SCIENTIFIC LINUX 4     %if 0%{?sl_version} == 4
-#SCIENTIFIC LINUX 5     %if 0%{?sl_version} == 5
-
 
 
 %if 0%{?opensuse_bs}
@@ -214,25 +212,6 @@ BuildRequires: suse-release
 %define _dist "SLES 11"
 %endif
 
-+%if 0%{?sl_version} == 3
-+%define build_sl3
-+%define _dist "Scientific Linux release 3"
-+BuildRequires: fedora-release
-+%endif
-+
-+%if 0%{?sl_version} == 4
-+%define build_sl4
-+%define _dist "Scientific Linux release 4"
-+BuildRequires: fedora-release
-+%endif
-+
-+%if 0%{?sl_version} == 5
-+%define build_sl5
-+%define _dist "Scientific Linux release 5"
-+BuildRequires: fedora-release
-+%endif
-
-
 %endif 
 # opensuse-bs?
 
@@ -248,7 +227,7 @@ BuildRequires: suse-release
 %{?contrib_packager:%define _packager %{contrib_packager}}
 
 Summary: Bacula - The Network Backup Solution
-Name: bacula
+Name: %{product}
 Version: %{_version}
 Release: %{_release}
 Group: System Environment/Daemons
@@ -450,9 +429,6 @@ exit 1
 %{?build_x86_64:%define x86_64 1}
 
 # check what distribution we are
-%if %{rhat} || %{rhel}
-%define _dist %(grep Red /etc/redhat-release)
-%endif
 %if %{fc1} || %{fc3} || %{fc4} || %{fc5} || %{fc7} || %{fc8} || %{fc9} || %{fc10} || %{fc11} || %{fc12}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
@@ -470,6 +446,9 @@ exit 1
 %endif
 %if %{mdk}
 %define _dist %(grep Mand /etc/mandrake-release)
+%endif
+%if %{rhat} || %{rhel}
+%define _dist %(grep Red /etc/redhat-release)
 %endif
 %{?DISTNAME:%define _dist %{DISTNAME}}
 
@@ -500,8 +479,12 @@ BuildRequires: sysconfig
 %{?build_python:%define python 1}
 
 # should we enable tcp wrappers support
-%define tcpwrappers 0
+%define tcpwrappers 1
 %{?build_tcpwrappers:%define tcpwrappers 1}
+
+# do we need to patch for old postgresql version?
+%define old_pgsql 0
+%{?build_old_pgsql:%define old_pgsql 1}
 
 # Mandriva somehow forces the manpage file extension to bz2 rather than gz
 %if %{mdk}
@@ -546,11 +529,7 @@ BuildRequires: termcap
 BuildRequires: libtermcap-devel
 %endif
 
-%if %{sqlite}
-BuildRequires: sqlite-devel
-%endif
-
-%if %{mysql}
+%if %{mysql} && ! %{suse}
 BuildRequires: mysql-devel
 %endif
 
@@ -595,11 +574,7 @@ Requires: glibc, readline, %{name}-libs
 Conflicts: bacula
 Requires: termcap
 %else
-%if %{rhel6}
-Requires: compat-libtermcap
-%else
 Requires: libtermcap
-%endif
 %endif
 
 %if %{mysql}
@@ -662,7 +637,8 @@ Conflicts: bacula-sqlite
 Conflicts: bacula-postgresql
 
 %if %{suse}
-Provides: bacula
+Provides: %{product}
+Provides: %{product}-libs
 %endif
 
 Requires: libstdc++, zlib, openssl
@@ -737,16 +713,22 @@ Group: System Environment/Daemons
 
 This package installs the shared libraries used by many bacula programs.
 
+# Don't strip symbols
+%define debug_package %{nil} 
+
 # Must explicitly enable debug pkg on SuSE
 # but not in opensuse_bs
-%if %{suse} && ! 0%{?opensuse_bs}
-%debug_package
-%endif
+#%if %{suse} && ! 0%{?opensuse_bs}
+#%debug_package
+#%endif
 
 %prep
 %setup
 %setup -T -D -b 1
+# extract depkgs
+%if %{sqlite}
 %setup -T -D -b 2
+%endif
 
 %build
 
@@ -761,25 +743,16 @@ make sqlite3
 cd ${cwd}
 %endif
 
+# hostname is the build hostname, so use XXX_HOSTNAME_XXX for Address parameter
+sed -i s/hostname/basename/ src/console/bconsole.conf.in src/dird/bacula-dir.conf.in src/qt-console/bat.conf.in src/tray-monitor/tray-monitor.conf.in 
 
 %if %{sqlite}
 # patches for the bundled sqlite scripts
-
-# patch the make_sqlite_tables script for installation bindir
-patch src/cats/make_sqlite3_tables.in src/cats/make_sqlite3_tables.in.patch
-
-# patch the create_sqlite_database script for installation bindir
-patch src/cats/create_sqlite3_database.in src/cats/create_sqlite3_database.in.patch
-
-# patch the make_catalog_backup script for installation bindir
-patch src/cats/make_catalog_backup.in src/cats/make_catalog_backup.in.patch
-
-# patch the update_sqlite_tables script for installation bindir
-patch src/cats/update_sqlite3_tables.in src/cats/update_sqlite3_tables.in.patch
+sed -i s:.SQL_BINDIR.:/opt/bacula/sqlite: src/cats/*_sqlite3_*.in
 
 # patch the bacula-dir init script to remove sqlite service
-%if %{sqlite} && %{suse}
-patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
+%if %{suse}
+sed -i 's/network .DB_TYPE./network/' platforms/suse/bacula-dir.in
 %endif
 %endif
 
@@ -826,21 +799,21 @@ export LDFLAGS="${LDFLAGS} -L/usr/lib64/python%{pyver}"
 %if %{python}
         --with-python \
 %endif
-%if %{tcpwrappers}
-        --with-tcp-wrappers  \
-%endif
 %if %{client_only}
         --enable-client-only \
 %endif
 %if %{rh7} || %{rh8} || %{rh9} || %{fc1} || %{fc3} || %{wb3} 
         --disable-batch-insert \
 %endif
+        --with-tcp-wrappers  \
         --with-dir-user=%{director_daemon_user} \
         --with-dir-group=%{daemon_group} \
         --with-sd-user=%{storage_daemon_user} \
         --with-sd-group=%{storage_daemon_group} \
         --with-fd-user=%{file_daemon_user} \
         --with-fd-group=%{daemon_group} \
+        --with-basename="XXX_HOSTNAME_XXX" \
+        --with-hostname="XXX_HOSTNAME_XXX" \
         --with-dir-password="XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX" \
         --with-fd-password="XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX" \
         --with-sd-password="XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX" \
@@ -872,19 +845,7 @@ mkdir -p $RPM_BUILD_ROOT%{sqlite_bindir}
 
 make DESTDIR=$RPM_BUILD_ROOT install
 
-%if %{client_only}
-# Program docs not installed on client
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bacula-dir.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bacula-sd.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bcopy.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bextract.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bls.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bscan.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/btape.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/dbcheck.8.%{manpage_ext}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bsmtp.1.%{manpage_ext}
-%endif
-# Docs for programs that are depreciated
+# Remove docs for programs that are depreciated
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bacula-bgnome-console.1.%{manpage_ext}
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bacula-bwxconsole.1.%{manpage_ext}
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bacula-tray-monitor.1.%{manpage_ext}
@@ -939,13 +900,11 @@ cp -p scripts/logrotate $RPM_BUILD_ROOT/etc/logrotate.d/bacula
 # install the updatedb scripts
 cp -p updatedb/* $RPM_BUILD_ROOT%{script_dir}/updatedb/
 
-# install the sample-query.sql file
 %if ! %{client_only}
+# install the sample-query.sql file
 cp -p examples/sample-query.sql $RPM_BUILD_ROOT%{script_dir}/sample-query.sql
-%endif
 
 # install the logwatch scripts
-%if ! %{client_only}
 cp -p scripts/logwatch/bacula $RPM_BUILD_ROOT%{logwatch_dir}/scripts/services/bacula
 cp -p scripts/logwatch/applybaculadate $RPM_BUILD_ROOT%{logwatch_dir}/scripts/shared/applybaculadate
 cp -p scripts/logwatch/logfile.bacula.conf $RPM_BUILD_ROOT%{logwatch_dir}/conf/logfiles/bacula.conf
@@ -961,6 +920,17 @@ chmod o-rwx $RPM_BUILD_ROOT%{working_dir}
 
 # fix me - building enable-client-only installs files not included in bacula-client package
 %if %{client_only}
+# Program docs not installed on client
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bacula-dir.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bacula-sd.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bcopy.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bextract.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bls.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bscan.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/btape.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/dbcheck.8.%{manpage_ext}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bsmtp.1.%{manpage_ext}
+
 rm -f $RPM_BUILD_ROOT%{script_dir}/bacula
 rm -f $RPM_BUILD_ROOT%{script_dir}/bacula_config
 rm -f $RPM_BUILD_ROOT%{script_dir}/bacula-ctl-dir
@@ -1013,6 +983,7 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %{sqlite_bindir}/libsqlite3.a
 %{sqlite_bindir}/sqlite3.h
 %{sqlite_bindir}/sqlite3
+%{_libdir}/libbacsql*
 %endif
 
 
@@ -1116,7 +1087,7 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 
 %if %{mysql}
 %pre mysql
-# test for bacula database older than version 14
+# test for bacula database older than version 13
 # note: this ASSUMES no password has been set for bacula database
 DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 %endif
@@ -1157,7 +1128,7 @@ DB_VER=`echo 'select * from Version;' | psql bacula 2>/dev/null | tail -3 | head
 
 %if ! %{client_only}
 if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "12" ]; then
-    echo "This bacula upgrade will update a bacula database from version 12 to 14."
+    echo "This bacula upgrade will update a bacula database from version 12 to 13."
     echo "You appear to be running database version $DB_VER. You must first update"
     echo "your database to version 12 and then install this upgrade. The alternative"
     echo "is to use %{script_dir}/drop_%{db_backend}_tables to delete all your your current"
@@ -1252,6 +1223,25 @@ if [ "$1" -ge 1 ] ; then
 fi
 %endif
 
+if [ -d %{sysconf_dir} ]; then
+   cd %{sysconf_dir}
+   for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
+      pass=`openssl rand -base64 33`
+      for file in *.conf; do
+         sed "s@${string}@${pass}@g" $file > $file.new
+         cp -f $file.new $file; rm -f $file.new
+      done
+   done
+# put actual hostname in conf file
+   host=`hostname`
+   string="XXX_HOSTNAME_XXX"
+   for file in *.conf; do
+      sed "s@${string}@${host}@g" $file >$file.new
+      cp -f $file.new $file; rm -f $file.new
+   done
+fi
+
+
 %if %{mysql}
 
 #check, if mysql can be called successfully at all
@@ -1272,7 +1262,7 @@ if [ -z "$DB_VER" ]; then
     %{script_dir}/make_mysql_tables
 
 # check to see if we need to upgrade a 3.x database
-elif [ "$DB_VER" -lt "14" ]; then
+elif [ "$DB_VER" -lt "13" ]; then
     echo "This release requires an upgrade to your bacula database."
     echo "Backing up your current database..."
     mysqldump -f --opt bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -1289,7 +1279,7 @@ fi
 if [ -s %{working_dir}/bacula.db ]; then
         DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
         # check to see if we need to upgrade a 3.x database
-        if [ "$DB_VER" -lt "14" ] && [ "$DB_VER" -ge "12" ]; then
+        if [ "$DB_VER" -lt "13" ] && [ "$DB_VER" -ge "12" ]; then
                 echo "This release requires an upgrade to your bacula database."
                 echo "Backing up your current database..."
                 echo ".dump" | %{sqlite_bindir}/sqlite3 %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -1302,9 +1292,9 @@ else
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating SQLite database..."
         %{script_dir}/create_sqlite3_database
-        chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
         echo "Creating the SQLite tables..."
         %{script_dir}/make_sqlite3_tables
+        chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
 fi
 %endif
 
@@ -1327,7 +1317,7 @@ if [ -z "$DB_VER" ]; then
     %{script_dir}/grant_postgresql_privileges
 
 # check to see if we need to upgrade a 5.0.x database
-elif [ "$DB_VER" -lt "14" ]; then
+elif [ "$DB_VER" -lt "13" ]; then
     echo "This release requires an upgrade to your bacula database."
     echo "Backing up your current database..."
     pg_dump bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -1396,6 +1386,7 @@ fi
 %{_sbindir}/btraceback
 %attr(-, root, %{daemon_group}) %{script_dir}/btraceback.gdb
 %attr(-, root, %{daemon_group}) %{script_dir}/btraceback.dbx
+%attr(-, root, %{daemon_group}) %{script_dir}/btraceback.mdb
 %{_sbindir}/bconsole
 %{_mandir}/man8/bacula-fd.8.%{manpage_ext}
 %{_mandir}/man8/bacula.8.%{manpage_ext}
@@ -1494,13 +1485,6 @@ echo "The database update scripts were installed to %{script_dir}/updatedb"
 %endif
 
 %changelog
-* Mon Sep 06 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
-* Mon Sep 06 2010 Kern Sibbald <kern@sibbald.com>
-- 5.0.3
-- change license to AGPL v3
-- add defines for postgresql version and packages, require version 8 or greater
-- adjusted package description
-- fix bug with libbacsql files
 * Sun Mar 07 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - remove --without-qwt from configure statement
 * Sat Feb 27 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>

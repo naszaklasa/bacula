@@ -146,7 +146,8 @@ static char sessioncmd[]  = "session %127s %ld %ld %ld %ld %ld %ld\n";
 static char restorecmd[]  = "restore replace=%c prelinks=%d where=%s\n";
 static char restorecmd1[] = "restore replace=%c prelinks=%d where=\n";
 static char restorecmdR[] = "restore replace=%c prelinks=%d regexwhere=%s\n";
-static char restoreobjcmd[] = "restoreobject JobId=%u %d,%d,%d,%d,%d,%d\n";
+static char restoreobjcmd[]  = "restoreobject JobId=%u %d,%d,%d,%d,%d,%d,%s";
+static char restoreobjcmd1[] = "restoreobject JobId=%u %d,%d,%d,%d,%d,%d\n";
 static char endrestoreobjectcmd[] = "restoreobject end\n";
 static char verifycmd[]   = "verify level=%30s";
 static char estimatecmd[] = "estimate listing=%d";
@@ -338,6 +339,9 @@ void *handle_client_request(void *dirp)
          findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
          for (j=0; j<incexe->opts_list.size(); j++) {
             findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+            if (fo->plugin) {
+               free(fo->plugin);
+            }
             for (k=0; k<fo->regex.size(); k++) {
                regfree((regex_t *)fo->regex.get(k));
             }
@@ -694,24 +698,38 @@ static int restore_object_cmd(JCR *jcr)
    memset(&rop, 0, sizeof(rop));
    rop.pkt_size = sizeof(rop);
    rop.pkt_end = sizeof(rop);
+
    Dmsg1(100, "Enter restoreobject_cmd: %s", dir->msg);
    if (strcmp(dir->msg, endrestoreobjectcmd) == 0) {
       generate_plugin_event(jcr, bEventRestoreObject, NULL);
       return dir->fsend(OKRestoreObject);
    }
 
+   rop.plugin_name = (char *) malloc (dir->msglen);
+   *rop.plugin_name = 0;
+
    if (sscanf(dir->msg, restoreobjcmd, &rop.JobId, &rop.object_len, 
               &rop.object_full_len, &rop.object_index, 
-              &rop.object_type, &rop.object_compression, &FileIndex) != 7) {
-      Dmsg0(5, "Bad restore object command\n");
-      pm_strcpy(jcr->errmsg, dir->msg);
-      Jmsg1(jcr, M_FATAL, 0, _("Bad RestoreObject command: %s\n"), jcr->errmsg);
-      goto bail_out;
+              &rop.object_type, &rop.object_compression, &FileIndex, 
+              rop.plugin_name) != 8) {
+
+      /* Old version, no plugin_name */
+      if (sscanf(dir->msg, restoreobjcmd1, &rop.JobId, &rop.object_len, 
+                 &rop.object_full_len, &rop.object_index, 
+                 &rop.object_type, &rop.object_compression, &FileIndex) != 7) {
+         Dmsg0(5, "Bad restore object command\n");
+         pm_strcpy(jcr->errmsg, dir->msg);
+         Jmsg1(jcr, M_FATAL, 0, _("Bad RestoreObject command: %s\n"), jcr->errmsg);
+         goto bail_out;
+      }
    }
 
-   Dmsg6(100, "Recv object: JobId=%u objlen=%d full_len=%d objinx=%d objtype=%d FI=%d\n",
+   unbash_spaces(rop.plugin_name);
+
+   Dmsg7(100, "Recv object: JobId=%u objlen=%d full_len=%d objinx=%d objtype=%d "
+         "FI=%d plugin_name=%s\n",
          rop.JobId, rop.object_len, rop.object_full_len, 
-         rop.object_index, rop.object_type, FileIndex);
+         rop.object_index, rop.object_type, FileIndex, rop.plugin_name);
    /* Read Object name */
    if (dir->recv() < 0) {
       goto bail_out;
@@ -744,22 +762,24 @@ static int restore_object_cmd(JCR *jcr)
       rop.object_len = out_len;
    }
    Dmsg2(100, "Recv Object: len=%d Object=%s\n", rop.object_len, rop.object);
-   /* Special Job meta data */
+   /* we still need to do this to detect a vss restore */
    if (strcmp(rop.object_name, "job_metadata.xml") == 0) {
       Dmsg0(100, "got job metadata\n");
-      free_and_null_pool_memory(jcr->job_metadata);
-      jcr->job_metadata = rop.object;
-      rop.object = NULL;
-   } else {
-      /* pass to plugin */
-      generate_plugin_event(jcr, bEventRestoreObject, (void *)&rop);
+      //free_and_null_pool_memory(jcr->job_metadata);
+      jcr->job_metadata = rop.object; /* this is like a boolean in the restore case */
+      // rop.object = NULL; /* but not this */
    }
+   
+   generate_plugin_event(jcr, bEventRestoreObject, (void *)&rop);
 
    if (rop.object_name) {
       free(rop.object_name);
    }
    if (rop.object) {
       free_pool_memory(rop.object);
+   }
+   if (rop.plugin_name) {
+      free(rop.plugin_name);
    }
 
    Dmsg1(100, "Send: %s", OKRestoreObject);
@@ -1147,6 +1167,11 @@ static void add_fileset(JCR *jcr, const char *item)
    case 'T':
       current_opts = start_options(ff);
 //    current_opts->writer = bstrdup(item); /* deprecated */
+      state = state_options;
+      break;
+   case 'G':                    /* Plugin command for this Option block */
+      current_opts = start_options(ff);
+      current_opts->plugin = bstrdup(item);
       state = state_options;
       break;
    default:
@@ -1577,12 +1602,15 @@ static int level_cmd(JCR *jcr)
       if (jcr->getJobLevel() == L_NONE) {
          jcr->setJobLevel(L_SINCE);     /* if no other job level set, do it now */
       }
-      if (sscanf(dir->msg, "level = since_utime %s mtime_only=%d",
-                 buf, &mtime_only) != 2) {
-         goto bail_out;
+      if (sscanf(dir->msg, "level = since_utime %s mtime_only=%d prev_job=%127s",
+                 buf, &mtime_only, jcr->PrevJob) != 3) {
+         if (sscanf(dir->msg, "level = since_utime %s mtime_only=%d",
+                    buf, &mtime_only) != 2) {
+            goto bail_out;
+         }
       }
       since_time = str_to_uint64(buf);  /* this is the since time */
-      Dmsg1(100, "since_time=%lld\n", since_time);
+      Dmsg2(100, "since_time=%lld prev_job=%s\n", since_time, jcr->PrevJob);
       char ed1[50], ed2[50];
       /*
        * Sync clocks by polling him for the time. We take
@@ -1875,8 +1903,7 @@ static int backup_cmd(JCR *jcr)
         if (get_win32_driveletters(jcr->ff, szWinDriveLetters)) {
             Jmsg(jcr, M_INFO, 0, _("Generate VSS snapshots. Driver=\"%s\", Drive(s)=\"%s\"\n"), g_pVSSClient->GetDriverName(), szWinDriveLetters);
             if (!g_pVSSClient->CreateSnapshots(szWinDriveLetters)) {               
-               berrno be;
-               Jmsg(jcr, M_FATAL, 0, _("Generate VSS snapshots failed. ERR=%s\n"), be.bstrerror());
+               Jmsg(jcr, M_FATAL, 0, _("CreateSGenerate VSS snapshots failed.\n"));
             } else {
                /* tell user if snapshot creation of a specific drive failed */
                int i;
@@ -1896,8 +1923,7 @@ static int backup_cmd(JCR *jcr)
             Jmsg(jcr, M_FATAL, 0, _("No drive letters found for generating VSS snapshots.\n"));
         }
       } else {
-         berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("VSS was not initialized properly. ERR=%s\n"), be.bstrerror());
+         Jmsg(jcr, M_FATAL, 0, _("VSS was not initialized properly.\n"));
       } 
       run_scripts(jcr, jcr->RunScripts, "ClientAfterVSS");
    }
@@ -2046,6 +2072,7 @@ static int verify_cmd(JCR *jcr)
    return 0;                          /* return and terminate command loop */
 }
 
+#if 0
 #ifdef WIN32_VSS
 static bool vss_restore_init_callback(JCR *jcr, int init_type)
 {
@@ -2061,6 +2088,7 @@ static bool vss_restore_init_callback(JCR *jcr, int init_type)
       break;
    }
 }
+#endif
 #endif
 
 /**
@@ -2087,6 +2115,7 @@ static int restore_cmd(JCR *jcr)
     *  data to restore 
     */
    enable_vss = jcr->job_metadata != NULL;
+   jcr->job_metadata = NULL;
 
    Dmsg2(50, "g_pVSSClient = %p, enable_vss = %d\n", g_pVSSClient, enable_vss);
    // capture state here, if client is backed up by multiple directors
@@ -2120,6 +2149,11 @@ static int restore_cmd(JCR *jcr)
 
    Dmsg2(150, "Got replace %c, where=%s\n", replace, args);
    unbash_spaces(args);
+
+   /* Keep track of newly created directories to apply them correct attributes */
+   if (replace == REPLACE_NEVER) {
+      jcr->keep_path_list = true;
+   }
 
    if (use_regexwhere) {
       jcr->where_bregexp = get_bregexps(args);
@@ -2160,27 +2194,11 @@ static int restore_cmd(JCR *jcr)
 #if defined(WIN32_VSS)
    /* START VSS ON WIN32 */
    if (jcr->VSS) {
-      if (g_pVSSClient->InitializeForRestore(jcr, vss_restore_init_callback,
-            (WCHAR *)jcr->job_metadata)) {
-
-         /* inform user about writer states */
-         int i;
-         for (i=0; i < (int)g_pVSSClient->GetWriterCount(); i++) {
-            if (g_pVSSClient->GetWriterState(i) < 1) {
-               Jmsg(jcr, M_INFO, 0, _("VSS Writer (PreRestore): %s\n"), g_pVSSClient->GetWriterInfo(i));
-               //jcr->JobErrors++;
-            }
-         }
-      } else {
-/*
-   int fd = open("C:\\eric.xml", O_CREAT | O_WRONLY | O_TRUNC, 0777);
-   write(fd, (WCHAR *)jcr->job_metadata, wcslen((WCHAR *)jcr->job_metadata) * sizeof(WCHAR));
-   close(fd);
-*/
+      if (!g_pVSSClient->InitializeForRestore(jcr)) {
          berrno be;
          Jmsg(jcr, M_WARNING, 0, _("VSS was not initialized properly. VSS support is disabled. ERR=%s\n"), be.bstrerror());
       }
-      free_and_null_pool_memory(jcr->job_metadata);
+      //free_and_null_pool_memory(jcr->job_metadata);
       run_scripts(jcr, jcr->RunScripts, "ClientAfterVSS");
    }
 #endif
@@ -2209,10 +2227,13 @@ static int restore_cmd(JCR *jcr)
    /* tell vss to close the restore session */
    Dmsg0(100, "About to call CloseRestore\n");
    if (jcr->VSS) {
+#if 0
       generate_plugin_event(jcr, bEventVssBeforeCloseRestore);
+#endif
       Dmsg0(100, "Really about to call CloseRestore\n");
       if (g_pVSSClient->CloseRestore()) {
          Dmsg0(100, "CloseRestore success\n");
+#if 0
          /* inform user about writer states */
          for (int i=0; i<(int)g_pVSSClient->GetWriterCount(); i++) {
             int msg_type = M_INFO;
@@ -2222,6 +2243,7 @@ static int restore_cmd(JCR *jcr)
             }
             Jmsg(jcr, msg_type, 0, _("VSS Writer (RestoreComplete): %s\n"), g_pVSSClient->GetWriterInfo(i));
          }
+#endif
       }
       else
          Dmsg1(100, "CloseRestore fail - %08x\n", errno);
@@ -2330,6 +2352,7 @@ static void filed_free_jcr(JCR *jcr)
    }
    free_runscripts(jcr->RunScripts);
    delete jcr->RunScripts;
+   free_path_list(jcr);
 
    if (jcr->JobId != 0)
       write_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));

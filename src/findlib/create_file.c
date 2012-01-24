@@ -114,38 +114,35 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
       }
    }
 #endif
-   Dmsg3(200, "Create %s Replace=%c FT=%d\n", attr->ofname, (char)replace, attr->type);
+
+   Dmsg2(400, "Replace=%c %d\n", (char)replace, replace);
    if (lstat(attr->ofname, &mstatp) == 0) {
       exists = true;
-      /*
-       * For directories we do not apply the replace options, because
-       * we must always create directories that do not exist, and thus
-       * when the directory end record comes, the directory exists.  So
-       * we always apply the FT_DIREND record for directories.
-       */
-      if (attr->type != FT_DIREND) {
-         switch (replace) {
-         case REPLACE_IFNEWER:
-            if (attr->statp.st_mtime <= mstatp.st_mtime) {
-               Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Not newer: %s\n"), attr->ofname);
-               return CF_SKIP;
-            }
-            break;
-
-         case REPLACE_IFOLDER:
-            if (attr->statp.st_mtime >= mstatp.st_mtime) {
-               Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Not older: %s\n"), attr->ofname);
-               return CF_SKIP;
-            }
-            break;
-
-         case REPLACE_NEVER:
-            Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Already exists: %s\n"), attr->ofname);
+      switch (replace) {
+      case REPLACE_IFNEWER:
+         if (attr->statp.st_mtime <= mstatp.st_mtime) {
+            Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Not newer: %s\n"), attr->ofname);
             return CF_SKIP;
+         }
+         break;
 
-         case REPLACE_ALWAYS:
+      case REPLACE_IFOLDER:
+         if (attr->statp.st_mtime >= mstatp.st_mtime) {
+            Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Not older: %s\n"), attr->ofname);
+            return CF_SKIP;
+         }
+         break;
+
+      case REPLACE_NEVER:
+         /* Set attributes if we created this directory */
+         if (attr->type == FT_DIREND && path_list_lookup(jcr, attr->ofname)) {
             break;
          }
+         Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Already exists: %s\n"), attr->ofname);
+         return CF_SKIP;
+
+      case REPLACE_ALWAYS:
+         break;
       }
    }
    switch (attr->type) {
@@ -193,12 +190,12 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          attr->ofname[pnl] = 0;                 /* terminate path */
 
          if (!path_already_seen(jcr, attr->ofname, pnl)) {
+            Dmsg1(400, "Make path %s\n", attr->ofname);
             /*
              * If we need to make the directory, ensure that it is with
              * execute bit set (i.e. parent_mode), and preserve what already
              * exists. Normally, this should do nothing.
              */
-            Dmsg1(400, "makepath %s\n", attr->ofname);
             if (!makepath(attr, attr->ofname, parent_mode, parent_mode, uid, gid, 1)) {
                Dmsg1(10, "Could not make path. %s\n", attr->ofname);
                attr->ofname[pnl] = savechr;     /* restore full name */

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -788,9 +788,9 @@ void store_bool(LEX *lc, RES_ITEM *item, int index, int pass)
  */
 void store_label(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token, i;
+   int i;
 
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    /* Store the label pass 2 so that type is defined */
    for (i=0; tapelabels[i].name; i++) {
       if (strcasecmp(lc->str, tapelabels[i].name) == 0) {

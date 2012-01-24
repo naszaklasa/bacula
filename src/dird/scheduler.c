@@ -232,8 +232,14 @@ again:
    if (run->spool_data_set) {
       jcr->spool_data = run->spool_data;
    }
+   if (run->accurate_set) {     /* overwrite accurate mode */
+      jcr->accurate = run->accurate;
+   }
    if (run->write_part_after_job_set) {
       jcr->write_part_after_job = run->write_part_after_job;
+   }
+   if (run->MaxRunSchedTime_set) {
+      jcr->MaxRunSchedTime = run->MaxRunSchedTime;
    }
    Dmsg0(dbglvl, "Leave wait_for_next_job()\n");
    return jcr;
@@ -260,19 +266,16 @@ static void find_runs()
    JOB *job;
    SCHED *sched;
    struct tm tm;
-   int minute;
    int hour, mday, wday, month, wom, woy;
    /* Items corresponding to above at the next hour */
-   int nh_hour, nh_mday, nh_wday, nh_month, nh_wom, nh_woy, nh_year;
+   int nh_hour, nh_mday, nh_wday, nh_month, nh_wom, nh_woy;
 
    Dmsg0(dbglvl, "enter find_runs()\n");
-
 
    /* compute values for time now */
    now = time(NULL);
    (void)localtime_r(&now, &tm);
    hour = tm.tm_hour;
-   minute = tm.tm_min;
    mday = tm.tm_mday - 1;
    wday = tm.tm_wday;
    month = tm.tm_mon;
@@ -293,7 +296,6 @@ static void find_runs()
    nh_mday = tm.tm_mday - 1;
    nh_wday = tm.tm_wday;
    nh_month = tm.tm_mon;
-   nh_year  = tm.tm_year;
    nh_wom = nh_mday / 7;
    nh_woy = tm_woy(next_hour);              /* get week of year */
 

@@ -882,6 +882,16 @@ static void eliminate_orphaned_file_records()
 
 static void eliminate_orphaned_path_records()
 {
+   db_int64_ctx lctx;
+   lctx.count=0;
+   db_sql_query(db, "SELECT 1 FROM Job WHERE HasCache=1 LIMIT 1", 
+                db_int64_handler, &lctx);
+   
+   if (lctx.count == 1) {
+      printf(_("Pruning orphaned Path entries isn't possible when using BVFS.\n"));
+      return;
+   }
+
    idx_tmp_name = NULL;
    /*
     * Check the existence of the required "one column" index

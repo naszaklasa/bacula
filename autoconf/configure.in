@@ -2435,14 +2435,19 @@ AC_SUBST(ZLIBS)
 dnl
 dnl Check for lzo
 dnl
-AC_CHECK_HEADERS(lzo/lzoconf.h)
-AC_CHECK_HEADERS(lzo/lzo1x.h)
-AC_CHECK_LIB(lzo2, lzo1x_1_compress, [LZOLIBS="-llzo2"])
 have_lzo=no
-if test x$LZOLIBS = x-llzo2; then
-   AC_DEFINE(HAVE_LZO)
-   have_lzo=yes
-fi
+AC_CHECK_HEADER(lzo/lzoconf.h, 
+[
+   AC_CHECK_HEADER(lzo/lzo1x.h,
+   [
+      AC_CHECK_LIB(lzo2, lzo1x_1_compress,
+      [
+	 LZOLIBS="-llzo2"
+	 AC_DEFINE(HAVE_LZO,1,[Define to 1 if you have LZO compression])
+	 have_lzo=yes
+      ])
+   ])
+])
 AC_SUBST(LZOLIBS)
 
 dnl
@@ -3133,22 +3138,22 @@ AC_ARG_WITH(systemd,
    AC_HELP_STRING([--with-systemd@<:@=UNITDIR@:>@], [Include systemd support. UNITDIR is where systemd system .service files are located, default is to ask systemctl.]),
    [
        if test "$withval" != "no"; then
-           if test "$withval" = "yes"; then
-               SYSTEMD_UNITDIR="`systemctl show | grep UnitPath | cut -d " " -f2`"
-           else
-               SYSTEMD_UNITDIR="${withval}"
-           fi
+	   if test "$withval" = "yes"; then
+	       SYSTEMD_UNITDIR="`systemctl show | grep UnitPath | cut -d " " -f2`"
+	   else
+	       SYSTEMD_UNITDIR="${withval}"
+	   fi
 
 	   PFILES="${PFILES} \
-	           platforms/systemd/Makefile \
-	           platforms/systemd/bacula-dir.service \
-	           platforms/systemd/bacula-fd.service \
-	           platforms/systemd/bacula-sd.service"
-           AC_DEFINE(HAVE_SYSTEMD, 1, [Define to 1 if systemd support should be enabled])
-           AC_MSG_RESULT(yes)
+		   platforms/systemd/Makefile \
+		   platforms/systemd/bacula-dir.service \
+		   platforms/systemd/bacula-fd.service \
+		   platforms/systemd/bacula-sd.service"
+	   AC_DEFINE(HAVE_SYSTEMD, 1, [Define to 1 if systemd support should be enabled])
+	   AC_MSG_RESULT(yes)
 	   support_systemd="yes"
        else
-           AC_MSG_RESULT(no)
+	   AC_MSG_RESULT(no)
 	   support_systemd="no"
        fi
    ],[
@@ -3294,6 +3299,10 @@ AC_OUTPUT([autoconf/Make.common \
 	   updatedb/update_sqlite3_tables_12_to_14 \
 	   updatedb/update_postgresql_tables_12_to_14 \
 	   examples/nagios/check_bacula/Makefile \
+	   platforms/rpms/redhat/bacula.spec \
+	   platforms/rpms/redhat/bacula-bat.spec \
+	   platforms/rpms/redhat/bacula-docs.spec \
+	   platforms/rpms/redhat/bacula-mtx.spec \
 	   $PFILES ],  
      [ ]
 )

@@ -55,8 +55,7 @@ int make_estimate(JCR *jcr)
       set_find_changed_function((FF_PKT *)jcr->ff, accurate_check_file);
    } 
 
-   stat = find_files(jcr, (FF_PKT *)jcr->ff, tally_file, NULL);
-
+   stat = find_files(jcr, (FF_PKT *)jcr->ff, tally_file, plugin_estimate);
    accurate_free(jcr);
    return stat;
 }

@@ -596,6 +596,9 @@ _Z9get_tracev
 _Z9set_tracei
 
 ; mkpath.o
+_Z13path_list_addP3JCRjPc
+_Z14free_path_listP3JCR
+_Z16path_list_lookupP3JCRPc
 _Z8makepathP4ATTRPKcttjji
 
 ; mntent_cache.o

@@ -418,7 +418,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sessrec)
 {
    const char *rtype;
-   memset(sessrec, 0, sizeof(sessrec));
+   memset(sessrec, 0, sizeof(SESSION_LABEL));
    jcr->JobId = 0;
    switch (rec->FileIndex) {
    case PRE_LABEL:

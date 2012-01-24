@@ -84,7 +84,7 @@ int main(int argc, char *const *argv)
    FF_PKT *ff;
    char name[1000];
    bool quiet = false;
-   int i, ch, hard_links;
+   int i, ch;
    char *inc = NULL;
    char *exc = NULL;
    FILE *fd;
@@ -181,7 +181,7 @@ int main(int argc, char *const *argv)
    }
    printf(_("Files seen = %d\n"), num_files);
    term_include_exclude_files(ff);
-   hard_links = term_find_files(ff);
+   term_find_files(ff);
 
    free_jcr(jcr);
    term_last_jobs_list();             /* free jcr chain */

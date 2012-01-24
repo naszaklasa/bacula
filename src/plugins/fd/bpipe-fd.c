@@ -253,6 +253,8 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
    case bEventRestoreCommand:
 //    printf("bpipe-fd: EventRestoreCommand cmd=%s\n", (char *)value);
       /* Fall-through wanted */
+   case bEventEstimateCommand:
+      /* Fall-through wanted */
    case bEventBackupCommand:
       char *p;
       bfuncs->DebugMessage(ctx, fi, li, dbglvl, "bpipe-fd: pluginEvent cmd=%s\n", (char *)value);

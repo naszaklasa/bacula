@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -88,13 +88,11 @@ const bool have_lzo = true;
 const bool have_lzo = false;
 #endif
 
-
 static void deallocate_cipher(r_ctx &rctx);
 static void deallocate_fork_cipher(r_ctx &rctx);
 static void free_signature(r_ctx &rctx);
 static void free_session(r_ctx &rctx);
-static void close_previous_stream(r_ctx &rctx);
-
+static bool close_previous_stream(JCR *jcr, r_ctx &rctx);
 static bool verify_signature(JCR *jcr, r_ctx &rctx);
 int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
                      uint64_t *addr, int flags, int32_t stream, RESTORE_CIPHER_CTX *cipher_ctx);
@@ -122,7 +120,7 @@ static int bclose_chksize(JCR *jcr, BFILE *bfd, boffset_t osize)
 }
 
 #ifdef HAVE_DARWIN_OS
-bool restore_finderinfo(JCR *jcr, POOLMEM *buf, int32_t buflen)
+static bool restore_finderinfo(JCR *jcr, POOLMEM *buf, int32_t buflen)
 {
    struct attrlist attrList;
 
@@ -145,11 +143,212 @@ bool restore_finderinfo(JCR *jcr, POOLMEM *buf, int32_t buflen)
    return true;
 }
 #else
-bool restore_finderinfo(JCR *jcr, POOLMEM *buf, int32_t buflen)
+static bool restore_finderinfo(JCR *jcr, POOLMEM *buf, int32_t buflen)
 {
    return true;
 }
 #endif
+
+/*
+ * Cleanup of delayed restore stack with streams for later
+ * processing.
+ */
+static inline void drop_delayed_restore_streams(r_ctx &rctx, bool reuse)
+{
+   RESTORE_DATA_STREAM *rds;
+
+   if (!rctx.delayed_streams ||
+       rctx.delayed_streams->empty()) {
+      return;
+   }
+
+   foreach_alist(rds, rctx.delayed_streams) {
+      free(rds->content);
+   }
+
+   rctx.delayed_streams->destroy();
+   if (reuse) {
+      rctx.delayed_streams->init(10, owned_by_alist);
+   }
+}
+
+/*
+ * Push a data stream onto the delayed restore stack for
+ * later processing.
+ */
+static inline void push_delayed_restore_stream(r_ctx &rctx, BSOCK *sd)
+{
+   RESTORE_DATA_STREAM *rds;
+
+   if (!rctx.delayed_streams) {
+      rctx.delayed_streams = New(alist(10, owned_by_alist));
+   }
+
+   rds = (RESTORE_DATA_STREAM *)malloc(sizeof(RESTORE_DATA_STREAM));
+   rds->stream = rctx.stream;
+   rds->content = (char *)malloc(sd->msglen);
+   memcpy(rds->content, sd->msg, sd->msglen);
+   rds->content_length = sd->msglen;
+
+   rctx.delayed_streams->append(rds);
+}
+
+/*
+ * Perform a restore of an ACL using the stream received.
+ * This can either be a delayed restore or direct restore.
+ */
+static inline bool do_restore_acl(JCR *jcr,
+                                  int stream,
+                                  char *content,
+                                  uint32_t content_length)
+
+{
+   switch (parse_acl_streams(jcr, stream, content, content_length)) {
+   case bacl_exit_fatal:
+      return false;
+   case bacl_exit_error:
+      /*
+       * Non-fatal errors, count them and when the number is under ACL_REPORT_ERR_MAX_PER_JOB
+       * print the error message set by the lower level routine in jcr->errmsg.
+       */
+      if (jcr->acl_data->u.parse->nr_errors < ACL_REPORT_ERR_MAX_PER_JOB) {
+         Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+      }
+      jcr->acl_data->u.parse->nr_errors++;
+      break;
+   case bacl_exit_ok:
+      break;
+   }
+   return true;
+}
+
+/*
+ * Perform a restore of an XATTR using the stream received.
+ * This can either be a delayed restore or direct restore.
+ */
+static inline bool do_restore_xattr(JCR *jcr,
+                                    int stream,
+                                    char *content,
+                                    uint32_t content_length)
+{
+   switch (parse_xattr_streams(jcr, stream, content, content_length)) {
+   case bxattr_exit_fatal:
+      return false;
+   case bxattr_exit_error:
+      /*
+       * Non-fatal errors, count them and when the number is under XATTR_REPORT_ERR_MAX_PER_JOB
+       * print the error message set by the lower level routine in jcr->errmsg.
+       */
+      if (jcr->xattr_data->u.parse->nr_errors < XATTR_REPORT_ERR_MAX_PER_JOB) {
+         Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+      }
+      jcr->xattr_data->u.parse->nr_errors++;
+      break;
+   case bxattr_exit_ok:
+      break;
+   }
+   return true;
+}
+
+/*
+ * Restore any data streams that are restored after the file
+ * is fully restored and has its attributes restored. Things
+ * like acls and xattr are restored after we set the file
+ * attributes otherwise we might clear some security flags
+ * by setting the attributes.
+ */
+static inline bool pop_delayed_data_streams(JCR *jcr, r_ctx &rctx)
+{
+   RESTORE_DATA_STREAM *rds;
+
+   /*
+    * See if there is anything todo.
+    */
+   if (!rctx.delayed_streams ||
+        rctx.delayed_streams->empty()) {
+      return true;
+   }
+
+   /*
+    * Only process known delayed data streams here.
+    * If you start using more delayed data streams
+    * be sure to add them in this loop and add the
+    * proper calls here.
+    *
+    * Currently we support delayed data stream
+    * processing for the following type of streams:
+    * - *_ACL_*
+    * - *_XATTR_*
+    */
+   foreach_alist(rds, rctx.delayed_streams) {
+      switch (rds->stream) {
+      case STREAM_UNIX_ACCESS_ACL:
+      case STREAM_UNIX_DEFAULT_ACL:
+      case STREAM_ACL_AIX_TEXT:
+      case STREAM_ACL_DARWIN_ACCESS_ACL:
+      case STREAM_ACL_FREEBSD_DEFAULT_ACL:
+      case STREAM_ACL_FREEBSD_ACCESS_ACL:
+      case STREAM_ACL_HPUX_ACL_ENTRY:
+      case STREAM_ACL_IRIX_DEFAULT_ACL:
+      case STREAM_ACL_IRIX_ACCESS_ACL:
+      case STREAM_ACL_LINUX_DEFAULT_ACL:
+      case STREAM_ACL_LINUX_ACCESS_ACL:
+      case STREAM_ACL_TRU64_DEFAULT_ACL:
+      case STREAM_ACL_TRU64_DEFAULT_DIR_ACL:
+      case STREAM_ACL_TRU64_ACCESS_ACL:
+      case STREAM_ACL_SOLARIS_ACLENT:
+      case STREAM_ACL_SOLARIS_ACE:
+      case STREAM_ACL_AFS_TEXT:
+      case STREAM_ACL_AIX_AIXC:
+      case STREAM_ACL_AIX_NFS4:
+      case STREAM_ACL_FREEBSD_NFS4_ACL:
+         if (!do_restore_acl(jcr, rds->stream, rds->content, rds->content_length)) {
+            goto bail_out;
+         }
+         free(rds->content);
+         break;
+      case STREAM_XATTR_IRIX:
+      case STREAM_XATTR_TRU64:
+      case STREAM_XATTR_AIX:
+      case STREAM_XATTR_OPENBSD:
+      case STREAM_XATTR_SOLARIS_SYS:
+      case STREAM_XATTR_DARWIN:
+      case STREAM_XATTR_FREEBSD:
+      case STREAM_XATTR_LINUX:
+      case STREAM_XATTR_NETBSD:
+         if (!do_restore_xattr(jcr, rds->stream, rds->content, rds->content_length)) {
+            goto bail_out;
+         }
+         free(rds->content);
+         break;
+      default:
+         Jmsg(jcr, M_WARNING, 0, _("Unknown stream=%d ignored. This shouldn't happen!\n"),
+              rds->stream);
+         break;
+      }
+   }
+
+   /*
+    * We processed the stack so we can destroy it.
+    */
+   rctx.delayed_streams->destroy();
+
+   /*
+    * (Re)Initialize the stack for a new use.
+    */
+   rctx.delayed_streams->init(10, owned_by_alist);
+
+   return true;
+
+bail_out:
+
+   /*
+    * Destroy the content of the stack and (re)initialize it for a new use.
+    */
+   drop_delayed_restore_streams(rctx, true);
+
+   return false;
+}
 
 /*
  * Restore the requested files.
@@ -259,13 +458,15 @@ void do_restore(JCR *jcr)
    attr = rctx.attr = new_attr(jcr);
    if (have_acl) {
       jcr->acl_data = (acl_data_t *)malloc(sizeof(acl_data_t));
-      memset((caddr_t)jcr->acl_data, 0, sizeof(acl_data_t));
-      jcr->acl_data->content = get_pool_memory(PM_MESSAGE);
+      memset(jcr->acl_data, 0, sizeof(acl_data_t));
+      jcr->acl_data->u.parse = (acl_parse_data_t *)malloc(sizeof(acl_parse_data_t));
+      memset(jcr->acl_data->u.parse, 0, sizeof(acl_parse_data_t));
    }
    if (have_xattr) {
       jcr->xattr_data = (xattr_data_t *)malloc(sizeof(xattr_data_t));
-      memset((caddr_t)jcr->xattr_data, 0, sizeof(xattr_data_t));
-      jcr->xattr_data->content = get_pool_memory(PM_MESSAGE);
+      memset(jcr->xattr_data, 0, sizeof(xattr_data_t));
+      jcr->xattr_data->u.parse = (xattr_parse_data_t *)malloc(sizeof(xattr_parse_data_t));
+      memset(jcr->xattr_data->u.parse, 0, sizeof(xattr_parse_data_t));
    }
 
    while (bget_msg(sd) >= 0 && !job_canceled(jcr)) {
@@ -328,7 +529,9 @@ void do_restore(JCR *jcr)
          /*
           * if any previous stream open, close it
           */
-         close_previous_stream(rctx);
+         if (!close_previous_stream(jcr, rctx)) {
+            goto bail_out;
+         }
 
          /*
           * TODO: manage deleted files
@@ -340,7 +543,7 @@ void do_restore(JCR *jcr)
           * Restore objects should be ignored here -- they are
           * returned at the beginning of the restore. 
           */
-         if (rctx.type == FT_RESTORE_FIRST) {
+         if (IS_FT_OBJECT(rctx.type)) {
             continue;
          }
 
@@ -374,9 +577,13 @@ void do_restore(JCR *jcr)
           */
          jcr->num_files_examined++;
          rctx.extract = false;
+         stat = CF_CORE;        /* By default, let Bacula's core handle it */
+
          if (jcr->plugin) {
             stat = plugin_create_file(jcr, attr, &rctx.bfd, jcr->replace);
-         } else {
+         } 
+         
+         if (stat == CF_CORE) {
             stat = create_file(jcr, attr, &rctx.bfd, jcr->replace);
          }
          jcr->lock();  
@@ -387,8 +594,7 @@ void do_restore(JCR *jcr)
          switch (stat) {
          case CF_ERROR:
          case CF_SKIP:
-            pm_strcpy(jcr->last_fname, attr->ofname);
-            jcr->last_type = attr->type;
+            jcr->JobFiles++;
             break;
          case CF_EXTRACT:
             /*
@@ -415,7 +621,7 @@ void do_restore(JCR *jcr)
                }
 
                /*
-                * Count the resource forks not as regular files being restored.
+                * Do not count the resource forks as regular files being restored.
                 */
                if (rsrc_len == 0) {
                   jcr->JobFiles++;
@@ -692,27 +898,22 @@ void do_restore(JCR *jcr)
           * b)     and it is not a directory (they are never "extracted")
           * c) or the file name is empty
           */
-         if ((!rctx.extract && jcr->last_type != FT_DIREND) || (*jcr->last_fname == 0)) {
+         if ((!rctx.extract &&
+               jcr->last_type != FT_DIREND) ||
+             (*jcr->last_fname == 0)) {
             break;
          }
          if (have_acl) {
-            pm_memcpy(jcr->acl_data->content, sd->msg, sd->msglen);
-            jcr->acl_data->content_length = sd->msglen;
-            switch (parse_acl_streams(jcr, rctx.stream)) {
-            case bacl_exit_fatal:
-               goto bail_out;
-            case bacl_exit_error:
-               /*
-                * Non-fatal errors, count them and when the number is under ACL_REPORT_ERR_MAX_PER_JOB
-                * print the error message set by the lower level routine in jcr->errmsg.
-                */
-               if (jcr->acl_data->nr_errors < ACL_REPORT_ERR_MAX_PER_JOB) {
-                  Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+            /*
+             * For anything that is not a directory we delay
+             * the restore of acls till a later stage.
+             */
+            if (jcr->last_type != FT_DIREND) {
+               push_delayed_restore_stream(rctx, sd);
+            } else {
+               if (!do_restore_acl(jcr, rctx.stream, sd->msg, sd->msglen)) {
+                  goto bail_out;
                }
-               jcr->acl_data->nr_errors++;
-               break;
-            case bacl_exit_ok:
-               break;
             }
          } else {
             non_support_acl++;
@@ -724,7 +925,6 @@ void do_restore(JCR *jcr)
       case STREAM_XATTR_AIX:
       case STREAM_XATTR_OPENBSD:
       case STREAM_XATTR_SOLARIS_SYS:
-      case STREAM_XATTR_SOLARIS:
       case STREAM_XATTR_DARWIN:
       case STREAM_XATTR_FREEBSD:
       case STREAM_XATTR_LINUX:
@@ -735,27 +935,43 @@ void do_restore(JCR *jcr)
           * b)     and it is not a directory (they are never "extracted")
           * c) or the file name is empty
           */
-         if ((!rctx.extract && jcr->last_type != FT_DIREND) || (*jcr->last_fname == 0)) {
+         if ((!rctx.extract &&
+               jcr->last_type != FT_DIREND) ||
+             (*jcr->last_fname == 0)) {
             break;
          }
          if (have_xattr) {
-            pm_memcpy(jcr->xattr_data->content, sd->msg, sd->msglen);
-            jcr->xattr_data->content_length = sd->msglen;
-            switch (parse_xattr_streams(jcr, rctx.stream)) {
-            case bxattr_exit_fatal:
-               goto bail_out;
-            case bxattr_exit_error:
-               /*
-                * Non-fatal errors, count them and when the number is under XATTR_REPORT_ERR_MAX_PER_JOB
-                * print the error message set by the lower level routine in jcr->errmsg.
-                */
-               if (jcr->xattr_data->nr_errors < XATTR_REPORT_ERR_MAX_PER_JOB) {
-                  Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+            /*
+             * For anything that is not a directory we delay
+             * the restore of xattr till a later stage.
+             */
+            if (jcr->last_type != FT_DIREND) {
+               push_delayed_restore_stream(rctx, sd);
+            } else {
+               if (!do_restore_xattr(jcr, rctx.stream, sd->msg, sd->msglen)) {
+                  goto bail_out;
                }
-               jcr->xattr_data->nr_errors++;
-               break;
-            case bxattr_exit_ok:
-               break;
+            }
+         } else {
+            non_support_xattr++;
+         }
+         break;
+
+      case STREAM_XATTR_SOLARIS:
+         /*
+          * Do not restore Extended Attributes when
+          * a) The current file is not extracted
+          * b)     and it is not a directory (they are never "extracted")
+          * c) or the file name is empty
+          */
+         if ((!rctx.extract &&
+               jcr->last_type != FT_DIREND) ||
+             (*jcr->last_fname == 0)) {
+            break;
+         }
+         if (have_xattr) {
+            if (!do_restore_xattr(jcr, rctx.stream, sd->msg, sd->msglen)) {
+               goto bail_out;
             }
          } else {
             non_support_xattr++;
@@ -794,7 +1010,9 @@ void do_restore(JCR *jcr)
          break;
 
       case STREAM_PLUGIN_NAME:
-         close_previous_stream(rctx);
+         if (!close_previous_stream(jcr, rctx)) {
+            goto bail_out;
+         }
          Dmsg1(50, "restore stream_plugin_name=%s\n", sd->msg);
          plugin_name_stream(jcr, sd->msg);
          break;
@@ -803,7 +1021,9 @@ void do_restore(JCR *jcr)
          break;                    /* these are sent by Director */
 
       default:
-         close_previous_stream(rctx);
+         if (!close_previous_stream(jcr, rctx)) {
+            goto bail_out;
+         }
          Jmsg(jcr, M_WARNING, 0, _("Unknown stream=%d ignored. This shouldn't happen!\n"),
               rctx.stream);
          Dmsg2(0, "Unknown stream=%d data=%s\n", rctx.stream, sd->msg);
@@ -819,7 +1039,9 @@ void do_restore(JCR *jcr)
       bclose_chksize(jcr, &rctx.forkbfd, rctx.fork_size);
    }
 
-   close_previous_stream(rctx);
+   if (!close_previous_stream(jcr, rctx)) {
+      goto bail_out;
+   }
    jcr->setJobStatus(JS_Terminated);
    goto ok_out;
 
@@ -832,13 +1054,13 @@ ok_out:
     */
    Dmsg2(10, "End Do Restore. Files=%d Bytes=%s\n", jcr->JobFiles,
       edit_uint64(jcr->JobBytes, ec1));
-   if (have_acl && jcr->acl_data->nr_errors > 0) {
+   if (have_acl && jcr->acl_data->u.parse->nr_errors > 0) {
       Jmsg(jcr, M_WARNING, 0, _("Encountered %ld acl errors while doing restore\n"),
-           jcr->acl_data->nr_errors);
+           jcr->acl_data->u.parse->nr_errors);
    }
-   if (have_xattr && jcr->xattr_data->nr_errors > 0) {
+   if (have_xattr && jcr->xattr_data->u.parse->nr_errors > 0) {
       Jmsg(jcr, M_WARNING, 0, _("Encountered %ld xattr errors while doing restore\n"),
-           jcr->xattr_data->nr_errors);
+           jcr->xattr_data->u.parse->nr_errors);
    }
    if (non_support_data > 1 || non_support_attr > 1) {
       Jmsg(jcr, M_WARNING, 0, _("%d non-supported data streams and %d non-supported attrib streams ignored.\n"),
@@ -902,15 +1124,23 @@ ok_out:
    }
 
    if (have_acl && jcr->acl_data) {
-      free_pool_memory(jcr->acl_data->content);
+      free(jcr->acl_data->u.parse);
       free(jcr->acl_data);
       jcr->acl_data = NULL;
    }
 
    if (have_xattr && jcr->xattr_data) {
-      free_pool_memory(jcr->xattr_data->content);
+      free(jcr->xattr_data->u.parse);
       free(jcr->xattr_data);
       jcr->xattr_data = NULL;
+   }
+
+   /*
+    * Free the delayed stream stack list.
+    */
+   if (rctx.delayed_streams) {
+      drop_delayed_restore_streams(rctx, false);
+      delete rctx.delayed_streams;
    }
 
    bclose(&rctx.forkbfd);
@@ -1109,7 +1339,9 @@ bool sparse_data(JCR *jcr, BFILE *bfd, uint64_t *addr, char **data, uint32_t *le
 
 bool decompress_data(JCR *jcr, int32_t stream, char **data, uint32_t *length)
 {
+#if defined(HAVE_LZO) || defined(HAVE_LIBZ)
    char ec1[50]; /* Buffer printing huge values */
+#endif
 
    Dmsg1(200, "Stream found in decompress_data(): %d\n", stream);
    if(stream == STREAM_COMPRESSED_DATA || stream == STREAM_SPARSE_COMPRESSED_DATA || stream == STREAM_WIN32_COMPRESSED_DATA
@@ -1374,11 +1606,10 @@ bail_out:
    return -1;
 }
 
-
 /*
  * If extracting, close any previous stream
  */
-static void close_previous_stream(r_ctx &rctx)
+static bool close_previous_stream(JCR *jcr, r_ctx &rctx)
 {
    /*
     * If extracting, it was from previous stream, so
@@ -1404,6 +1635,13 @@ static void close_previous_stream(r_ctx &rctx)
       rctx.extract = false;
 
       /*
+       * Now perform the delayed restore of some specific data streams.
+       */
+      if (!pop_delayed_data_streams(jcr, rctx)) {
+         return false;
+      }
+
+      /*
        * Verify the cryptographic signature, if any
        */
       rctx.type = rctx.attr->type;
@@ -1421,8 +1659,9 @@ static void close_previous_stream(r_ctx &rctx)
       Dmsg0(000, "=== logic error !open\n");
       bclose(&rctx.bfd);
    }
-}
 
+   return true;
+}
 
 /*
  * In the context of jcr, flush any remaining data from the cipher context,

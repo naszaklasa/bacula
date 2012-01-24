@@ -9,6 +9,10 @@
    the code in any way. 
 
 */
+
+#define BUILD_PLUGIN
+#define BUILDING_DLL            /* required for Windows plugin */
+
 #include "bacula.h"
 #include "fd_plugins.h"
 
@@ -18,7 +22,7 @@ extern "C" {
 
 #define PLUGIN_LICENSE      "AGPLv3"
 #define PLUGIN_AUTHOR       "Your name"
-#define PLUGIN_DATE         "January 2008"
+#define PLUGIN_DATE         "January 2010"
 #define PLUGIN_VERSION      "1"
 #define PLUGIN_DESCRIPTION  "Test File Daemon Plugin"
 
@@ -74,7 +78,8 @@ static pFuncs pluginFuncs = {
 /*
  * Plugin called here when it is first loaded
  */
-bRC loadPlugin(bInfo *lbinfo, bFuncs *lbfuncs, pInfo **pinfo, pFuncs **pfuncs)
+bRC DLL_IMP_EXP
+loadPlugin(bInfo *lbinfo, bFuncs *lbfuncs, pInfo **pinfo, pFuncs **pfuncs)
 {
    bfuncs = lbfuncs;                  /* set Bacula funct pointers */
    binfo  = lbinfo;
@@ -90,7 +95,8 @@ bRC loadPlugin(bInfo *lbinfo, bFuncs *lbfuncs, pInfo **pinfo, pFuncs **pfuncs)
  * Plugin called here when it is unloaded, normally when
  *  Bacula is going to exit.
  */
-bRC unloadPlugin() 
+bRC DLL_IMP_EXP
+unloadPlugin() 
 {
    printf("plugin: Unloaded\n");
    return bRC_OK;

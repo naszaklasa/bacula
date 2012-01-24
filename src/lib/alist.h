@@ -1,7 +1,7 @@
 /*
-   Bacula® - The Network Backup Solution
+   Bacula(R) - The Network Backup Solution
 
-   Copyright (C) 2003-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of Kern Sibbald.
+   Bacula(R) is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -90,6 +90,9 @@ public:
    void *pop() { return remove(num_items-1); };
 };
 
+/*
+ * Define index operator []
+ */
 inline void * alist::operator [](int index) const {
    if (index < 0 || index >= num_items) {
       return NULL;
@@ -108,7 +111,8 @@ inline bool alist::empty() const
  *   allowing us to mix C++ classes inside malloc'ed
  *   C structures. Define before called in constructor.
  */
-inline void alist::init(int num, bool own) {
+inline void alist::init(int num, bool own)
+{
    items = NULL;
    num_items = 0;
    max_items = 0;
@@ -117,12 +121,14 @@ inline void alist::init(int num, bool own) {
 }
 
 /* Constructor */
-inline alist::alist(int num, bool own) {
+inline alist::alist(int num, bool own)
+{
    init(num, own);
 }
 
 /* Destructor */
-inline alist::~alist() {
+inline alist::~alist()
+{
    destroy();
 }
 

@@ -319,7 +319,7 @@ public:
 inline char *STORE::dev_name() const
 { 
    DEVICE *dev = (DEVICE *)device->first();
-   return dev->hdr.name;
+   return dev->name();
 }
 
 inline char *STORE::name() const { return hdr.name; }
@@ -613,8 +613,12 @@ public:
    uint32_t level;                    /* level override */
    int32_t Priority;                  /* priority override */
    uint32_t job_type;
+   utime_t MaxRunSchedTime;           /* max run time in sec from Sched time */
+   bool MaxRunSchedTime_set;          /* MaxRunSchedTime given */
    bool spool_data;                   /* Data spooling override */
    bool spool_data_set;               /* Data spooling override given */
+   bool accurate;                     /* accurate */
+   bool accurate_set;                 /* accurate given */
    bool write_part_after_job;         /* Write part after job override */
    bool write_part_after_job_set;     /* Write part after job override given */
    

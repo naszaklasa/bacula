@@ -118,7 +118,7 @@ typedef enum
 {
    LMGR_WHITE,                  /* never seen */
    LMGR_BLACK,                  /* no loop */
-   LMGR_GREY,                   /* seen before */
+   LMGR_GREY                    /* seen before */
 } lmgr_color_t;
 
 /*

@@ -453,9 +453,8 @@ input_char()
     }
     /* if we got a screen size escape sequence, read height, width */
     if (c == F_SCRSIZ) {
-       int y, x;
-       y = t_gnc() - 0x20;        /* y */
-       x = t_gnc() - 0x20;        /* x */
+       t_gnc();   /*  - 0x20 = y */
+       t_gnc();   /*  - 0x20 = x */
        c = input_char();
     }
     return c;

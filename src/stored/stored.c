@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -45,19 +45,6 @@
  * filed plugins 
  */
 #include "sd_plugins.h"         
-
-#ifdef HAVE_PYTHON
-
-#undef _POSIX_C_SOURCE
-#include <Python.h>
-
-#include "lib/pythonlib.h"
-
-/* Imported Functions */
-extern PyObject *job_getattr(PyObject *self, char *attrname);
-extern int job_setattr(PyObject *self, char *attrname, PyObject *value);
-
-#endif /* HAVE_PYTHON */
 
 /* Imported functions */
 extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
@@ -133,9 +120,6 @@ int main (int argc, char *argv[])
    pthread_t thid;
    char *uid = NULL;
    char *gid = NULL;
-#ifdef HAVE_PYTHON
-   init_python_interpreter_args python_args;
-#endif /* HAVE_PYTHON */
 
    start_heap = sbrk(0);
    setlocale(LC_ALL, "");
@@ -284,21 +268,9 @@ int main (int argc, char *argv[])
       Jmsg0(NULL, M_ABORT, 0, _("Volume Session Time is ZERO!\n"));
    }
 
-#ifdef HAVE_PYTHON
-   python_args.progname = me->hdr.name;
-   python_args.scriptdir = me->scripts_directory;
-   python_args.modulename = "SDStartUp";
-   python_args.configfile = configfile;
-   python_args.workingdir = me->working_directory;
-   python_args.job_getattr = job_getattr;
-   python_args.job_setattr = job_setattr;
-
-   init_python_interpreter(&python_args);
-#endif /* HAVE_PYTHON */
-
-    /*
-     * Start the device allocation thread
-     */
+   /*
+    * Start the device allocation thread
+    */
    create_volume_lists();             /* do before device_init */
    if (pthread_create(&thid, NULL, device_initialization, NULL) != 0) {
       berrno be;
@@ -541,6 +513,7 @@ void *device_initialization(void *arg)
       }
 
       jcr->dcr = dcr = new_dcr(jcr, NULL, dev);
+      generate_plugin_event(jcr, bsdEventDeviceInit, dcr);
       if (dev->is_autochanger()) {
          /* If autochanger set slot in dev sturcture */
          get_autochanger_loaded_slot(dcr);

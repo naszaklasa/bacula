@@ -1,7 +1,94 @@
 
-               Release Notes for Bacula 5.2.3
+               Release Notes for Bacula 5.2.4
 
   Bacula code: Total files = 1,110 Total lines = 231,439 (Using SLOCCount)
+
+General:
+--------
+The 5.2.3 version is an bug fix release.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+If you are upgrading directly from 5.0.3 to this version, please see the
+important notices below for version 5.2.2, particularly
+the database upgrade and the difference in packaging the
+SQL shared libraries.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+If you store .bsr or .mail files in the Bacula working
+directory, please be aware that they will all be deleted
+each time the Director starts.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Compatibility:
+--------------
+ As always, both the Director and Storage daemon must be upgraded at
+ the same time.
+
+ Older 5.0.x and 3.0.x File Daemons are compatible with the 5.2.3
+ Director and Storage daemons. There should be no need to upgrade older File
+ Daemons.
+
+Most important changes since 5.2.3:
+- Fix LZO detection so that it correctly detects presense of header
+  files.
+- Switch the way we handle shared object versioning.
+- Backport Enterprise spec files to platforms/rpms
+- Switch to using Qt 4.7.4 (you must download new 
+  depkgs-qt-24Dec11.tar.gz
+- Update depkgs to depkgs-24Dec11.tar.gz
+- Enhancements to File daemon and Storage daemon plugins
+- Compiler warning cleanups
+- xattr fixes
+- Cleanup old files in the working directory when the Director starts
+
+Changes since 5.2.3:
+
+18Jan12
+ - Prepare for adding IPv6 to Windows in the future
+ - Fix bug #1822 Schedule run line parsing fails if value is keyword
+ - Revert to 5.0 size computation in accurate elements, may fix #1821
+ - Mark that a file was found in the accurate list in the ff_pkt with a
+   variable
+ - Definitive fix for MySQL MaxValue problem bug #1810
+ - Initialize delta_seq to -1 because 0 means that we have already a version
+ - Adapt bfileview for bvfs tables
+ - Set job status to running when restore job really starts
+ - Remove ifdeffing that turned off JS_Warning status -- must have been missed 
+  test code
+ - Add support for soname setting in libtool.
+ - Fix bug #1815
+ - Fix systemd pid files.
+ - Limit migration/copy jobs to starting 100 at a time
+ - Avoid conflict with PAGE_SIZE define
+ - Send previous Job name during Incremental/Differential to the FD
+ - Fix bug #1811 Filed fails to backup more then one xattr.
+ - system.posix_acl_default is also an acl stored as xattr
+ - Fix bug #1807
+ - Add configure for new redhat spec files
+ - Backport Enterprise spec files
+ - Fix bad memset() reported by clang
+ - Test new plugin function in bpipe and test plugin
+ - Try to fix openssl problem with signal
+ - Add BSOCK::set_killable()
+ - Set directory attributes when using Replace=Never when Bacula creates them
+ - Use RestoreObject type in Catalog
+ - Add new features in plugin
+ - Add helper for ini files
+ - Implement run accurate=yes/no
+ - Add .bvfs_clear_cache
+ - Add Accurate and MaxRunSchedTime in Schedule resource
+ - Fix bug #1802 configure code to detect LZO is broken
+ - Fix bug #1806 failure to save second and more xattr.
+ - Add second xattr to show bug 1806
+ - Fix seg fault in plugin event loop
+ - Fix #3210 about slow restore with bvfs
+
+Bugs fixed/closed since last release:
+1802 1806 1807 1810 1811 1815 1821 1822 3210
+
+
+==============================================================
 
 General:
 --------

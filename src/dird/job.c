@@ -172,7 +172,7 @@ bool setup_job(JCR *jcr)
 
    generate_daemon_event(jcr, "JobStart");
    new_plugins(jcr);                  /* instantiate plugins for this jcr */
-   generate_plugin_event(jcr, bEventJobStart);
+   generate_plugin_event(jcr, bDirEventJobStart);
 
    if (job_canceled(jcr)) {
       goto bail_out;
@@ -233,7 +233,7 @@ bool setup_job(JCR *jcr)
    }
 
    generate_job_event(jcr, "JobInit");
-   generate_plugin_event(jcr, bEventJobInit);
+   generate_plugin_event(jcr, bDirEventJobInit);
    Dsm_check(100);
    return true;
 
@@ -306,7 +306,7 @@ static void *job_thread(void *arg)
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
    }
    generate_job_event(jcr, "JobRun");
-   generate_plugin_event(jcr, bEventJobRun);
+   generate_plugin_event(jcr, bDirEventJobRun);
 
    switch (jcr->getJobType()) {
    case JT_BACKUP:
@@ -358,7 +358,7 @@ static void *job_thread(void *arg)
    }
 
    generate_daemon_event(jcr, "JobEnd");
-   generate_plugin_event(jcr, bEventJobEnd);
+   generate_plugin_event(jcr, bDirEventJobEnd);
    Dmsg1(50, "======== End Job stat=%c ==========\n", jcr->JobStatus);
    Dsm_check(100);
    return NULL;

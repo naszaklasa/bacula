@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -756,7 +756,7 @@ int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
    db_lock(mdb);
    mdb->db_escape_string(jcr, esc, cr->Counter, strlen(cr->Counter));
 
-   Mmsg(mdb->cmd, "SELECT \"MinValue\",\"MaxValue\",CurrentValue,WrapCounter "
+   Mmsg(mdb->cmd, "SELECT Counters.MinValue,Counters.MaxValue,CurrentValue,WrapCounter "
       "FROM Counters WHERE Counter='%s'", esc);
 
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {

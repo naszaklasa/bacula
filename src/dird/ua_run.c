@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -61,6 +61,8 @@ public:
    bool mod;
    int spool_data;
    bool spool_data_set;
+   int accurate;
+   bool accurate_set;
    int ignoreduplicatecheck;
    bool ignoreduplicatecheck_set;
 
@@ -211,6 +213,10 @@ int modify_job_parameters(UAContext *ua, JCR *jcr, run_ctx &rc)
     */
    if (rc.spool_data_set) {
       jcr->spool_data = rc.spool_data;
+   }
+
+   if (rc.accurate_set) {
+      jcr->accurate = rc.accurate;
    }
 
    /* Used by migration jobs that can have the same name,
@@ -1202,6 +1208,7 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
       "spooldata",                    /* 26 */
       "comment",                      /* 27 */
       "ignoreduplicatecheck",         /* 28 */
+      "accurate",                     /* 29 */
       NULL
    };
 
@@ -1216,6 +1223,7 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
    rc.fileset_name = NULL;
    rc.verify_job_name = NULL;
    rc.previous_job_name = NULL;
+   rc.accurate_set = false;
    rc.spool_data_set = false;
    rc.ignoreduplicatecheck = false;
    rc.comment = NULL;
@@ -1446,6 +1454,18 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
                   kw_ok = true;
                } else {
                   ua->send_msg(_("Invalid ignoreduplicatecheck flag.\n"));
+               }
+               break;
+            case 29: /* accurate */
+               if (rc.accurate_set) {
+                  ua->send_msg(_("Accurate flag specified twice.\n"));
+                  return false;
+               }
+               if (is_yesno(ua->argv[i], &rc.accurate)) {
+                  rc.accurate_set = true;
+                  kw_ok = true;
+               } else {
+                  ua->send_msg(_("Invalid accurate flag.\n"));
                }
                break;
             default:

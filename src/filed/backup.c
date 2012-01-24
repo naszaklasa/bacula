@@ -170,14 +170,18 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
 
    if (have_acl) {
       jcr->acl_data = (acl_data_t *)malloc(sizeof(acl_data_t));
-      memset((caddr_t)jcr->acl_data, 0, sizeof(acl_data_t));
-      jcr->acl_data->content = get_pool_memory(PM_MESSAGE);
+      memset(jcr->acl_data, 0, sizeof(acl_data_t));
+      jcr->acl_data->u.build = (acl_build_data_t *)malloc(sizeof(acl_build_data_t));
+      memset(jcr->acl_data->u.build, 0, sizeof(acl_build_data_t));
+      jcr->acl_data->u.build->content = get_pool_memory(PM_MESSAGE);
    }
 
    if (have_xattr) {
       jcr->xattr_data = (xattr_data_t *)malloc(sizeof(xattr_data_t));
-      memset((caddr_t)jcr->xattr_data, 0, sizeof(xattr_data_t));
-      jcr->xattr_data->content = get_pool_memory(PM_MESSAGE);
+      memset(jcr->xattr_data, 0, sizeof(xattr_data_t));
+      jcr->xattr_data->u.build = (xattr_build_data_t *)malloc(sizeof(xattr_build_data_t));
+      memset(jcr->xattr_data->u.build, 0, sizeof(xattr_build_data_t));
+      jcr->xattr_data->u.build->content = get_pool_memory(PM_MESSAGE);
    }
 
    /** Subroutine save_file() is called for each file */
@@ -186,13 +190,13 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
       jcr->setJobStatus(JS_ErrorTerminated);
    }
 
-   if (have_acl && jcr->acl_data->nr_errors > 0) {
+   if (have_acl && jcr->acl_data->u.build->nr_errors > 0) {
       Jmsg(jcr, M_WARNING, 0, _("Encountered %ld acl errors while doing backup\n"),
-           jcr->acl_data->nr_errors);
+           jcr->acl_data->u.build->nr_errors);
    }
-   if (have_xattr && jcr->xattr_data->nr_errors > 0) {
+   if (have_xattr && jcr->xattr_data->u.build->nr_errors > 0) {
       Jmsg(jcr, M_WARNING, 0, _("Encountered %ld xattr errors while doing backup\n"),
-           jcr->xattr_data->nr_errors);
+           jcr->xattr_data->u.build->nr_errors);
    }
 
    close_vss_backup_session(jcr);
@@ -204,12 +208,14 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
    sd->signal(BNET_EOD);            /* end of sending data */
 
    if (have_acl && jcr->acl_data) {
-      free_pool_memory(jcr->acl_data->content);
+      free_pool_memory(jcr->acl_data->u.build->content);
+      free(jcr->acl_data->u.build);
       free(jcr->acl_data);
       jcr->acl_data = NULL;
    }
    if (have_xattr && jcr->xattr_data) {
-      free_pool_memory(jcr->xattr_data->content);
+      free_pool_memory(jcr->xattr_data->u.build->content);
+      free(jcr->xattr_data->u.build);
       free(jcr->xattr_data);
       jcr->xattr_data = NULL;
    }
@@ -330,6 +336,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 {
    bool do_read = false;
    bool plugin_started = false;
+   bool do_plugin_set = false;
    int stat, data_stream; 
    int rtnstat = 0;
    DIGEST *digest = NULL;
@@ -337,6 +344,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    int digest_stream = STREAM_NONE;
    SIGNATURE *sig = NULL;
    bool has_file_data = false;
+   struct save_pkt sp;          /* use by option plugin */
    // TODO landonf: Allow the user to specify the digest algorithm
 #ifdef HAVE_SHA2
    crypto_digest_t signing_algorithm = CRYPTO_DIGEST_SHA256;
@@ -368,6 +376,9 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       break;
    case FT_RESTORE_FIRST:
       Dmsg1(100, "FT_RESTORE_FIRST saving: %s\n", ff_pkt->fname);
+      break;
+   case FT_PLUGIN_CONFIG:
+      Dmsg1(100, "FT_PLUGIN_CONFIG saving: %s\n", ff_pkt->fname);
       break;
    case FT_DIRBEGIN:
       jcr->num_files_examined--;      /* correct file count */
@@ -523,7 +534,32 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    if (ff_pkt->flags & FO_PORTABLE) {
       set_portable_backup(&ff_pkt->bfd); /* disable Win32 BackupRead() */
    }
+
    if (ff_pkt->cmd_plugin) {
+      do_plugin_set = true;
+
+   /* option and cmd plugin are not compatible together */
+   } else if (ff_pkt->opt_plugin) {
+      
+      /* ask the option plugin what to do with this file */
+      switch (plugin_option_handle_file(jcr, ff_pkt, &sp)) {
+      case bRC_OK:
+         Dmsg2(10, "Option plugin %s will be used to backup %s\n",
+               ff_pkt->plugin, ff_pkt->fname);
+         do_plugin_set = true;
+         break;
+      case bRC_Skip:
+         Dmsg2(10, "Option plugin %s decided to skip %s\n",
+               ff_pkt->plugin, ff_pkt->fname);
+         goto good_rtn;
+      default:
+         Dmsg2(10, "Option plugin %s decided to let bacula handle %s\n",
+               ff_pkt->plugin, ff_pkt->fname);
+         break;
+      }
+   }
+
+   if (do_plugin_set) {
       /* Tell bfile that it needs to call plugin */
       if (!set_cmd_plugin(&ff_pkt->bfd, jcr)) {
          goto bail_out;
@@ -537,7 +573,7 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       goto bail_out;
    }
    /** Meta data only for restore object */
-   if (ff_pkt->type == FT_RESTORE_FIRST) {
+   if (IS_FT_OBJECT(ff_pkt->type)) {
       goto good_rtn;
    }
 
@@ -662,7 +698,8 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    }
 
    /**
-    * Save ACLs when requested and available for anything not being a symlink and not being a plugin.
+    * Save ACLs when requested and available for anything not being a symlink
+    * and not being a plugin.
     */
    if (have_acl) {
       if (ff_pkt->flags & FO_ACL && ff_pkt->type != FT_LNK && !ff_pkt->cmd_plugin) {
@@ -671,13 +708,14 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
             goto bail_out;
          case bacl_exit_error:
             /**
-             * Non-fatal errors, count them and when the number is under ACL_REPORT_ERR_MAX_PER_JOB
-             * print the error message set by the lower level routine in jcr->errmsg.
+             * Non-fatal errors, count them and when the number is under
+             * ACL_REPORT_ERR_MAX_PER_JOB print the error message set by the
+             * lower level routine in jcr->errmsg.
              */
-            if (jcr->acl_data->nr_errors < ACL_REPORT_ERR_MAX_PER_JOB) {
+            if (jcr->acl_data->u.build->nr_errors < ACL_REPORT_ERR_MAX_PER_JOB) {
                Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
             }
-            jcr->acl_data->nr_errors++;
+            jcr->acl_data->u.build->nr_errors++;
             break;
          case bacl_exit_ok:
             break;
@@ -686,7 +724,8 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    }
 
    /**
-    * Save Extended Attributes when requested and available for all files not being a plugin.
+    * Save Extended Attributes when requested and available for all files not
+    * being a plugin.
     */
    if (have_xattr) {
       if (ff_pkt->flags & FO_XATTR && !ff_pkt->cmd_plugin) {
@@ -695,13 +734,14 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
             goto bail_out;
          case bxattr_exit_error:
             /**
-             * Non-fatal errors, count them and when the number is under XATTR_REPORT_ERR_MAX_PER_JOB
-             * print the error message set by the lower level routine in jcr->errmsg.
+             * Non-fatal errors, count them and when the number is under
+             * XATTR_REPORT_ERR_MAX_PER_JOB print the error message set by the
+             * lower level routine in jcr->errmsg.
              */
-            if (jcr->xattr_data->nr_errors < XATTR_REPORT_ERR_MAX_PER_JOB) {
+            if (jcr->xattr_data->u.build->nr_errors < XATTR_REPORT_ERR_MAX_PER_JOB) {
                Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
             }
-            jcr->xattr_data->nr_errors++;
+            jcr->xattr_data->u.build->nr_errors++;
             break;
          case bxattr_exit_ok:
             break;
@@ -795,11 +835,17 @@ good_rtn:
    rtnstat = jcr->is_canceled() ? 0 : 1; /* good return if not canceled */
 
 bail_out:
-   if (jcr->is_incomplete()) {
+   if (jcr->is_incomplete() || jcr->is_canceled()) {
       rtnstat = 0;
    }
-   if (ff_pkt->cmd_plugin && plugin_started) {
+   if (plugin_started) {
       send_plugin_name(jcr, sd, false); /* signal end of plugin data */
+   }
+   if (ff_pkt->opt_plugin) {
+      jcr->plugin_sp = NULL;    /* sp is local to this function */
+      jcr->plugin_ctx = NULL;
+      jcr->plugin = NULL;
+      jcr->opt_plugin = false;
    }
    if (digest) {
       crypto_digest_free(digest);
@@ -1237,7 +1283,7 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
    encode_stat(attribs, &ff_pkt->statp, sizeof(ff_pkt->statp), ff_pkt->LinkFI, data_stream);
 
    /** Now possibly extend the attributes */
-   if (ff_pkt->type == FT_RESTORE_FIRST) {
+   if (IS_FT_OBJECT(ff_pkt->type)) {
       attr_stream = STREAM_RESTORE_OBJECT;
    } else {
       attribsEx = attribsExBuf;
@@ -1315,15 +1361,16 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
                        ff_pkt->type, ff_pkt->link, 0, attribs, 0, 0, 
                        attribsEx, 0, ff_pkt->delta_seq, 0);
       break;
+   case FT_PLUGIN_CONFIG:
    case FT_RESTORE_FIRST:
       comp_len = ff_pkt->object_len;
       ff_pkt->object_compression = 0;
       if (ff_pkt->object_len > 1000) {
          /* Big object, compress it */
-         int stat;
          comp_len = ff_pkt->object_len + 1000;
          POOLMEM *comp_obj = get_memory(comp_len);
-         stat = Zdeflate(ff_pkt->object, ff_pkt->object_len, comp_obj, comp_len);
+         /* *** FIXME *** check Zdeflate error */
+         Zdeflate(ff_pkt->object, ff_pkt->object_len, comp_obj, comp_len);
          if (comp_len < ff_pkt->object_len) {
             ff_pkt->object = comp_obj;
             ff_pkt->object_compression = 1;    /* zlib level 9 compression */

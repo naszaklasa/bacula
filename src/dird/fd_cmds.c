@@ -49,7 +49,7 @@ const int dbglvl = 400;
 static char filesetcmd[]  = "fileset%s\n"; /* set full fileset */
 static char jobcmd[]      = "JobId=%s Job=%s SDid=%u SDtime=%u Authorization=%s\n";
 /* Note, mtime_only is not used here -- implemented as file option */
-static char levelcmd[]    = "level = %s%s%s mtime_only=%d\n";
+static char levelcmd[]    = "level = %s%s%s mtime_only=%d %s%s\n";
 static char runscript[]   = "Run OnSuccess=%u OnFailure=%u AbortOnError=%u When=%u Command=%s\n";
 static char runbeforenow[]= "RunBeforeNow\n";
 
@@ -176,6 +176,7 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
    utime_t now;
    utime_t last_full_time = 0;
    utime_t last_diff_time;
+   char prev_job[MAX_NAME_LENGTH];
 
    since[0] = 0;
    /* If job cloned and a since time already given, use it */
@@ -188,7 +189,7 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
    if (!jcr->stime) {
       jcr->stime = get_pool_memory(PM_MESSAGE);
    } 
-   jcr->stime[0] = 0;
+   jcr->PrevJob[0] = jcr->stime[0] = 0;
    /*
     * Lookup the last FULL backup job to get the time/date for a
     * differential or incremental save.
@@ -204,10 +205,11 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
        * This is probably redundant, but some of the code below
        * uses jcr->stime, so don't remove unless you are sure.
        */
-      if (!db_find_job_start_time(jcr, jcr->db, &jcr->jr, &jcr->stime)) {
+      if (!db_find_job_start_time(jcr,jcr->db, &jcr->jr, &jcr->stime, jcr->PrevJob)) {
          do_full = true;
       }
-      have_full = db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_FULL);
+      have_full = db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, 
+                                              &stime, prev_job, L_FULL);
       if (have_full) {
          last_full_time = str_to_utime(stime);
       } else {
@@ -218,7 +220,8 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
       /* Make sure the last diff is recent enough */
       if (have_full && jcr->getJobLevel() == L_INCREMENTAL && jcr->job->MaxDiffInterval > 0) {
          /* Lookup last diff job */
-         if (db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_DIFFERENTIAL)) {
+         if (db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, 
+                                         &stime, prev_job, L_DIFFERENTIAL)) {
             last_diff_time = str_to_utime(stime);
             /* If no Diff since Full, use Full time */
             if (last_diff_time < last_full_time) {
@@ -255,7 +258,8 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
          jcr->setJobLevel(jcr->jr.JobLevel = L_DIFFERENTIAL);
       } else {
          if (jcr->job->rerun_failed_levels) {
-            if (db_find_failed_job_since(jcr, jcr->db, &jcr->jr, jcr->stime, JobLevel)) {
+            if (db_find_failed_job_since(jcr, jcr->db, &jcr->jr,
+                                         jcr->stime, JobLevel)) {
                Jmsg(jcr, M_INFO, 0, _("Prior failed job found in catalog. Upgrading to %s.\n"),
                   level_to_str(JobLevel));
                bsnprintf(since, since_len, _(" (upgraded from %s)"),
@@ -271,7 +275,8 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
       jcr->jr.JobId = jcr->JobId;
       break;
    }
-   Dmsg2(100, "Level=%c last start time=%s\n", jcr->getJobLevel(), jcr->stime);
+   Dmsg3(100, "Level=%c last start time=%s job=%s\n", 
+         jcr->getJobLevel(), jcr->stime, jcr->PrevJob);
 }
 
 static void send_since_time(JCR *jcr)
@@ -281,7 +286,8 @@ static void send_since_time(JCR *jcr)
    char ed1[50];
 
    stime = str_to_utime(jcr->stime);
-   fd->fsend(levelcmd, "", NT_("since_utime "), edit_uint64(stime, ed1), 0);
+   fd->fsend(levelcmd, "", NT_("since_utime "), edit_uint64(stime, ed1), 0, 
+             NT_("prev_job="), jcr->PrevJob);
    while (bget_dirmsg(fd) >= 0) {  /* allow him to poll us to sync clocks */
       Jmsg(jcr, M_INFO, 0, "%s\n", fd->msg);
    }
@@ -302,19 +308,19 @@ bool send_level_command(JCR *jcr)
     */
    switch (jcr->getJobLevel()) {
    case L_BASE:
-      fd->fsend(levelcmd, not_accurate, "base", rerunning, 0);
+      fd->fsend(levelcmd, not_accurate, "base", rerunning, 0, "", "");
       break;
    /* L_NONE is the console, sending something off to the FD */
    case L_NONE:
    case L_FULL:
-      fd->fsend(levelcmd, not_accurate, "full", rerunning, 0);
+      fd->fsend(levelcmd, not_accurate, "full", rerunning, 0, "", "");
       break;
    case L_DIFFERENTIAL:
-      fd->fsend(levelcmd, accurate, "differential", rerunning, 0);
+      fd->fsend(levelcmd, accurate, "differential", rerunning, 0, "", "");
       send_since_time(jcr);
       break;
    case L_INCREMENTAL:
-      fd->fsend(levelcmd, accurate, "incremental", rerunning, 0);
+      fd->fsend(levelcmd, accurate, "incremental", rerunning, 0, "", "");
       send_since_time(jcr);
       break;
    case L_SINCE:
@@ -692,9 +698,15 @@ static int restore_object_handler(void *ctx, int num_fields, char **row)
       return 1;
    }
 
-   fd->fsend("restoreobject JobId=%s %s,%s,%s,%s,%s,%s\n",
-      row[0], row[1], row[2], row[3], row[4], row[5], row[6]);
-
+   if (jcr->FDVersion < 5) {    /* Old version without PluginName */
+      fd->fsend("restoreobject JobId=%s %s,%s,%s,%s,%s,%s\n",
+                row[0], row[1], row[2], row[3], row[4], row[5], row[6]);
+   } else {
+      /* bash spaces from PluginName */
+      bash_spaces(row[9]);      
+      fd->fsend("restoreobject JobId=%s %s,%s,%s,%s,%s,%s,%s\n",
+                row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[9]);
+   }
    Dmsg1(010, "Send obj hdr=%s", fd->msg);
 
    fd->msglen = pm_strcpy(fd->msg, row[7]);
@@ -725,6 +737,7 @@ static int restore_object_handler(void *ctx, int num_fields, char **row)
 
 bool send_restore_objects(JCR *jcr)
 {
+   char ed1[50];
    POOL_MEM query(PM_MESSAGE);
    BSOCK *fd;
    OBJ_CTX octx;
@@ -734,14 +747,16 @@ bool send_restore_objects(JCR *jcr)
    }
    octx.jcr = jcr;
    octx.count = 0;
-   Mmsg(query, "SELECT JobId,ObjectLength,ObjectFullLength,ObjectIndex,"
-                      "ObjectType,ObjectCompression,FileIndex,ObjectName,"
-                      "RestoreObject "
-               "FROM RestoreObject "
-              "WHERE JobId IN (%s) "
-              "ORDER BY ObjectIndex ASC", jcr->JobIds);
    
    /* restore_object_handler is called for each file found */
+   
+   /* send restore objects for all jobs involved  */
+   Mmsg(query, get_restore_objects, jcr->JobIds, FT_RESTORE_FIRST);
+   db_sql_query(jcr->db, query.c_str(), restore_object_handler, (void *)&octx);
+
+   /* send config objects for the current restore job */
+   Mmsg(query, get_restore_objects, 
+        edit_uint64(jcr->JobId, ed1), FT_PLUGIN_CONFIG_FILLED);
    db_sql_query(jcr->db, query.c_str(), restore_object_handler, (void *)&octx);
 
    /*

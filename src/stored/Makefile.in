@@ -39,35 +39,35 @@ TAPEOBJS = btape.o block.o butil.o dev.o device.o label.o vtape.o \
 	   lock.o ansi_label.o dvd.o ebcdic.o \
 	   autochanger.o acquire.o mount.o record.o read_record.o \
 	   reserve.o stored_conf.o match_bsr.o parse_bsr.o scan.o \
-	   spool.o vol_mgr.o wait.o
+	   sd_plugins.o spool.o vol_mgr.o wait.o
 
 # bls
 BLSOBJS = bls.o block.o butil.o device.o dev.o label.o match_bsr.o vtape.o \
 	  ansi_label.o dvd.o ebcdic.o lock.o \
 	  autochanger.o acquire.o mount.o parse_bsr.o record.o	\
 	  read_record.o reserve.o scan.o stored_conf.o spool.o \
-	  vol_mgr.o wait.o
+	  sd_plugins.o vol_mgr.o wait.o
 
 # bextract
 BEXTOBJS = bextract.o block.o device.o dev.o label.o record.o vtape.o \
 	   ansi_label.o dvd.o ebcdic.o lock.o \
 	   autochanger.o acquire.o mount.o match_bsr.o parse_bsr.o butil.o \
 	   read_record.o reserve.o scan.o stored_conf.o spool.o \
-	   vol_mgr.o wait.o
+	   sd_plugins.o vol_mgr.o wait.o
 
 # bscan
 SCNOBJS = bscan.o block.o device.o dev.o label.o vtape.o \
 	  ansi_label.o dvd.o ebcdic.o lock.o \
 	  autochanger.o acquire.o mount.o record.o match_bsr.o parse_bsr.o \
 	  butil.o read_record.o scan.o reserve.o stored_conf.o spool.o \
-	  vol_mgr.o wait.o
+	  sd_plugins.o vol_mgr.o wait.o
 
 # bcopy
 COPYOBJS = bcopy.o block.o device.o dev.o label.o vtape.o \
 	   ansi_label.o dvd.o ebcdic.o lock.o \
 	   autochanger.o acquire.o mount.o record.o match_bsr.o parse_bsr.o \
 	   butil.o read_record.o reserve.o \
-	   scan.o stored_conf.o spool.o vol_mgr.o wait.o
+	   sd_plugins.o scan.o stored_conf.o spool.o vol_mgr.o wait.o
 
 
 

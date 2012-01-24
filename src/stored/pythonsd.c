@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, January MMV
  *
- *   Version $Id$
+ *  SD Python interface removed 17 December 2011 (KES)
  *
  */
 
@@ -39,7 +39,7 @@
 #include "bacula.h"
 #include "stored.h"
 
-#ifdef HAVE_PYTHON
+#ifdef xxxxHAVE_PYTHON
 #undef _POSIX_C_SOURCE
 #include <Python.h>
 
@@ -279,4 +279,4 @@ int generate_job_event(JCR *jcr, const char *event)
 { return 1; }
 
 
-#endif /* HAVE_PYTHON */
+#endif /* xxxxHAVE_PYTHON */

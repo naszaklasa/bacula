@@ -634,8 +634,7 @@ bool despool_attributes_from_file(JCR *jcr, const char *file)
    bool ret=false;
    int32_t pktsiz;
    size_t nbytes;
-   ssize_t last = 0, size = 0;
-   int count = 0;
+   ssize_t size = 0;
    int32_t msglen;                    /* message length */
    POOLMEM *msg = get_pool_memory(PM_MESSAGE);
    FILE *spool_fd=NULL;
@@ -673,9 +672,6 @@ bool despool_attributes_from_file(JCR *jcr, const char *file)
             goto bail_out;
          }
          size += nbytes;
-         if ((++count & 0x3F) == 0) {
-            last = size;
-         }
       }
       if (!jcr->is_job_canceled()) {
          update_attribute(jcr, msg, msglen);

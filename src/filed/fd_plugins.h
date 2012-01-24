@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -63,6 +63,7 @@
 #endif
 #endif
 
+#include "../src/version.h"
 #include "bc_types.h"
 #include "lib/plugins.h"
 #include <sys/stat.h>
@@ -79,6 +80,7 @@ struct restore_object_pkt {
    int32_t pkt_size;                  /* size of this packet */
    char *object_name;                 /* Object name */
    char *object;                      /* restore object data to save */
+   char *plugin_name;                 /* Plugin name */
    int32_t object_type;               /* FT_xx for this file */             
    int32_t object_len;                /* restore object length */
    int32_t object_full_len;           /* restore object uncompressed length */
@@ -100,6 +102,7 @@ struct save_pkt {
    int32_t type;                      /* FT_xx for this file */             
    uint32_t flags;                    /* Bacula internal flags */
    bool portable;                     /* set if data format is portable */
+   bool accurate_found;               /* Found in accurate list (valid after check_changes()) */
    char *cmd;                         /* command */
    uint32_t delta_seq;                /* Delta sequence number */
    char *object_name;                 /* Object name to create */
@@ -183,7 +186,8 @@ typedef enum {
   bVarExePath    = 16,
   bVarVersion    = 17,
   bVarDistName   = 18,
-  bVarBEEF       = 19
+  bVarBEEF       = 19,
+  bVarPrevJobName = 20
 } bVariable;
 
 /* Events that are passed to plugin */
@@ -198,23 +202,26 @@ typedef enum {
   bEventEndVerifyJob                    = 8,
   bEventBackupCommand                   = 9,
   bEventRestoreCommand                  = 10,
-  bEventLevel                           = 11,
-  bEventSince                           = 12,
-  bEventCancelCommand                   = 13, /* Executed by another thread */
-  bEventVssBackupAddComponents          = 14, /* Just before bEventVssPrepareSnapshot */
-  bEventVssRestoreLoadComponentMetadata = 15,
-  bEventVssRestoreSetComponentsSelected = 16,
-  bEventRestoreObject                   = 17,
-  bEventEndFileSet                      = 18,
-  bEventPluginCommand                   = 19, /* Sent during FileSet creation */
-  bEventVssBeforeCloseRestore           = 20,
+  bEventEstimateCommand                 = 11,
+  bEventLevel                           = 12,
+  bEventSince                           = 13,
+  bEventCancelCommand                   = 14, /* Executed by another thread */
+  bEventVssBackupAddComponents          = 15, /* Just before bEventVssPrepareSnapshot */
+  bEventVssRestoreLoadComponentMetadata = 16,
+  bEventVssRestoreSetComponentsSelected = 17,
+  bEventRestoreObject                   = 18,
+  bEventEndFileSet                      = 19,
+  bEventPluginCommand                   = 20, /* Sent during FileSet creation */
+  bEventVssBeforeCloseRestore           = 21,
 
   /* Add drives to VSS snapshot 
    *  argument: char[27] drivelist
    * You need to add them without duplicates, 
    * see fd_common.h add_drive() copy_drives() to get help
    */
-  bEventVssPrepareSnapshot              = 21
+  bEventVssPrepareSnapshot              = 22,
+  bEventOptionPlugin                    = 23,
+  bEventHandleBackupFile                = 24 /* Used with Options Plugin */
 } bEventType;
 
 typedef struct s_bEvent {
@@ -239,7 +246,9 @@ bool plugin_name_stream(JCR *jcr, char *name);
 int plugin_create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace);
 bool plugin_set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd);
 int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level);
+int plugin_estimate(JCR *jcr, FF_PKT *ff_pkt, bool top_level);
 bool plugin_check_file(JCR *jcr, char *fname);
+bRC plugin_option_handle_file(JCR *jcr, FF_PKT *ff_pkt, struct save_pkt *sp);
 #endif
 
 #ifdef __cplusplus
@@ -270,6 +279,7 @@ typedef struct s_baculaFuncs {
    bRC (*AddWild)(bpContext *ctx, const char *item, int type);
    bRC (*NewOptions)(bpContext *ctx);
    bRC (*NewInclude)(bpContext *ctx);
+   bRC (*NewPreInclude)(bpContext *ctx);
    bRC (*checkChanges)(bpContext *ctx, struct save_pkt *sp);
 } bFuncs;
 

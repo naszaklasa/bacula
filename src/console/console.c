@@ -598,7 +598,7 @@ static struct cpl_keywords_t cpl_keywords[] = {
    {"fileset=",   ".fileset"       },
    {"client=",    ".client"        },
    {"job=",       ".jobs"          },
-   {"restorejob=",".jobs type=R"  },
+   {"restore_job=",".jobs type=R"  },
    {"level=",     ".level"         },
    {"storage=",   ".storage"       },
    {"schedule=",  ".schedule"      },
@@ -1342,6 +1342,7 @@ static int check_resources()
    return OK;
 }
 
+/* @version */
 static int versioncmd(FILE *input, BSOCK *UA_sock)
 {
    senditf("Version: " VERSION " (" BDATE ") %s %s %s\n",
@@ -1349,6 +1350,7 @@ static int versioncmd(FILE *input, BSOCK *UA_sock)
    return 1;
 }
 
+/* @input <input-filename> */
 static int inputcmd(FILE *input, BSOCK *UA_sock)
 {
    FILE *fd;
@@ -1373,13 +1375,15 @@ static int inputcmd(FILE *input, BSOCK *UA_sock)
    return 1;
 }
 
-/* Send output to both termina and specified file */
+/* @tee <output-filename> */
+/* Send output to both terminal and specified file */
 static int teecmd(FILE *input, BSOCK *UA_sock)
 {
    teeout = true;
    return do_outputcmd(input, UA_sock);
 }
 
+/* @output <output-filename> */
 /* Send output to specified "file" */
 static int outputcmd(FILE *input, BSOCK *UA_sock)
 {
@@ -1420,7 +1424,7 @@ static int do_outputcmd(FILE *input, BSOCK *UA_sock)
 }
 
 /*
- * exec "some-command" [wait-seconds]
+ * @exec "some-command" [wait-seconds]
 */
 static int execcmd(FILE *input, BSOCK *UA_sock)
 {
@@ -1457,6 +1461,7 @@ static int execcmd(FILE *input, BSOCK *UA_sock)
 }
 
 
+/* @echo xxx yyy */
 static int echocmd(FILE *input, BSOCK *UA_sock)
 {
    for (int i=1; i < argc; i++) {
@@ -1466,11 +1471,13 @@ static int echocmd(FILE *input, BSOCK *UA_sock)
    return 1;
 }
 
+/* @quit */
 static int quitcmd(FILE *input, BSOCK *UA_sock)
 {
    return 0;
 }
 
+/* @help */
 static int helpcmd(FILE *input, BSOCK *UA_sock)
 {
    int i;
@@ -1481,6 +1488,7 @@ static int helpcmd(FILE *input, BSOCK *UA_sock)
 }
 
 
+/* @sleep secs */
 static int sleepcmd(FILE *input, BSOCK *UA_sock)
 {
    if (argc > 1) {
@@ -1489,7 +1497,7 @@ static int sleepcmd(FILE *input, BSOCK *UA_sock)
    return 1;
 }
 
-
+/* @time */
 static int timecmd(FILE *input, BSOCK *UA_sock)
 {
    char sdt[50];

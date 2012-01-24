@@ -49,7 +49,7 @@ void stop_dir_heartbeat(JCR *jcr);
 
 /* From acl.c */
 bacl_exit_code build_acl_streams(JCR *jcr, FF_PKT *ff_pkt);
-bacl_exit_code parse_acl_streams(JCR *jcr, int stream);
+bacl_exit_code parse_acl_streams(JCR *jcr, int stream, char *content, uint32_t content_length);
 
 /* from accurate.c */
 bool accurate_finish(JCR *jcr);
@@ -64,7 +64,7 @@ void unstrip_path(FF_PKT *ff_pkt);
 
 /* from xattr.c */
 bxattr_exit_code build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt);
-bxattr_exit_code parse_xattr_streams(JCR *jcr, int stream);
+bxattr_exit_code parse_xattr_streams(JCR *jcr, int stream, char *content, uint32_t content_length);
 
 /* from job.c */
 findINCEXE *new_exclude(JCR *jcr);

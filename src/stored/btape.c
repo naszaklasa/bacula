@@ -2650,7 +2650,10 @@ static bool quickie_cb(DCR *dcr, DEV_RECORD *rec)
 static bool compare_blocks(DEV_BLOCK *last_block, DEV_BLOCK *block)
 {
    char *p, *q;
-   uint32_t CheckSum, block_len;
+   union {
+      uint32_t CheckSum;
+      uint32_t block_len;
+   };
    ser_declare;
 
    p = last_block->buf;

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *
  *     Kern Sibbald, May MM
  *
- *     Version $Id$
  */
 
 #include "bacula.h"
@@ -163,6 +162,8 @@ static struct s_kw RunFields[] = {
    {"priority",          'p'},
    {"spooldata",         's'},
    {"writepartafterjob", 'W'},
+   {"maxrunschedtime",   'm'},
+   {"accurate",          'a'},
    {NULL,                 0}
 };
 
@@ -183,6 +184,7 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
 {
    int i, j;
    bool found;
+   utime_t utime;
    int token, state, state2 = 0, code = 0, code2 = 0;
    int options = lc->options;
    RUN **run = (RUN **)(item->value);
@@ -199,7 +201,7 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
    for (found=true; found; ) {
       found = false;
       token = lex_get_token(lc, T_NAME);
-      for (i=0; RunFields[i].name; i++) {
+      for (i=0; !found && RunFields[i].name; i++) {
          if (strcasecmp(lc->str, RunFields[i].name) == 0) {
             found = true;
             if (lex_get_token(lc, T_ALL) != T_EQUALS) {
@@ -302,6 +304,27 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
                      /* NOT REACHED */
                   }
                   lrun.msgs = (MSGS *)res;
+               }
+               break;
+            case 'm':           /* max run sched time */
+               token = lex_get_token(lc, T_QUOTED_STRING); 
+               if (!duration_to_utime(lc->str, &utime)) {
+                  scan_err1(lc, _("expected a time period, got: %s"), lc->str);
+                  return;
+               }
+               lrun.MaxRunSchedTime = utime;
+               lrun.MaxRunSchedTime_set = true;
+               break;
+            case 'a':           /* accurate */
+               token = lex_get_token(lc, T_NAME);
+               if (strcasecmp(lc->str, "yes") == 0 || strcasecmp(lc->str, "true") == 0) {
+                  lrun.accurate = true;
+                  lrun.accurate_set = true;
+               } else if (strcasecmp(lc->str, "no") == 0 || strcasecmp(lc->str, "false") == 0) {
+                  lrun.accurate = false;
+                  lrun.accurate_set = true;
+               } else {
+                  scan_err1(lc, _("Expect a YES or NO, got: %s"), lc->str);
                }
                break;
             default:

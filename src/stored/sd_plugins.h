@@ -105,9 +105,10 @@ typedef enum {
 typedef enum {
   bsdEventJobStart       = 1,
   bsdEventJobEnd         = 2,
-  bsdEventDeviceOpen     = 3,
-  bsdEventDeviceTryOpen  = 4,
-  bsdEventDeviceClose    = 5
+  bsdEventDeviceInit     = 3,
+  bsdEventDeviceOpen     = 4,
+  bsdEventDeviceTryOpen  = 5,
+  bsdEventDeviceClose    = 6
 } bsdEventType;
 
 typedef struct s_bsdEvent {

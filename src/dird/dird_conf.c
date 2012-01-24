@@ -1642,14 +1642,13 @@ static void store_actiononpurge(LEX *lc, RES_ITEM *item, int index, int pass)
  */
 static void store_device(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token;
    URES *res;
    int rindex = R_DEVICE - r_first;
    int size = sizeof(DEVICE);
    bool found = false;
 
    if (pass == 1) {
-      token = lex_get_token(lc, T_NAME);
+      lex_get_token(lc, T_NAME);
       if (!res_head[rindex]) {
          res = (URES *)malloc(size);
          memset(res, 0, size);
@@ -1689,9 +1688,9 @@ static void store_device(LEX *lc, RES_ITEM *item, int index, int pass)
  */
 void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token, i;
+   int i;
 
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    /* Store the type both pass 1 and pass 2 */
    for (i=0; migtypes[i].type_name; i++) {
       if (strcasecmp(lc->str, migtypes[i].type_name) == 0) {
@@ -1715,9 +1714,9 @@ void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
  */
 void store_jobtype(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token, i;
+   int i;
 
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    /* Store the type both pass 1 and pass 2 */
    for (i=0; jobtypes[i].type_name; i++) {
       if (strcasecmp(lc->str, jobtypes[i].type_name) == 0) {
@@ -1739,9 +1738,9 @@ void store_jobtype(LEX *lc, RES_ITEM *item, int index, int pass)
  */
 void store_level(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token, i;
+   int i;
 
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    /* Store the level pass 2 so that type is defined */
    for (i=0; joblevels[i].level_name; i++) {
       if (strcasecmp(lc->str, joblevels[i].level_name) == 0) {
@@ -1760,8 +1759,8 @@ void store_level(LEX *lc, RES_ITEM *item, int index, int pass)
 
 void store_replace(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token, i;
-   token = lex_get_token(lc, T_NAME);
+   int i;
+   lex_get_token(lc, T_NAME);
    /* Scan Replacement options */
    for (i=0; ReplaceOptions[i].name; i++) {
       if (strcasecmp(lc->str, ReplaceOptions[i].name) == 0) {
@@ -1786,7 +1785,7 @@ void store_acl(LEX *lc, RES_ITEM *item, int index, int pass)
    int token;
 
    for (;;) {
-      token = lex_get_token(lc, T_STRING);
+      lex_get_token(lc, T_STRING);
       if (pass == 1) {
          if (((alist **)item->value)[item->code] == NULL) {
             ((alist **)item->value)[item->code] = New(alist(10, owned_by_alist));
@@ -2079,8 +2078,10 @@ extern "C" char *job_code_callback_director(JCR *jcr, const char* param)
          break;
       case 'x':
          return jcr->spool_data ? yes : no;
+         break;
       case 'D':
          return my_name;
+         break;
    }
    return NULL;
 }

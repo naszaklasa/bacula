@@ -93,8 +93,10 @@
 #define JS_DataDespooling        'l'  /* Doing data despooling */
 #define JS_WaitMedia             'm'  /* waiting for new media */
 #define JS_WaitPriority          'p'  /* Waiting for higher priority jobs to finish */
+#define JS_WaitDevice            'q'  /* Queued waiting for device */
 #define JS_WaitStoreRes          's'  /* Waiting for storage resource */
 #define JS_WaitStartTime         't'  /* Waiting for start time */ 
+
 
 /* Migration selection types */
 enum {
@@ -127,6 +129,7 @@ enum {
    jcr->JobStatus == JS_WaitPriority || \
    jcr->SDJobStatus == JS_WaitMedia  || \
    jcr->SDJobStatus == JS_WaitMount  || \
+   jcr->SDJobStatus == JS_WaitDevice || \
    jcr->SDJobStatus == JS_WaitMaxJobs)
 
 
@@ -141,10 +144,11 @@ enum {
 
 /* Forward referenced structures */
 class JCR;
+class BSOCK;
 struct FF_PKT;
 class  B_DB;
 struct ATTR_DBR;
-struct Plugin;
+class Plugin;
 struct save_pkt;
 struct bpContext;
 struct xattr_private_data_t;
@@ -204,7 +208,9 @@ public:
    };
    const char *get_OperationName();       /* in lib/jcr.c */
    const char *get_ActionName(bool past); /* in lib/jcr.c */
-   void setJobStatus(int JobStatus);      /* in lib/jcr.c */
+   void setJobStatus(int newJobStatus);   /* in lib/jcr.c */
+   bool sendJobStatus();                  /* in lib/jcr.c */
+   bool sendJobStatus(int newJobStatus);  /* in lib/jcr.c */
    bool JobReads();                       /* in lib/jcr.c */
    void my_thread_send_signal(int sig);   /* in lib/jcr.c */
    void set_killable(bool killable);      /* in lib/jcr.c */
@@ -262,6 +268,7 @@ public:
    bool cached_attribute;             /* set if attribute is cached */
    bool batch_started;                /* is batch mode already started ? */
    bool cmd_plugin;                   /* Set when processing a command Plugin = */
+   bool opt_plugin;                   /* Set when processing an option Plugin = */
    bool keep_path_list;               /* Keep newly created path in a hash */
    bool accurate;                     /* true if job is accurate */
    bool HasBase;                      /* True if job use base jobs */
@@ -295,7 +302,6 @@ public:
    pthread_t SD_msg_chan;             /* Message channel thread id */
    pthread_cond_t term_wait;          /* Wait for job termination */
    workq_ele_t *work_item;            /* Work queue item if scheduled */
-   volatile bool sd_msg_thread_done;  /* Set when Storage message thread done */
    BSOCK *ua;                         /* User agent */
    JOB *job;                          /* Job resource */
    JOB *verify_job;                   /* Job resource of verify previous job */
@@ -328,6 +334,7 @@ public:
    JCR *mig_jcr;                      /* JCR for migration/copy job */
    char FSCreateTime[MAX_TIME_LENGTH]; /* FileSet CreateTime as returned from DB */
    char since[MAX_TIME_LENGTH];       /* since time */
+   char PrevJob[MAX_NAME_LENGTH];     /* Previous job name assiciated with since time */
    union {
       JobId_t RestoreJobId;           /* Id specified by UA */
       JobId_t MigrateJobId;
@@ -343,6 +350,7 @@ public:
    int32_t reschedule_count;          /* Number of times rescheduled */
    int32_t FDVersion;                 /* File daemon version number */
    int64_t spool_size;                /* Spool size for this job */
+   volatile bool sd_msg_thread_done;  /* Set when Storage message thread done */
    bool wasVirtualFull;               /* set if job was VirtualFull */
    bool IgnoreDuplicateJobChecking;   /* set in migration jobs */
    bool spool_data;                   /* Spool data in SD */
@@ -364,6 +372,7 @@ public:
    bool run_inc_pool_override;
    bool run_diff_pool_override;
    bool sd_canceled;                  /* set if SD canceled */
+   bool RescheduleIncompleteJobs;     /* set if incomplete can be rescheduled */
 #endif /* DIRECTOR_DAEMON */
 
 
@@ -388,6 +397,7 @@ public:
    int32_t buf_size;                  /* length of buffer */
    FF_PKT *ff;                        /* Find Files packet */
    char stored_addr[MAX_NAME_LENGTH]; /* storage daemon address */
+   char PrevJob[MAX_NAME_LENGTH];     /* Previous job name assiciated with since time */
    uint32_t StartFile;
    uint32_t EndFile;
    uint32_t StartBlock;

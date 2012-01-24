@@ -567,7 +567,7 @@ int vtape::fsr(int count)
    ASSERT(fd >= 0);
    
    int i,nb, ret=0;
-   boffset_t where=0;
+// boffset_t where=0;
    uint32_t s;
    Dmsg4(dbglevel, "fsr %i:%i EOF=%i c=%i\n", 
          current_file,current_block,atEOF,count);
@@ -592,7 +592,7 @@ int vtape::fsr(int count)
       nb = ::read(fd, &s, sizeof(uint32_t)); /* get size of next block */
       if (nb == sizeof(uint32_t) && s) {
          current_block++;
-         where = lseek(fd, s, SEEK_CUR);     /* seek after this block */
+         lseek(fd, s, SEEK_CUR);     /* seek after this block */
       } else {
          Dmsg4(dbglevel, "read EOF %i:%i nb=%i s=%i\n",
                current_file, current_block, nb,s);

@@ -63,17 +63,28 @@ struct xattr_link_cache_entry_t {
 #define BXATTR_FLAG_SAVE_NATIVE    0x01
 #define BXATTR_FLAG_RESTORE_NATIVE 0x02
 
+struct xattr_build_data_t {
+   uint32_t nr_errors;
+   uint32_t nr_saved;
+   POOLMEM *content;
+   uint32_t content_length;
+   alist *link_cache;
+};
+
+struct xattr_parse_data_t {
+   uint32_t nr_errors;
+};
+
 /*
  * Internal tracking data.
  */
 struct xattr_data_t {
-   POOLMEM *content;
-   uint32_t content_length;
-   uint32_t nr_errors;
-   uint32_t nr_saved;
-   alist *link_cache;
-   uint32_t current_dev;
    uint32_t flags;              /* See BXATTR_FLAG_* */
+   uint32_t current_dev;
+   union {
+      struct xattr_build_data_t *build;
+      struct xattr_parse_data_t *parse;
+   } u;
 };
 
 /*

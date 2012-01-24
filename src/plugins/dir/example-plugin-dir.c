@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,7 +38,7 @@
 extern "C" {
 #endif
 
-#define PLUGIN_LICENSE      "GPL"
+#define PLUGIN_LICENSE      "Bacula AGPLv3"
 #define PLUGIN_AUTHOR       "Kern Sibbald"
 #define PLUGIN_DATE         "January 2008"
 #define PLUGIN_VERSION      "1"
@@ -47,16 +47,16 @@ extern "C" {
 /* Forward referenced functions */
 static bRC newPlugin(bpContext *ctx);
 static bRC freePlugin(bpContext *ctx);
-static bRC getPluginValue(bpContext *ctx, pVariable var, void *value);
-static bRC setPluginValue(bpContext *ctx, pVariable var, void *value);
-static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value);
+static bRC getPluginValue(bpContext *ctx, pDirVariable var, void *value);
+static bRC setPluginValue(bpContext *ctx, pDirVariable var, void *value);
+static bRC handlePluginEvent(bpContext *ctx, bDirEvent *event, void *value);
 
 
 /* Pointers to Bacula functions */
-static bFuncs *bfuncs = NULL;
-static bInfo  *binfo = NULL;
+static bDirFuncs *bfuncs = NULL;
+static bDirInfo  *binfo = NULL;
 
-static pInfo pluginInfo = {
+static pDirInfo pluginInfo = {
    sizeof(pluginInfo),
    DIR_PLUGIN_INTERFACE_VERSION,
    DIR_PLUGIN_MAGIC,
@@ -64,10 +64,10 @@ static pInfo pluginInfo = {
    PLUGIN_AUTHOR,
    PLUGIN_DATE,
    PLUGIN_VERSION,
-   PLUGIN_DESCRIPTION,
+   PLUGIN_DESCRIPTION
 };
 
-static pFuncs pluginFuncs = {
+static pDirFuncs pluginFuncs = {
    sizeof(pluginFuncs),
    DIR_PLUGIN_INTERFACE_VERSION,
 
@@ -79,7 +79,7 @@ static pFuncs pluginFuncs = {
    handlePluginEvent
 };
 
-bRC loadPlugin(bInfo *lbinfo, bFuncs *lbfuncs, pInfo **pinfo, pFuncs **pfuncs)
+bRC loadPlugin(bDirInfo *lbinfo, bDirFuncs *lbfuncs, pDirInfo **pinfo, pDirFuncs **pfuncs)
 {
    bfuncs = lbfuncs;                  /* set Bacula funct pointers */
    binfo  = lbinfo;
@@ -100,7 +100,7 @@ bRC unloadPlugin()
 static bRC newPlugin(bpContext *ctx)
 {
    int JobId = 0;
-   bfuncs->getBaculaValue(ctx, bVarJobId, (void *)&JobId);
+   bfuncs->getBaculaValue(ctx, bDirVarJobId, (void *)&JobId);
    printf("plugin: newPlugin JobId=%d\n", JobId);
    bfuncs->registerBaculaEvents(ctx, 1, 2, 0);
    return bRC_OK;
@@ -109,59 +109,59 @@ static bRC newPlugin(bpContext *ctx)
 static bRC freePlugin(bpContext *ctx)
 {
    int JobId = 0;
-   bfuncs->getBaculaValue(ctx, bVarJobId, (void *)&JobId);
+   bfuncs->getBaculaValue(ctx, bDirVarJobId, (void *)&JobId);
    printf("plugin: freePlugin JobId=%d\n", JobId);
    return bRC_OK;
 }
 
-static bRC getPluginValue(bpContext *ctx, pVariable var, void *value) 
+static bRC getPluginValue(bpContext *ctx, pDirVariable var, void *value) 
 {
    printf("plugin: getPluginValue var=%d\n", var);
    return bRC_OK;
 }
 
-static bRC setPluginValue(bpContext *ctx, pVariable var, void *value) 
+static bRC setPluginValue(bpContext *ctx, pDirVariable var, void *value) 
 {
    printf("plugin: setPluginValue var=%d\n", var);
    return bRC_OK;
 }
 
-static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
+static bRC handlePluginEvent(bpContext *ctx, bDirEvent *event, void *value)
 {
    char *name;
    int val;
    switch (event->eventType) {
-   case bEventJobStart:
+   case bDirEventJobStart:
       printf("plugin: HandleEvent JobStart\n");
       break;
-   case bEventJobEnd:
+   case bDirEventJobEnd:
       printf("plugin: HandleEvent JobEnd\n");
-      bfuncs->getBaculaValue(ctx, bVarJob, (void *)&name);
-      printf("plugin: bVarJob=%s\n", name);
-      bfuncs->getBaculaValue(ctx, bVarJobId, (void *)&val);
-      printf("plugin: bVarJobId=%d\n", val);
-      bfuncs->getBaculaValue(ctx, bVarType, (void *)&val);
-      printf("plugin: bVarType=%c\n", val);
-      bfuncs->getBaculaValue(ctx, bVarLevel, (void *)&val);
-      printf("plugin: bVarLevel=%c\n", val);
-      bfuncs->getBaculaValue(ctx, bVarClient, (void *)&name);
-      printf("plugin: bVarClient=%s\n", name);
-      bfuncs->getBaculaValue(ctx, bVarCatalog, (void *)&name);
-      printf("plugin: bVarCatalog=%s\n", name);
-      bfuncs->getBaculaValue(ctx, bVarPool, (void *)&name);
-      printf("plugin: bVarPool=%s\n", name);
-      bfuncs->getBaculaValue(ctx, bVarStorage, (void *)&name);
-      printf("plugin: bVarStorage=%s\n", name);
-      bfuncs->getBaculaValue(ctx, bVarJobErrors, (void *)&val);
-      printf("plugin: bVarJobErrors=%d\n", val);
-      bfuncs->getBaculaValue(ctx, bVarJobFiles, (void *)&val);
-      printf("plugin: bVarJobFiles=%d\n", val);
-      bfuncs->getBaculaValue(ctx, bVarNumVols, (void *)&val);
-      printf("plugin: bVarNumVols=%d\n", val);
+      bfuncs->getBaculaValue(ctx, bDirVarJob, (void *)&name);
+      printf("plugin: bDirVarJob=%s\n", name);
+      bfuncs->getBaculaValue(ctx, bDirVarJobId, (void *)&val);
+      printf("plugin: bDirVarJobId=%d\n", val);
+      bfuncs->getBaculaValue(ctx, bDirVarType, (void *)&val);
+      printf("plugin: bDirVarType=%c\n", val);
+      bfuncs->getBaculaValue(ctx, bDirVarLevel, (void *)&val);
+      printf("plugin: bDirVarLevel=%c\n", val);
+      bfuncs->getBaculaValue(ctx, bDirVarClient, (void *)&name);
+      printf("plugin: bDirVarClient=%s\n", name);
+      bfuncs->getBaculaValue(ctx, bDirVarCatalog, (void *)&name);
+      printf("plugin: bDirVarCatalog=%s\n", name);
+      bfuncs->getBaculaValue(ctx, bDirVarPool, (void *)&name);
+      printf("plugin: bDirVarPool=%s\n", name);
+      bfuncs->getBaculaValue(ctx, bDirVarStorage, (void *)&name);
+      printf("plugin: bDirVarStorage=%s\n", name);
+      bfuncs->getBaculaValue(ctx, bDirVarJobErrors, (void *)&val);
+      printf("plugin: bDirVarJobErrors=%d\n", val);
+      bfuncs->getBaculaValue(ctx, bDirVarJobFiles, (void *)&val);
+      printf("plugin: bDirVarJobFiles=%d\n", val);
+      bfuncs->getBaculaValue(ctx, bDirVarNumVols, (void *)&val);
+      printf("plugin: bDirVarNumVols=%d\n", val);
 
       break;
    }
-   bfuncs->getBaculaValue(ctx, bVarJobName, (void *)&name);
+   bfuncs->getBaculaValue(ctx, bDirVarJobName, (void *)&name);
    printf("Job Name=%s\n", name);
    bfuncs->JobMessage(ctx, __FILE__, __LINE__, M_INFO, 0, "JobMesssage message");
    bfuncs->DebugMessage(ctx, __FILE__, __LINE__, 1, "DebugMesssage message");
