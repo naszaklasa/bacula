@@ -1,3 +1,10 @@
+bacula (5.2.4-1) UNRELEASED; urgency=low
+
+  * Non-maintainer upload.
+  * Upstream 5.2.4
+
+ -- Bartosz Cisek <bartosz.cisek@nasza-klasa.pl>  Tue, 24 Jan 2012 08:48:22 +0100
+
 bacula (5.2.3-1) UNRELEASED; urgency=low
 
   * Non-maintainer upload.
