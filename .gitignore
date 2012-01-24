@@ -93,6 +93,7 @@ oldtxt
 kerns-bs-config
 libtool
 config.status.lineno
+.pc
 
 # autoconf/
 autoconf/autom4te.cache
