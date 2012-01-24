@@ -127,16 +127,16 @@ int db_list_handler(void *ctx, int num_fields, char **row)
 }
 
 /*
- *  * specific context passed from db_check_max_connections to db_max_connections_handler.
- *   */
+ * specific context passed from db_check_max_connections to db_max_connections_handler.
+ */
 struct max_connections_context {
    B_DB *db;
    uint32_t nr_connections;
 };
 
 /*
- *  * Called here to retrieve an integer from the database
- *   */
+ * Called here to retrieve an integer from the database
+ */
 static inline int db_max_connections_handler(void *ctx, int num_fields, char **row)
 {
    struct max_connections_context *context;
@@ -160,8 +160,8 @@ static inline int db_max_connections_handler(void *ctx, int num_fields, char **r
 }
 
 /*
- *  * Check catalog max_connections setting
- *   */
+ * Check catalog max_connections setting
+ */
 bool db_check_max_connections(JCR *jcr, B_DB *mdb, uint32_t max_concurrent_jobs)
 {
    struct max_connections_context context;
@@ -300,7 +300,8 @@ UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
    return 1;
 }
 
-/* Utility routine for deletes
+/*
+ * Utility routine for deletes
  *
  * Returns: -1 on error
  *           n number of rows affected
@@ -350,8 +351,8 @@ int get_sql_record_max(JCR *jcr, B_DB *mdb)
 }
 
 /*
- *  * Return pre-edited error message
- *   */
+ * Return pre-edited error message
+ */
 char *db_strerror(B_DB *mdb)
 {
    return mdb->errmsg;
@@ -586,9 +587,10 @@ vertical_list:
 
 /*
  * If full_list is set, we list vertically, otherwise, we
- * list on one line horizontally.
+ *  list on one line horizontally.
+ * Return number of rows
  */
-void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type)
+int list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type)
 {
    SQL_FIELD *field;
    SQL_ROW row;
@@ -599,7 +601,7 @@ void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_t
    Dmsg0(800, "list_result starts\n");
    if (sql_num_rows(mdb) == 0) {
       send(ctx, _("No results to list.\n"));
-      return;
+      return sql_num_rows(mdb);
    }
 
    num_fields = sql_num_fields(mdb);
@@ -676,7 +678,7 @@ void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_t
       send(ctx, "\n");
    }
    list_dashes(mdb, send, ctx);
-   return;
+   return sql_num_rows(mdb);
 
 vertical_list:
 
@@ -700,7 +702,7 @@ vertical_list:
       }
       send(ctx, "\n");
    }
-   return;
+   return sql_num_rows(mdb);
 }
 
 /* 

@@ -215,7 +215,7 @@ static bool accurate_add_file(JCR *jcr, uint32_t len,
    /* we store CurFile, fname and ctime/mtime in the same chunk 
     * we need one extra byte to handle an empty chksum
     */
-   item = (CurFile *)jcr->file_list->hash_malloc(sizeof(CurFile)+len+1);
+   item = (CurFile *)jcr->file_list->hash_malloc(sizeof(CurFile)+len+3);
    item->seen = 0;
 
    /* TODO: see if we can optimize this part with memcpy instead of strcpy */
@@ -259,6 +259,7 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
    CurFile elt;
 
    ff_pkt->delta_seq = 0;
+   ff_pkt->accurate_found = false;
 
    if (!jcr->accurate && !jcr->rerunning) {
       return true;
@@ -278,6 +279,7 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
       goto bail_out;
    }
 
+   ff_pkt->accurate_found = true;
    ff_pkt->delta_seq = elt.delta_seq;
 
    if (elt.seen) { /* file has been seen ? */
@@ -380,7 +382,9 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
             stat = true;
          }
          break;
-
+      case 'A':                 /* Always backup a file */
+         stat = true;
+         break;
       /* TODO: cleanup and factorise this function with verify.c */
       case '5':                /* compare MD5 */
       case '1':                /* compare SHA1 */
@@ -496,7 +500,7 @@ int accurate_cmd(JCR *jcr)
    BSOCK *dir = jcr->dir_bsock;
    int lstat_pos, chksum_pos;
    int32_t nb;
-   uint32_t delta_seq;
+   uint16_t delta_seq;
 
    if (job_canceled(jcr)) {
       return true;

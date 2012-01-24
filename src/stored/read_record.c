@@ -408,7 +408,7 @@ static void handle_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *s
    const char *rtype;
    char buf[100];
 
-   memset(sessrec, 0, sizeof(sessrec));
+   memset(sessrec, 0, sizeof(SESSION_LABEL));
    switch (rec->FileIndex) {
    case PRE_LABEL:
       rtype = _("Fresh Volume Label");

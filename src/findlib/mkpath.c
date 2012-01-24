@@ -42,6 +42,90 @@
 #include "bacula.h"
 #include "jcr.h"
 
+#define dbglvl 50
+
+typedef struct PrivateCurDir {
+   hlink link;
+   char fname[1];
+} CurDir;
+
+/* Initialize the path hash table */
+static bool path_list_init(JCR *jcr)
+{
+   CurDir *elt = NULL;
+   jcr->path_list = (htable *)malloc(sizeof(htable));
+
+   /* Hard to know in advance how many directories will
+    * be stored in this hash
+    */
+   jcr->path_list->init(elt, &elt->link, 10000);
+   return true;
+}
+
+/* Add a path to the hash when we create a directory
+ * with the replace=NEVER option
+ */
+bool path_list_add(JCR *jcr, uint32_t len, char *fname)
+{
+   bool ret = true;
+   CurDir *item;
+
+   if (!jcr->path_list) {
+      path_list_init(jcr);
+   }
+
+   /* we store CurDir, fname in the same chunk */
+   item = (CurDir *)jcr->path_list->hash_malloc(sizeof(CurDir)+len+1);
+   
+   memset(item, 0, sizeof(CurDir));
+   memcpy(item->fname, fname, len+1);
+
+   jcr->path_list->insert(item->fname, item); 
+
+   Dmsg1(dbglvl, "add fname=<%s>\n", fname);
+   return ret;
+}
+
+void free_path_list(JCR *jcr)
+{
+   if (jcr->path_list) {
+      jcr->path_list->destroy();
+      free(jcr->path_list);
+      jcr->path_list = NULL;
+   }
+}
+
+bool path_list_lookup(JCR *jcr, char *fname)
+{
+   bool found=false;
+   char bkp;
+
+   if (!jcr->path_list) {
+      return false;
+   }
+
+   /* Strip trailing / */
+   int len = strlen(fname);
+   if (len == 0) {
+      return false;
+   }
+   len--;
+   bkp = fname[len];
+   if (fname[len] == '/') {       /* strip any trailing slash */
+      fname[len] = 0;
+   }
+
+   CurDir *temp = (CurDir *)jcr->path_list->lookup(fname);
+   if (temp) {
+      found=true;
+   }
+
+   Dmsg2(dbglvl, "lookup <%s> %s\n", fname, found?"ok":"not ok");
+
+   fname[len] = bkp;            /* restore last / */
+   return found;
+}
+
 static bool makedir(JCR *jcr, char *path, mode_t mode, int *created)
 {
    struct stat statp;
@@ -59,6 +143,12 @@ static bool makedir(JCR *jcr, char *path, mode_t mode, int *created)
       }
       return true;                 /* directory exists */
    }
+
+   if (jcr->keep_path_list) {
+      /* When replace=NEVER, we keep track of all directories newly created */
+      path_list_add(jcr, strlen(path), path);
+   }
+
    *created = true;
    return true;
 }
@@ -174,7 +264,6 @@ bool makepath(ATTR *attr, const char *apath, mode_t mode, mode_t parent_mode,
       if (!makedir(jcr, path, tmode, &created)) {
          goto bail_out;
       }
-      Dmsg2(400, "makedir: created=%d %s\n", created, path);
       if (ndir < max_dirs) {
          new_dir[ndir++] = created;
       }
@@ -187,7 +276,6 @@ bool makepath(ATTR *attr, const char *apath, mode_t mode, mode_t parent_mode,
    if (!makedir(jcr, path, tmode, &created)) {
       goto bail_out;
    }
-   Dmsg2(400, "makedir: created=%d %s\n", created, path);
    if (ndir < max_dirs) {
       new_dir[ndir++] = created;
    }

@@ -197,6 +197,8 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
             ff->strip_path = fo->strip_path;
             ff->fstypes = fo->fstype;
             ff->drivetypes = fo->drivetype;
+            ff->plugin = fo->plugin; /* TODO: generate a plugin event ? */
+            ff->opt_plugin = (ff->plugin != NULL)? true : false;
             bstrncat(ff->VerifyOpts, fo->VerifyOpts, sizeof(ff->VerifyOpts));
             if (fo->AccurateOpts[0]) {
                bstrncpy(ff->AccurateOpts, fo->AccurateOpts, sizeof(ff->AccurateOpts));

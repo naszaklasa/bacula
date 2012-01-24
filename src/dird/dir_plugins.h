@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,8 +32,8 @@
  *
  */
  
-#ifndef __FD_PLUGINS_H 
-#define __FD_PLUGINS_H
+#ifndef __DIR_PLUGINS_H 
+#define __DIR_PLUGINS_H
 
 #ifndef _BACULA_H
 #ifdef __cplusplus
@@ -71,80 +71,80 @@ extern "C" {
 
 /* Bacula Variable Ids */       /* return value */
 typedef enum {
-  bVarJob       = 1,            // string
-  bVarLevel     = 2,            // int   
-  bVarType      = 3,            // int   
-  bVarJobId     = 4,            // int   
-  bVarClient    = 5,            // string
-  bVarNumVols   = 6,            // int   
-  bVarPool      = 7,            // string
-  bVarStorage   = 8,            // string
-  bVarWriteStorage = 9,         // string
-  bVarReadStorage  = 10,        // string
-  bVarCatalog   = 11,           // string
-  bVarMediaType = 12,           // string
-  bVarJobName   = 13,           // string
-  bVarJobStatus = 14,           // int   
-  bVarPriority  = 15,           // int   
-  bVarVolumeName = 16,          // string
-  bVarCatalogRes = 17,          // NYI      
-  bVarJobErrors  = 18,          // int   
-  bVarJobFiles   = 19,          // int   
-  bVarSDJobFiles = 20,          // int   
-  bVarSDErrors   = 21,          // int   
-  bVarFDJobStatus = 22,         // int   
-  bVarSDJobStatus = 23          // int   
-} brVariable;
+  bDirVarJob       = 1,            // string
+  bDirVarLevel     = 2,            // int   
+  bDirVarType      = 3,            // int   
+  bDirVarJobId     = 4,            // int   
+  bDirVarClient    = 5,            // string
+  bDirVarNumVols   = 6,            // int   
+  bDirVarPool      = 7,            // string
+  bDirVarStorage   = 8,            // string
+  bDirVarWriteStorage = 9,         // string
+  bDirVarReadStorage  = 10,        // string
+  bDirVarCatalog   = 11,           // string
+  bDirVarMediaType = 12,           // string
+  bDirVarJobName   = 13,           // string
+  bDirVarJobStatus = 14,           // int   
+  bDirVarPriority  = 15,           // int   
+  bDirVarVolumeName = 16,          // string
+  bDirVarCatalogRes = 17,          // NYI      
+  bDirVarJobErrors  = 18,          // int   
+  bDirVarJobFiles   = 19,          // int   
+  bDirVarSDJobFiles = 20,          // int   
+  bDirVarSDErrors   = 21,          // int   
+  bDirVarFDJobStatus = 22,         // int   
+  bDirVarSDJobStatus = 23          // int   
+} brDirVariable;
 
 typedef enum {
-  bwVarJobReport  = 1,
-  bwVarVolumeName = 2,
-  bwVarPriority   = 3,
-  bwVarJobLevel   = 4
-} bwVariable;
+  bwDirVarJobReport  = 1,
+  bwDirVarVolumeName = 2,
+  bwDirVarPriority   = 3,
+  bwDirVarJobLevel   = 4
+} bwDirVariable;
 
 
 typedef enum {
-  bEventJobStart      = 1,
-  bEventJobEnd        = 2,
-  bEventJobInit       = 3,
-  bEventJobRun        = 4,
-  bEventVolumePurged  = 5,
-  bEventNewVolume     = 6,
-  bEventNeedVolume    = 7,
-  bEventVolumeFull    = 8,
-  bEventRecyle        = 9,
-  bEventGetScratch    = 10
-} bEventType;
+  bDirEventJobStart      = 1,
+  bDirEventJobEnd        = 2,
+  bDirEventJobInit       = 3,
+  bDirEventJobRun        = 4,
+  bDirEventVolumePurged  = 5,
+  bDirEventNewVolume     = 6,
+  bDirEventNeedVolume    = 7,
+  bDirEventVolumeFull    = 8,
+  bDirEventRecyle        = 9,
+  bDirEventGetScratch    = 10
+} bDirEventType;
 
-typedef struct s_bEvent {
+typedef struct s_bDirEvent {
    uint32_t eventType;
-} bEvent;
+} bDirEvent;
 
-typedef struct s_baculaInfo {
+typedef struct s_dirbaculaInfo {
    uint32_t size;
    uint32_t version;  
-} bInfo;
+} bDirInfo;
 
 /* Bacula interface version and function pointers */
-typedef struct s_baculaFuncs {  
+typedef struct s_dirbaculaFuncs {  
    uint32_t size;
    uint32_t version;
    bRC (*registerBaculaEvents)(bpContext *ctx, ...);
-   bRC (*getBaculaValue)(bpContext *ctx, brVariable var, void *value);
-   bRC (*setBaculaValue)(bpContext *ctx, bwVariable var, void *value);
+   bRC (*getBaculaValue)(bpContext *ctx, brDirVariable var, void *value);
+   bRC (*setBaculaValue)(bpContext *ctx, bwDirVariable var, void *value);
    bRC (*JobMessage)(bpContext *ctx, const char *file, int line, 
                      int type, utime_t mtime, const char *fmt, ...);     
    bRC (*DebugMessage)(bpContext *ctx, const char *file, int line,
                        int level, const char *fmt, ...);
-} bFuncs;
+} bDirFuncs;
 
 /* Bacula Core Routines -- not used within a plugin */
 #ifdef DIRECTOR_DAEMON
 void load_dir_plugins(const char *plugin_dir);
 void new_plugins(JCR *jcr);
 void free_plugins(JCR *jcr);
-void generate_plugin_event(JCR *jcr, bEventType event, void *value=NULL);
+int generate_plugin_event(JCR *jcr, bDirEventType event, void *value=NULL);
 #endif
 
 
@@ -155,15 +155,15 @@ void generate_plugin_event(JCR *jcr, bEventType event, void *value=NULL);
  ****************************************************************************/
 
 typedef enum {
-  pVarName = 1,
-  pVarDescription = 2
-} pVariable;
+  pDirVarName = 1,
+  pDirVarDescription = 2
+} pDirVariable;
 
 
 #define DIR_PLUGIN_MAGIC     "*DirPluginData*" 
 #define DIR_PLUGIN_INTERFACE_VERSION  1
 
-typedef struct s_pluginInfo {
+typedef struct s_dirpluginInfo {
    uint32_t size;
    uint32_t version;
    const char *plugin_magic;
@@ -172,20 +172,20 @@ typedef struct s_pluginInfo {
    const char *plugin_date;
    const char *plugin_version;
    const char *plugin_description;
-} pInfo;
+} pDirInfo;
 
-typedef struct s_pluginFuncs {  
+typedef struct s_dirpluginFuncs {  
    uint32_t size;
    uint32_t version;
    bRC (*newPlugin)(bpContext *ctx);
    bRC (*freePlugin)(bpContext *ctx);
-   bRC (*getPluginValue)(bpContext *ctx, pVariable var, void *value);
-   bRC (*setPluginValue)(bpContext *ctx, pVariable var, void *value);
-   bRC (*handlePluginEvent)(bpContext *ctx, bEvent *event, void *value);
-} pFuncs;
+   bRC (*getPluginValue)(bpContext *ctx, pDirVariable var, void *value);
+   bRC (*setPluginValue)(bpContext *ctx, pDirVariable var, void *value);
+   bRC (*handlePluginEvent)(bpContext *ctx, bDirEvent *event, void *value);
+} pDirFuncs;
 
-#define plug_func(plugin) ((pFuncs *)(plugin->pfuncs))
-#define plug_info(plugin) ((pInfo *)(plugin->pinfo))
+#define dirplug_func(plugin) ((pDirFuncs *)(plugin->pfuncs))
+#define dirplug_info(plugin) ((pDirInfo *)(plugin->pinfo))
 
 #ifdef __cplusplus
 }

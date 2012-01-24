@@ -119,6 +119,7 @@ public:
    int set_nonblocking();
    int set_blocking();
    void restore_blocking(int flags);
+   void set_killable(bool killable);
    int wait_data(int sec, int usec=0);
    int wait_data_intr(int sec, int usec=0);
    bool authenticate_director(const char *name, const char *password,

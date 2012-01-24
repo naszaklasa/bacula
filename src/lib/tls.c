@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2011 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -472,6 +472,7 @@ static inline bool openssl_bsock_session_start(BSOCK *bsock, bool server)
    /* start timer */
    bsock->timer_start = watchdog_time;
    bsock->clear_timed_out();
+   bsock->set_killable(false);
 
    for (;;) { 
       if (server) {
@@ -525,6 +526,7 @@ cleanup:
    bsock->restore_blocking(flags);
    /* Clear timer */
    bsock->timer_start = 0;
+   bsock->set_killable(true);
 
    return stat;
 }
@@ -618,6 +620,7 @@ static inline int openssl_bsock_readwrite(BSOCK *bsock, char *ptr, int nbytes, b
    /* start timer */
    bsock->timer_start = watchdog_time;
    bsock->clear_timed_out();
+   bsock->set_killable(false);
 
    nleft = nbytes;
 
@@ -694,6 +697,7 @@ cleanup:
 
    /* Clear timer */
    bsock->timer_start = 0;
+   bsock->set_killable(true);
    return nbytes - nleft;
 }
 

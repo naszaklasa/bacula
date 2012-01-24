@@ -106,7 +106,6 @@ bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int
    if (ok) {
       bs->fsend("1000 OK auth\n");
    } else {
-      Dmsg1(dbglvl, "Auth failed PW: %s\n", password);
       bs->fsend(_("1999 Authorization failed.\n"));
       bmicrosleep(5, 0);
    }

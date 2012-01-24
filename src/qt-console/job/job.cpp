@@ -230,7 +230,6 @@ void Job::updateRunInfo()
    QStringList results;
    QStringList lst;
    bool parseit=false;
-   QChar equal = '=';
 
    cmd = QString(".status client=\"" + m_client + "\" running");
 /*

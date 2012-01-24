@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,6 @@
 /*
  * Prototypes for finlib directory of Bacula
  *
- *   Version $Id$
  */
 
 /* from attribs.c */
@@ -81,6 +80,10 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors);
 bool makepath(ATTR *attr, const char *path, mode_t mode,
            mode_t parent_mode, uid_t owner, gid_t group,
            int keep_dir_modes);
+void free_path_list(JCR *jcr);
+bool path_list_lookup(JCR *jcr, char *fname);
+bool path_list_add(JCR *jcr, uint32_t len, char *fname);
+
 
 /* from fstype.c */
 bool fstype(const char *fname, char *fs, int fslen);

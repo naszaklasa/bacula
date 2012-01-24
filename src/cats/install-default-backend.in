@@ -33,7 +33,7 @@ if [ -f ${install_dir}/libbaccats-${default_backend}-${library_version}${SHLIB_E
    # As all backends are in the same directory anyhow this should
    # always work.
    #
-   ln -s libbaccats-${default_backend}-${library_version}${SHLIB_EXT} \
+   ln -s libbaccats-${default_backend}${SHLIB_EXT} \
          ${install_dir}/libbaccats-${library_version}${SHLIB_EXT}
 fi
 

@@ -938,7 +938,6 @@ bool read_block_from_dev(DCR *dcr, bool check_block_numbers)
 {
    ssize_t stat;
    int looping;
-   uint32_t BlockNumber;
    int retry;
    JCR *jcr = dcr->jcr;
    DEVICE *dev = dcr->dev;
@@ -1043,7 +1042,7 @@ reread:
       return false;             /* return error */
    }
 
-   BlockNumber = block->BlockNumber + 1;
+// BlockNumber = block->BlockNumber + 1;
    if (!unser_block_header(jcr, dev, block)) {
       if (forge_on) {
          dev->file_addr += block->read_len;

@@ -53,6 +53,7 @@ public:
    int max_prompts;                   /* max size of list */
    int num_prompts;                   /* current number in list */
    int api;                           /* For programs want an API */
+   int cmd_index;                     /* Index in command table */
    bool force_mult_db_connections;    /* overwrite cat.mult_db_connections */
    bool auto_display_messages;        /* if set, display messages */
    bool user_notified_msg_pending;    /* set when user notified */

@@ -1,4 +1,107 @@
-              Changelog on version 5.2.3
+              Changelog on version 5.2.4
+
+Version 5.2.4
+
+18Jan12
+ - Prepare for adding IPv6 to Windows in the future
+ - Fix bug #1822 Schedule run line parsing fails if value is keyword
+ - Revert to 5.0 size computation in accurate elements, may fix #1821
+ - Mark that a file was found in the accurate list in the ff_pkt with a
+   variable
+
+17Jan12
+ - Fix Windows build
+ - Update po files
+ - Definitive fix for MySQL MaxValue problem
+ - Fix python module compilation
+
+15Jan12
+ - Initialize delta_seq to -1 because 0 means that we have already a version
+ - Back out bad MinValue patch
+
+14Jan12
+ - Fix bug #1810 use single quotes instead of double quotes for MinValue and 
+  MaxValue in catalog
+
+11Jan12
+ - Adapt bfileview for bvfs tables
+ - Set job status to running when restore job really starts
+
+10Jan12
+ - Remove ifdeffing that turned off JS_Warning status -- must have been missed 
+  test code
+ - Add support for soname setting in libtool.
+
+09Jan12
+ - Make error somewhat more understandable.
+ - Fix bug #1815
+ - Fix systemd pid files.
+
+08Jan12
+ - Fix const char compiler warning
+
+07Jan12
+ - Limit migration/copy jobs to starting 100 at a time
+ - Avoid conflict with PAGE_SIZE define
+
+06Jan12
+ - Fix warning reported by clang
+ - Send previous Job name during Incremental/Differential to the FD
+ - Fix bug #1811 Filed fails to backup more then one xattr.
+ - system.posix_acl_default is also an acl stored as xattr
+ - Don't copy xattr and acl streams.
+ - Fix bug #1807
+ - Recompile configure
+ - Add configure for new redhat spec files
+ - Backport Enterprise spec files
+ - Remove unnecessary break and unused variable
+ - Fix xattr/acl regression script.
+
+05Jan12
+ - Fix bad memset() reported by clang
+
+04Jan12
+ - Move ini.c to libbaccfg from libbac
+ - Test new plugin function in bpipe and test plugin
+ - Try to fix openssl problem with signal
+ - Add BSOCK::set_killable()
+ - Set directory attributes when using Replace=Never when Bacula creates them
+ - Use RestoreObject type in Catalog
+ - Add new features in plugin
+ - Add helper for ini files
+ - Implement run accurate=yes/no
+ - Add .bvfs_clear_cache
+ - Add Accurate and MaxRunSchedTime in Schedule resource
+ - fix warning
+ - Fix xattr/acl regression.
+
+03Jan12
+ - Recompile configure
+ - Fix bug #1802 configure code to detect LZO is broken
+ - Fix bug #1806 failure to save second and more xattr.
+ - Add second xattr to show bug 1806
+
+02Jan12
+ - Enhance sellist to allow rescanning the list
+ - Fix lib/sellist.c
+
+01Jan12
+ - Remove double include of sellist.h
+ - First cut selection list
+
+31Dec11
+ - Fix seg fault in plugin event loop
+
+18Dec11
+ - Implement slow regression for manual testing things like cancel/stop
+ - Fix slow regress setups
+
+16Dec11
+ - Fix #3210 about slow restore with bvfs
+
+Bugs fixed/closed since last release:
+1802 1806 1807 1810 1811 1815 3210
+
 
 Version 5.2.3
 

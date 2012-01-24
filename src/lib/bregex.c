@@ -110,13 +110,13 @@ typedef union item_t {
    } cntr;
 } item_t;
 
-#define STACK_PAGE_SIZE 256
+#define B_STACK_PAGE_SIZE 256
 #define NUM_REGISTERS 256
 
 /* A 'page' of stack items. */
 
 typedef struct item_page_t {
-   item_t items[STACK_PAGE_SIZE];
+   item_t items[B_STACK_PAGE_SIZE];
    struct item_page_t *prev;
    struct item_page_t *next;
 } item_page_t;
@@ -154,8 +154,8 @@ typedef struct match_state {
    struct {
       /* index into the current page.  If index == 0 and you need
        * to pop an item, move to the previous page and set index
-       * = STACK_PAGE_SIZE - 1.  Otherwise decrement index to
-       * push a page. If index == STACK_PAGE_SIZE and you need
+       * = B_STACK_PAGE_SIZE - 1.  Otherwise decrement index to
+       * push a page. If index == B_STACK_PAGE_SIZE and you need
        * to push a page move to the next page and set index =
        * 0. If there is no new next page, allocate a new page
        * and link it in. Otherwise, increment index to push a
@@ -215,7 +215,7 @@ while (stack.index < 0) \
    if (stack.current->prev == NULL) \
            on_error; \
    stack.current = stack.current->prev; \
-   stack.index += STACK_PAGE_SIZE; \
+   stack.index += B_STACK_PAGE_SIZE; \
 }
 
 /* Store a pointer to the previous item on the stack. Used to pop an
@@ -227,7 +227,7 @@ if (stack.index == 0) \
         if (stack.current->prev == NULL) \
                 on_error; \
         stack.current = stack.current->prev; \
-        stack.index = STACK_PAGE_SIZE - 1; \
+        stack.index = B_STACK_PAGE_SIZE - 1; \
 } \
 else \
 { \
@@ -239,7 +239,7 @@ top = &(stack.current->items[stack.index])
  * on to the stack. */
 
 #define STACK_NEXT(stack, top, on_error) \
-if (stack.index == STACK_PAGE_SIZE) \
+if (stack.index == B_STACK_PAGE_SIZE) \
 { \
         if (stack.current->next == NULL) \
         { \
@@ -269,7 +269,7 @@ top = &(stack.current->items[stack.index++])
                 if (current->prev == NULL) \
                         on_error; \
                 current = current->prev; \
-                index += STACK_PAGE_SIZE; \
+                index += B_STACK_PAGE_SIZE; \
         } \
         top = &(current->items[index]); \
 }
@@ -282,7 +282,7 @@ if (stack.index == 0) \
 { \
         if (stack.current->prev == NULL) \
                 on_error; \
-        top = &(stack.current->prev->items[STACK_PAGE_SIZE - 1]); \
+        top = &(stack.current->prev->items[B_STACK_PAGE_SIZE - 1]); \
 } \
 else \
 { \

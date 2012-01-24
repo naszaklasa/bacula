@@ -1197,7 +1197,6 @@ void status_slots(UAContext *ua, STORE *store_r)
    MEDIA_DBR mr;
    char *slot_list;
    int max_slots;
-   int drive;
    int i=1;
    /* Slot | Volume | Status | MediaType | Pool */
    const char *slot_hformat=" %4i%c| %16s | %9s | %20s | %18s |\n";
@@ -1214,7 +1213,7 @@ void status_slots(UAContext *ua, STORE *store_r)
 
    pm_strcpy(store.store_source, _("command line"));
    set_wstorage(ua->jcr, &store);
-   drive = get_storage_drive(ua, store.store);
+   get_storage_drive(ua, store.store);
 
    max_slots = get_num_slots_from_SD(ua);
 

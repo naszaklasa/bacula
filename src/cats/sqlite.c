@@ -675,7 +675,6 @@ bool B_DB_SQLITE::sql_batch_end(JCR *jcr, const char *error)
  */
 bool B_DB_SQLITE::sql_batch_insert(JCR *jcr, ATTR_DBR *ar)
 {
-   size_t len;
    const char *digest;
    char ed1[50];
 
@@ -691,10 +690,10 @@ bool B_DB_SQLITE::sql_batch_insert(JCR *jcr, ATTR_DBR *ar)
       digest = ar->Digest;
    }
 
-   len = Mmsg(cmd, "INSERT INTO batch VALUES "
-                   "(%u,%s,'%s','%s','%s','%s',%u)",
-                   ar->FileIndex, edit_int64(ar->JobId,ed1), esc_path,
-                   esc_name, ar->attr, digest, ar->DeltaSeq);
+   Mmsg(cmd, "INSERT INTO batch VALUES "
+        "(%u,%s,'%s','%s','%s','%s',%u)",
+        ar->FileIndex, edit_int64(ar->JobId,ed1), esc_path,
+        esc_name, ar->attr, digest, ar->DeltaSeq);
 
    return sql_query(cmd);
 }

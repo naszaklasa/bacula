@@ -29,13 +29,19 @@
 #ifndef __RESTORE_H
 #define __RESTORE_H
 
+struct RESTORE_DATA_STREAM {
+   int32_t stream;                     /* stream less new bits */
+   char *content;                      /* stream data */
+   uint32_t content_length;            /* stream length */
+};
+
 struct RESTORE_CIPHER_CTX {
    CIPHER_CONTEXT *cipher;
    uint32_t block_size;
 
-   POOLMEM *buf;       /* Pointer to descryption buffer */
-   int32_t buf_len;    /* Count of bytes currently in buf */ 
-   int32_t packet_len; /* Total bytes in packet */
+   POOLMEM *buf;                       /* Pointer to descryption buffer */
+   int32_t buf_len;                    /* Count of bytes currently in buf */
+   int32_t packet_len;                 /* Total bytes in packet */
 };
 
 struct r_ctx {
@@ -55,6 +61,7 @@ struct r_ctx {
    int32_t type;                       /* file type FT_ */
    ATTR *attr;                         /* Pointer to attributes */
    bool extract;                       /* set when extracting */
+   alist *delayed_streams;             /* streams that should be restored as last */
 
    SIGNATURE *sig;                     /* Cryptographic signature (if any) for file */
    CRYPTO_SESSION *cs;                 /* Cryptographic session data (if any) for file */

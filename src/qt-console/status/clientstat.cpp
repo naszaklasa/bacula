@@ -26,7 +26,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *
  *   Dirk Bartley, March 2007
  */
  

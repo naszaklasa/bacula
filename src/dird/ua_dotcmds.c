@@ -80,6 +80,7 @@ static bool dot_bvfs_get_jobids(UAContext *ua, const char *cmd);
 static bool dot_bvfs_versions(UAContext *ua, const char *cmd);
 static bool dot_bvfs_restore(UAContext *ua, const char *cmd);
 static bool dot_bvfs_cleanup(UAContext *ua, const char *cmd);
+static bool dot_bvfs_clear_cache(UAContext *ua, const char *cmd);
 
 static bool api_cmd(UAContext *ua, const char *cmd);
 static bool sql_cmd(UAContext *ua, const char *cmd);
@@ -120,6 +121,7 @@ static struct cmdstruct commands[] = { /* help */  /* can be used in runscript *
  { NT_(".bvfs_versions"), dot_bvfs_versions,     NULL,       true},
  { NT_(".bvfs_restore"), dot_bvfs_restore,       NULL,       true},
  { NT_(".bvfs_cleanup"), dot_bvfs_cleanup,       NULL,       true},
+ { NT_(".bvfs_clear_cache"),dot_bvfs_clear_cache,NULL,       false},
  { NT_(".types"),      typescmd,                 NULL,       false}
              };
 #define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
@@ -190,6 +192,22 @@ static bool dot_bvfs_update(UAContext *ua, const char *cmd)
       bvfs_update_cache(ua->jcr, ua->db);
    }
    
+   close_db(ua);
+   return true;
+}
+
+static bool dot_bvfs_clear_cache(UAContext *ua, const char *cmd)
+{
+   if (!open_new_client_db(ua)) {
+      return 1;
+   }
+
+   int pos = find_arg(ua, "yes");
+   if (pos != -1) {
+      Bvfs fs(ua->jcr, ua->db);
+      fs.clear_cache();
+      ua->info_msg("OK\n");
+   } 
    close_db(ua);
    return true;
 }
@@ -729,6 +747,7 @@ static bool admin_cmds(UAContext *ua, const char *cmd)
          ua->send_msg(_("The Director will segment fault.\n"));
          a = jcr->JobId; /* ref NULL pointer */
          jcr->JobId = 1000; /* another ref NULL pointer */
+         jcr->JobId = a;
 
       } else if (strncmp(remote_cmd, ".dump", 5) == 0) {
          sm_dump(false, true);

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2011 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -372,33 +372,28 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
             }
             currlen = fmtint(buffer, currlen, maxlen, value, 16, min, max, flags);
             break;
+
+#ifdef SECURITY_PROBLEM
          case 'n':
             if (cflags == DP_C_INT16) {
                int16_t *num;
                num = va_arg(args, int16_t *);
-#ifdef SECURITY_PROBLEM
                *num = currlen;
-#endif
             } else if (cflags == DP_C_INT32) {
                int32_t *num;
                num = va_arg(args, int32_t *);
-#ifdef SECURITY_PROBLEM
                *num = (int32_t)currlen;
-#endif
             } else if (cflags == DP_C_INT64) {
                int64_t *num;
                num = va_arg(args, int64_t *);
-#ifdef SECURITY_PROBLEM
                *num = (int64_t)currlen;
-#endif
             } else {
                int32_t *num;
                num = va_arg(args, int32_t *);
-#ifdef SECURITY_PROBLEM
                *num = (int32_t)currlen;
-#endif
             }
             break;
+#endif
          case '%':
             outch(ch);
             break;

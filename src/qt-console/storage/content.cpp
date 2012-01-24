@@ -179,7 +179,7 @@ void Content::statusStorageWindow()
 void Content::populateContent()
 {
    char buf[200];
-   time_t t;
+   time_t tim;
    struct tm tm;
 
    QStringList results_all;
@@ -244,23 +244,22 @@ void Content::populateContent()
          /* Pool */
          slotitem.setTextFld(index++, fld.next());
          
-         t = fld.next().toInt();
-         if (t > 0) {
+         tim = fld.next().toInt();
+         if (tim > 0) {
             /* LastW */
-            localtime_r(&t, &tm);
+            localtime_r(&tim, &tm);
             strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
             slotitem.setTextFld(index++, QString(buf));
             
             /* Expire */
-            t = fld.next().toInt();
-            localtime_r(&t, &tm);
+            tim = fld.next().toInt();
+            localtime_r(&tim, &tm);
             strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
             slotitem.setTextFld(index++, QString(buf));
          }
       }
       row++;
    }
-
 
    tableContent->verticalHeader()->hide();
    tableContent->sortByColumn(0, Qt::AscendingOrder);
@@ -276,11 +275,15 @@ void Content::populateContent()
 
    tableDrive->verticalHeader()->hide();
    QStringList drives = results_all.filter(QRegExp("^D\\|[0-9]+\\|"));
+   tableDrive->setRowCount(drives.size());
+
    row = 0;
    foreach (resultline, drives) {
       fieldlist = resultline.split("|");
-      if (fieldlist.size() < 4)
+      if (fieldlist.size() < 4) {
+         Pmsg1(0, "Discarding %s\n", resultline.data());
          continue; /* some fields missing, ignore row */
+      }
 
       int index=0;
       QStringListIterator fld(fieldlist);

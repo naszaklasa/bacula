@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -118,16 +118,17 @@ void run_job(JCR *jcr)
    dir->fsend(Job_start, jcr->Job);
    jcr->start_time = time(NULL);
    jcr->run_time = jcr->start_time;
-   jcr->setJobStatus(JS_Running);
-   dir_send_job_status(jcr);          /* update director */
+   jcr->sendJobStatus(JS_Running);
    do_fd_commands(jcr);
    jcr->end_time = time(NULL);
    dequeue_messages(jcr);             /* send any queued messages */
    jcr->setJobStatus(JS_Terminated);
    generate_daemon_event(jcr, "JobEnd");
+   generate_plugin_event(jcr, bsdEventJobEnd);
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
       edit_uint64(jcr->JobBytes, ec1), jcr->JobErrors);
    dir->signal(BNET_EOD);             /* send EOD to Director daemon */
+   free_plugins(jcr);                 /* release instantiated plugins */
    return;
 }
 

@@ -96,6 +96,7 @@ enum lex_state {
 /* Lex scan options */
 #define LOPT_NO_IDENT            0x1  /* No Identifiers -- use string */
 #define LOPT_STRING              0x2  /* Force scan for string */
+#define LOPT_NO_EXTERN           0x4  /* Don't follow @ command */
 
 class BPIPE;                          /* forward reference */
   

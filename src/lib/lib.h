@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *   that we use within Bacula. bacula.h includes this
  *   file and thus picks up everything we need in lib.
  *
- *   Version $Id$
  */
 
 #include "smartall.h"
@@ -70,4 +69,5 @@
 #include "var.h"
 #include "guid_to_name.h"
 #include "htable.h"
+#include "sellist.h"
 #include "protos.h"

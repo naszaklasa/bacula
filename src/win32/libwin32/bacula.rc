@@ -67,7 +67,7 @@ BEGIN
             VALUE "FileDescription", "Bacula File daemon for Win32\0"
             VALUE "FileVersion", VERSION "\0"
             VALUE "InternalName", "Bacula\0"
-            VALUE "LegalCopyright", "Copyright 2010 Free Software Foundation Europe e.V., 1999-2009\0"
+            VALUE "LegalCopyright", "Copyright 2012 Free Software Foundation Europe e.V., 1999-2009\0"
             VALUE "LegalTrademarks", "Licensed under GNU AGPLv3\0"
             VALUE "OriginalFilename", "bacula-fd.exe\0"
             VALUE "PrivateBuild", "\0"
@@ -122,7 +122,7 @@ BEGIN
     LTEXT           "      by Kern Sibbald",-1,134,38,78,10
     LTEXT           "For more information, see:",-1,115,60,100,10
     LTEXT           "         www.bacula.org",-1,115,70,100,10
-    LTEXT           "Copyright (C) 1999-2010, Free Software Foundation Europe e.V.",-1,7,120,175,10
+    LTEXT           "Copyright (C) 1999-2012, Free Software Foundation Europe e.V.",-1,7,120,175,10
     LTEXT           "Licensed under GNU AGPLv3",-1,7,130,175,10
     RTEXT           "Build Date:",-1,108,24,42,8
     RTEXT           "Bacula Version:",-1,100,9,50,8

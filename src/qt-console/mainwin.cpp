@@ -651,9 +651,8 @@ void MainWin::set_statusf(const char *fmt, ...)
 {
    va_list arg_ptr;
    char buf[1000];
-   int len;
    va_start(arg_ptr, fmt);
-   len = bvsnprintf(buf, sizeof(buf), fmt, arg_ptr);
+   bvsnprintf(buf, sizeof(buf), fmt, arg_ptr);
    va_end(arg_ptr);
    set_status(buf);
 }

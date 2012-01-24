@@ -1,7 +1,7 @@
 /*
-   Bacula® - The Network Backup Solution
+   Bacula(R) - The Network Backup Solution
 
-   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of Kern Sibbald.
+   Bacula(R) is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -56,7 +56,6 @@ bool acquire_device_for_read(DCR *dcr)
    JCR *jcr = dcr->jcr;
    bool ok = false;
    bool tape_previously_mounted;
-   bool tape_initially_mounted;
    VOL_LIST *vol;
    bool try_autochanger = true;
    int i;
@@ -92,6 +91,11 @@ bool acquire_device_for_read(DCR *dcr)
    }
    set_dcr_from_vol(dcr, vol);
 
+   if (generate_plugin_event(jcr, bsdEventDeviceOpen, dcr) != bRC_OK) {
+      Jmsg(jcr, M_FATAL, 0, _("generate_plugin_event(bsdEventDeviceOpen) Failed\n"));
+      goto get_out;
+   }
+
    Dmsg2(100, "Want Vol=%s Slot=%d\n", vol->VolumeName, vol->Slot);
     
    /*
@@ -118,6 +122,8 @@ bool acquire_device_for_read(DCR *dcr)
       Dmsg3(50, "Changing read device. Want Media Type=\"%s\" have=\"%s\"\n"
                               "  device=%s\n", 
             dcr->media_type, dev->device->media_type, dev->print_name());
+
+      generate_plugin_event(jcr, bsdEventDeviceClose, dcr);
 
       dev->dunblock(DEV_UNLOCKED);
 
@@ -148,11 +154,15 @@ bool acquire_device_for_read(DCR *dcr)
       if (stat == 1) {
          dev = dcr->dev;                     /* get new device pointer */
          dev->dblock(BST_DOING_ACQUIRE); 
+
          dcr->VolumeName[0] = 0;
          Jmsg(jcr, M_INFO, 0, _("Media Type change.  New read device %s chosen.\n"),
             dev->print_name());
          Dmsg1(50, "Media Type change.  New read device %s chosen.\n", dev->print_name());
-
+         if (generate_plugin_event(jcr, bsdEventDeviceOpen, dcr) != bRC_OK) {
+            Jmsg(jcr, M_FATAL, 0, _("generate_plugin_event(bsdEventDeviceOpen) Failed\n"));
+            goto get_out;
+         }
          bstrncpy(dcr->VolumeName, vol->VolumeName, sizeof(dcr->VolumeName));
          dcr->setVolCatName(vol->VolumeName);
          bstrncpy(dcr->media_type, vol->MediaType, sizeof(dcr->media_type));
@@ -182,8 +192,7 @@ bool acquire_device_for_read(DCR *dcr)
 
    tape_previously_mounted = dev->can_read() || dev->can_append() ||
                              dev->is_labeled();
-   tape_initially_mounted = tape_previously_mounted;
-
+// tape_initially_mounted = tape_previously_mounted;
 
    /* Volume info is always needed because of VolParts */
    Dmsg1(150, "dir_get_volume_info vol=%s\n", dcr->VolumeName);
@@ -317,13 +326,16 @@ default_path:
 
    dev->clear_append();
    dev->set_read();
-   jcr->setJobStatus(JS_Running);
-   dir_send_job_status(jcr);
+   jcr->sendJobStatus(JS_Running);
    Jmsg(jcr, M_INFO, 0, _("Ready to read from volume \"%s\" on device %s.\n"),
       dcr->VolumeName, dev->print_name());
 
 get_out:
    dev->dlock();
+   /* If failed and not writing plugin close device */
+   if (!ok && dev->num_writers == 0) {
+      generate_plugin_event(jcr, bsdEventDeviceClose, dcr);
+   }
    dcr->clear_reserved();
    /* 
     * Normally we are blocked, but in at least one error case above 
@@ -362,6 +374,7 @@ DCR *acquire_device_for_append(DCR *dcr)
    dev->dlock();
    Dmsg1(100, "acquire_append device is %s\n", dev->is_tape()?"tape":
         (dev->is_dvd()?"DVD":"disk"));
+
 
    /*
     * With the reservation system, this should not happen
@@ -414,6 +427,11 @@ DCR *acquire_device_for_append(DCR *dcr)
       unblock_device(dev);
    }
 
+   if (generate_plugin_event(jcr, bsdEventDeviceOpen, dcr) != bRC_OK) {
+      Jmsg(jcr, M_FATAL, 0, _("generate_plugin_event(bsdEventDeviceOpen) Failed\n"));
+      goto get_out;
+   }
+
    dev->num_writers++;                /* we are now a writer */
    if (jcr->NumWriteVolumes == 0) {
       jcr->NumWriteVolumes = 1;
@@ -426,6 +444,7 @@ DCR *acquire_device_for_append(DCR *dcr)
    ok = true;
 
 get_out:
+   /* Don't plugin close here, we might have multiple writers */
    dcr->clear_reserved();
    dev->dunlock();
    V(dev->acquire_mutex);
@@ -464,6 +483,7 @@ bool release_device(DCR *dcr)
 
    if (dev->can_read()) {
       VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
+      generate_plugin_event(jcr, bsdEventDeviceClose, dcr);
       dev->clear_read();              /* clear read bit */
       Dmsg2(150, "dir_update_vol_info. label=%d Vol=%s\n",
          dev->is_labeled(), vol->VolCatName);
@@ -518,6 +538,7 @@ bool release_device(DCR *dcr)
 
    /* If no writers, close if file or !CAP_ALWAYS_OPEN */
    if (dev->num_writers == 0 && (!dev->is_tape() || !dev->has_cap(CAP_ALWAYSOPEN))) {
+      generate_plugin_event(jcr, bsdEventDeviceClose, dcr);
       dvd_remove_empty_part(dcr);        /* get rid of any empty spool part */
       dev->close();
       free_volume(dev);
@@ -730,6 +751,7 @@ void free_dcr(DCR *dcr)
 
    P(dcr->m_mutex);
    jcr = dcr->jcr;
+
    locked_detach_dcr_from_dev(dcr);
 
    if (dcr->block) {

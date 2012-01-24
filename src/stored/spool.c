@@ -240,8 +240,7 @@ static bool despool_data(DCR *dcr, bool commit)
          edit_uint64_with_commas(jcr->dcr->job_spool_size, ec1));
       jcr->setJobStatus(JS_DataDespooling);
    }
-   jcr->setJobStatus(JS_DataDespooling);
-   dir_send_job_status(jcr);
+   jcr->sendJobStatus(JS_DataDespooling);
    dcr->despool_wait = true;
    dcr->spooling = false;
    /*
@@ -378,8 +377,7 @@ static bool despool_data(DCR *dcr, bool commit)
    if (!commit) {
       dcr->dev->dunblock();
    }
-   jcr->setJobStatus(JS_Running);
-   dir_send_job_status(jcr);
+   jcr->sendJobStatus(JS_Running);
    return ok;
 }
 
@@ -737,8 +735,7 @@ bool commit_attribute_spool(JCR *jcr)
       }
       spool_stats.attr_size += size;
       V(mutex);
-      jcr->setJobStatus(JS_AttrDespooling);
-      dir_send_job_status(jcr);
+      jcr->sendJobStatus(JS_AttrDespooling);
       Jmsg(jcr, M_INFO, 0, _("Sending spooled attrs to the Director. Despooling %s bytes ...\n"),
             edit_uint64_with_commas(size, ec1));
 

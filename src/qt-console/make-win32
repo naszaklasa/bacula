@@ -1,12 +1,11 @@
 #!/bin/sh
 #
-#  Used to build the Windows version of bat and the tray-monitor 
+#  Used to build the Win32 version of bat
 #
 rm -f debug/bat.exe
 if test -f ../config.h ; then
    mv -f ../config.h ../config.h.orig
 fi
-# Create bat Makefile.mingw32
 qmake -spec win32 -unix -o Makefile.mingw32 bat.pro.mingw32
 echo "Make Windows bat"
 make -j3 -f Makefile.mingw32 $1
@@ -30,7 +29,6 @@ fi
 
 cd tray-monitor
 rm -f release/bacula-tray-monitor.exe debug/bacula-tray-monitor.exe
-# Create tray-monitor Makefile.mingw32
 qmake -spec ../win32 -unix -o Makefile.mingw32 tray-monitor.pro
 echo "Make Windows tray-monitor"
 make -j3 -f Makefile.mingw32 $1

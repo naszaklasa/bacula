@@ -74,8 +74,11 @@ MediaList::~MediaList()
  */
 void MediaList::populateTree()
 {
-   if (m_populated)
+   QTreeWidgetItem *pooltreeitem = NULL;
+
+   if (m_populated) {
       writeExpandedSettings();
+   }
    m_populated = true;
 
    Freeze frz(*mp_treeWidget); /* disable updating*/
@@ -102,7 +105,6 @@ void MediaList::populateTree()
    settings.beginGroup("MediaListTreeExpanded");
    QString query;
 
-   QTreeWidgetItem *pooltreeitem;
 
    /* Comma separated list of pools first */
    bool first = true;

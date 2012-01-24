@@ -326,7 +326,7 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
 static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sessrec)
 {
    const char *rtype;
-   memset(sessrec, 0, sizeof(sessrec));
+   memset(sessrec, 0, sizeof(SESSION_LABEL));
    switch (rec->FileIndex) {
    case PRE_LABEL:
       rtype = _("Fresh Volume Label");

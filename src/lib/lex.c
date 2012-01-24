@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -452,8 +452,14 @@ lex_get_token(LEX *lf, int expect)
             }
             break;
          case '@':
-            lf->state = lex_include;
-            begin_str(lf, 0);
+            /* In NO_EXTERN mode, @ is part of a string */
+            if (lf->options & LOPT_NO_EXTERN) {
+               lf->state = lex_string;
+               begin_str(lf, ch);
+            } else {
+               lf->state = lex_include;
+               begin_str(lf, 0);
+            }
             break;
          case 0xEF: /* probably a UTF-8 BOM */
          case 0xFF: /* probably a UTF-16le BOM */

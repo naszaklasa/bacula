@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2009-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2009-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -36,6 +36,7 @@
  *
  *
  */
+#ifdef needed
 #include "bacula.h"
 #include "cats/cats.h"
 #include "cats/sql_glue.h"
@@ -330,3 +331,9 @@ int main (int argc, char *argv[])
 
    return 0;
 }
+#else  /* needed */
+int main (int argc, char *argv[])
+{
+   return 1;
+}
+#endif /* needed */

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -100,8 +100,7 @@ bool do_mac(JCR *jcr)
 
    Dmsg2(200, "===== After acquire pos %u:%u\n", jcr->dcr->dev->file, jcr->dcr->dev->block_num);
      
-   jcr->setJobStatus(JS_Running);
-   dir_send_job_status(jcr);
+   jcr->sendJobStatus(JS_Running);
 
    begin_data_spool(jcr->dcr);
    begin_attribute_spool(jcr);
@@ -158,7 +157,7 @@ ok_out:
       }
    }
 
-   dir_send_job_status(jcr);          /* update director */
+   jcr->sendJobStatus();              /* update director */
 
    Dmsg0(30, "Done reading.\n");
    jcr->end_time = time(NULL);
@@ -167,11 +166,13 @@ ok_out:
       jcr->setJobStatus(JS_Terminated);
    }
    generate_daemon_event(jcr, "JobEnd");
+   generate_plugin_event(jcr, bsdEventJobEnd);
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
       edit_uint64(jcr->JobBytes, ec1), jcr->JobErrors);
    Dmsg4(100, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles, ec1); 
        
    dir->signal(BNET_EOD);             /* send EOD to Director daemon */
+   free_plugins(jcr);                 /* release instantiated plugins */
 
    return ok;
 }

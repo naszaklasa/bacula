@@ -1,7 +1,7 @@
 /*
-   Bacula® - The Network Backup Solution
+   Bacula(R) - The Network Backup Solution
 
-   Copyright (C) 2010-2010 Bacula Systems(R) SA
+   Copyright (C) 2010-2011 Bacula Systems(R) SA
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -19,7 +19,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of Kern Sibbald.
+   Bacula(R) is a registered trademark of Kern Sibbald.
    Bacula Systems(R) is a trademark of Bacula Systems SA.
    Bacula Enterprise(TM) is a trademark of Bacula Systems SA.
 

@@ -50,11 +50,11 @@
 
 #include "bacula.h"
 
-#define PAGE_SIZE 4096
+#define B_PAGE_SIZE 4096
 #define MIN_PAGES 32
 #define MAX_PAGES 2400
-#define MIN_BUF_SIZE (MIN_PAGES * PAGE_SIZE) /* 128 Kb */
-#define MAX_BUF_SIZE (MAX_PAGES * PAGE_SIZE) /* approx 10MB */
+#define MIN_BUF_SIZE (MIN_PAGES * B_PAGE_SIZE) /* 128 Kb */
+#define MAX_BUF_SIZE (MAX_PAGES * B_PAGE_SIZE) /* approx 10MB */
 
 static const int dbglvl = 500;
 
@@ -181,7 +181,7 @@ void htable::init(void *item, void *link, int tsize, int nr_pages)
 #ifdef HAVE_GETPAGESIZE
    pagesize = getpagesize();
 #else
-   pagesize = PAGE_SIZE;
+   pagesize = B_PAGE_SIZE;
 #endif
    if (nr_pages == 0) {
       buffer_size = MAX_BUF_SIZE;

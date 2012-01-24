@@ -607,12 +607,10 @@ void backup_cleanup(JCR *jcr, int TermCode)
    memset(&mr, 0, sizeof(mr));
    memset(&cr, 0, sizeof(cr));
 
-#ifdef xxxx
    if (jcr->getJobStatus() == JS_Terminated && 
         (jcr->JobErrors || jcr->SDErrors || jcr->JobWarnings)) {
       TermCode = JS_Warnings;
    }
-#endif
          
    update_job_end(jcr, TermCode);
 

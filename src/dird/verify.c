@@ -393,7 +393,6 @@ void verify_cleanup(JCR *jcr, int TermCode)
    char term_code[100], fd_term_msg[100], sd_term_msg[100];
    const char *term_msg;
    int msg_type;
-   JobId_t JobId;
    const char *Name;
 
 // Dmsg1(100, "Enter verify_cleanup() TermCod=%d\n", TermCode);
@@ -404,8 +403,6 @@ void verify_cleanup(JCR *jcr, int TermCode)
        jcr->ExpectedFiles != jcr->JobFiles) {
       TermCode = JS_ErrorTerminated;
    }
-
-   JobId = jcr->jr.JobId;
 
    update_job_end(jcr, TermCode);
 

@@ -1,22 +1,25 @@
+#
 # Bacula RPM spec file
 #
-# Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
+# Copyright (C) 2000-2012 Bacula Systems SA
 
 # Platform Build Configuration
 
 # basic defines for every build
 %define _release           1
-%define _version           5.2.0
-%define depkgs_qt_version  16Dec10
+%define _version           @VERSION@
+%define depkgs_qt_version  24Dec11
+%define product            bacula
 
 # this is the QT version in depkgs_qt
-%define qt4ver             4.6.2
+%define qt4ver             4.7.4
 
-%define _packager Kern Sibbald <kern@sibbald.com>
+%define _packager Kern Sibbald <kern@baculasystems.com>
 
 %define manpage_ext gz
 
-%define single_dir 0
+# Force single file build
+%define single_dir 1
 %{?single_dir_install:%define single_dir 1}
 
 # Installation Directory locations
@@ -88,7 +91,7 @@ exit 1
 %endif
 
 Summary: Bacula - The Network Backup Solution
-Name: bacula-bat
+Name: %{product}-bat
 Version: %{_version}
 Release: %{_release}
 Group: System Environment/Daemons
@@ -100,7 +103,7 @@ Packager: %{_packager}
 Prefix: %{_prefix}
 Distribution: %{_dist}
 
-Source0: http://www.prdownloads.sourceforge.net/bacula/bacula-%{version}.tar.gz
+Source0: http://www.prdownloads.sourceforge.net/bacula/%{product}-%{version}.tar.gz
 Source1: http://www.prdownloads.sourceforge.net/bacula/depkgs-qt-%{depkgs_qt_version}.tar.gz
 
 BuildRequires: gcc, gcc-c++, make, autoconf
@@ -113,10 +116,9 @@ Requires: libgcc
 Requires: libpng
 Requires: libstdc++
 Requires: zlib
-Requires: bacula-libs
+Requires: %{product}-libs
 
 %if %{suse}
-Requires: /usr/bin/kdesu
 Requires: freetype2
 BuildRequires: freetype2-devel
 %else
@@ -138,6 +140,9 @@ BuildRequires: freetype-devel
 %define blurb7 features that make it easy to find and recover lost or damaged files.
 %define blurb8 Bacula source code has been released under the AGPL version 3 license.
 
+%define group_file /etc/group
+%define groupadd /usr/sbin/groupadd
+
 Summary: Bacula - The Network Backup Solution
 Group: System Environment/Daemons
 
@@ -155,9 +160,18 @@ Group: System Environment/Daemons
 This is the Bacula Administration Tool (bat) graphical user interface package.
 It is an add-on to the client or server packages.
 
+# Don't strip symbols
+%define debug_package %{nil} 
+
+# Must explicitly enable debug pkg on SuSE
+# but not in opensuse_bs
+#%if %{suse} && ! 0%{?opensuse_bs}
+#%debug_package
+#%endif
+
 %prep
-%setup -T -n bacula-%{_version} -b 0
-%setup -T -D -n bacula-%{_version} -b 1
+%setup -T -n %{product}-%{_version} -b 0
+%setup -T -D -n %{product}-%{_version} -b 1
 
 %build
 
@@ -169,18 +183,30 @@ export QTINC=$(pkg-config --variable=includedir QtCore)
 export QTLIB=$(pkg-config --variable=libdir QtCore)
 export PATH=${QTDIR}/bin/:${PATH}
 %else
-cd %{depkgs_qt}
-make qt4 <<EOF
+# You can use a cache for depkgs-qt
+# tar xfz depkgs-qt*gz -C ~/
+# cd ~/depkgs-qt
+# echo yes | make qt4
+# touch %{depkgs_qt_version}       # depkgs version
+if [ -f $HOME/depkgs-qt/%{depkgs_qt_version} ]; then
+   rm -rf %{depkgs_qt}
+   ln -s $HOME/depkgs-qt %{depkgs_qt}
+   cd %{depkgs_qt}
+else
+   cd %{depkgs_qt}
+   make qt4 <<EOF
 yes
 EOF
-qtdir=${PWD}
-export PATH=${qtdir}/qt4/bin:$PATH
-export QTDIR=${qtdir}/qt4/
-export QTINC=${qtdir}/qt4/include/
-export QTLIB=${qtdir}/qt4/lib/
-export QMAKESPEC=${qtdir}/qt-x11-opensource-src-%{qt4ver}/mkspecs/linux-g++/
+fi
+
+source ./qt4-paths
+rm -f ${QTLIB}/QtCore.so* ${QTLIB}/QtGUI.so*
 cd ${cwd}
+
 %endif
+
+# hostname is the build hostname, so use XXX_HOSTNAME_XXX for Address parameter
+sed -i s/hostname/basename/ src/console/bconsole.conf.in src/dird/bacula-dir.conf.in src/qt-console/bat.conf.in src/tray-monitor/tray-monitor.conf.in 
 
 # Main Bacula configuration with bat
 %configure \
@@ -195,7 +221,6 @@ cd ${cwd}
         --with-subsys-dir=%{_subsysdir} \
         --enable-smartalloc \
         --enable-bat \
-        --without-qwt \
         --enable-client-only \
         --with-dir-user=%{director_daemon_user} \
         --with-dir-group=%{daemon_group} \
@@ -203,6 +228,8 @@ cd ${cwd}
         --with-sd-group=%{storage_daemon_group} \
         --with-fd-user=%{file_daemon_user} \
         --with-fd-group=%{daemon_group} \
+        --with-basename="XXX_HOSTNAME_XXX" \
+        --with-hostname="XXX_HOSTNAME_XXX" \
         --with-dir-password="XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX" \
         --with-fd-password="XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX" \
         --with-sd-password="XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX" \
@@ -261,6 +288,8 @@ ln -sf consolehelper $RPM_BUILD_ROOT/usr/bin/bat
 /usr/bin/bat
 %endif
 
+
+
 %pre
 # create the daemon group
 HAVE_BACULA=`grep %{daemon_group} %{group_file} 2>/dev/null`
@@ -277,22 +306,16 @@ if [ -d %{sysconf_dir} ]; then
    for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
       pass=`openssl rand -base64 33`
       for file in *.conf; do
-         need_password=`grep ${string} $file 2>/dev/null`
-         if [ -n "$need_password" ]; then
-            sed "s@${string}@${pass}@g" $file > $file.new
-            cp -f $file.new $file; rm -f $file.new
-         fi
+         sed "s@${string}@${pass}@g" $file > $file.new
+         cp -f $file.new $file; rm -f $file.new
       done
    done
 # put actual hostname in conf file
    host=`hostname`
    string="XXX_HOSTNAME_XXX"
    for file in *.conf; do
-      need_host=`grep ${string} $file 2>/dev/null`
-      if [ -n "$need_host" ]; then
-         sed "s@${string}@${host}@g" $file >$file.new
-         cp -f $file.new $file; rm -f $file.new
-      fi
+      sed "s@${string}@${host}@g" $file >$file.new
+      cp -f $file.new $file; rm -f $file.new
    done
 fi
 /sbin/ldconfig
@@ -302,6 +325,8 @@ fi
 rm -rf $RPM_BUILD_DIR/depkgs-qt
 
 %changelog
+* Sun Oct 03 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix bug 1639
 * Sun Mar 14 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - Fix for QT mkspecs location on FC12
 - allow user to build without embedded static QT

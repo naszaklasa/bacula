@@ -171,7 +171,6 @@ po/*.gmo
 
 # scripts/
 scripts/breload
-scripts/storage-ctl
 scripts/make_catalog_backup.pl
 scripts/bacula_config
 scripts/wxconsole.console_apps
@@ -199,6 +198,7 @@ scripts/startit
 scripts/startmysql
 scripts/stopit
 scripts/stopmysql
+scripts/storage-ctl
 scripts/gnome-console.console_apps
 scripts/bacula.desktop.gnome2.xsu
 scripts/bacula.desktop.gnome2.consolehelper
@@ -233,10 +233,10 @@ src/xqt-console
 src/TAGS
 
 # src/cats/
-src/cats/install-default-backend
 src/cats/1
 src/cats/2
 src/cats/3
+src/cats/install-default-backend
 src/cats/make_catalog_backup.pl
 src/cats/Makefile
 src/cats/make_catalog_backup
@@ -479,7 +479,6 @@ src/qt-console/tray-monitor/Makefile.mingw32
 src/qt-console/tray-monitor/Makefile.mingw32.Debug
 src/qt-console/tray-monitor/Makefile.mingw32.Release
 src/qt-console/tray-monitor/debug/
-src/qt-console/tray-monitor/release/
 src/qt-console/tray-monitor/moc/
 src/qt-console/tray-monitor/tray-monitor.conf
 src/qt-console/tray-monitor/tray-monitor.pro

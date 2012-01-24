@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,8 +32,6 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id$
- *
  */
 
 #include "bacula.h"
@@ -48,7 +46,7 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx);
 static int reserve_device(RCTX &rctx);
 static bool reserve_device_for_read(DCR *dcr);
 static bool reserve_device_for_append(DCR *dcr, RCTX &rctx);
-static bool use_storage_cmd(JCR *jcr);
+static bool use_device_cmd(JCR *jcr);
 static void queue_reserve_message(JCR *jcr);
 static void pop_reserve_messages(JCR *jcr);
 //void switch_device(DCR *dcr, DEVICE *dev);
@@ -68,7 +66,7 @@ bool use_cmd(JCR *jcr)
    /*
     * Get the device, media, and pool information
     */
-   if (!use_storage_cmd(jcr)) {
+   if (!use_device_cmd(jcr)) {
       jcr->setJobStatus(JS_ErrorTerminated);
       memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
       return false;
@@ -163,6 +161,7 @@ void DCR::unreserve_device()
       }
    }
    unlock_volumes();
+   generate_plugin_event(jcr, bsdEventDeviceClose, this);
    dev->dunlock();
 }
 
@@ -177,7 +176,7 @@ void DCR::unreserve_device()
  *  use device=bbb
  *
  */
-static bool use_storage_cmd(JCR *jcr)
+static bool use_device_cmd(JCR *jcr)
 {
    POOL_MEM store_name, dev_name, media_type, pool_name, pool_type;
    BSOCK *dir = jcr->dir_bsock;
@@ -785,10 +784,15 @@ static bool reserve_device_for_read(DCR *dcr)
       goto bail_out;
    }
 
+   /* Note: on failure this returns jcr->errmsg properly edited */
+   if (generate_plugin_event(jcr, bsdEventDeviceTryOpen, dcr) != bRC_OK) {
+      queue_reserve_message(jcr);
+      goto bail_out;
+   }
    dev->clear_append();
    dev->set_read();
-   ok = true;
    dcr->set_reserved();
+   ok = true;
 
 bail_out:
    dev->dunlock();
@@ -850,6 +854,11 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
       goto bail_out;
    }
 
+   /* Note: on failure this returns jcr->errmsg properly edited */
+   if (generate_plugin_event(jcr, bsdEventDeviceTryOpen, dcr) != bRC_OK) {
+      queue_reserve_message(jcr);
+      goto bail_out;
+   }
    dcr->set_reserved();
    ok = true;
 

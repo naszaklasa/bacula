@@ -26,7 +26,7 @@ ConditionPathIsDirectory=@working_dir@
 
 [Service]
 Type=forking
-PIDFile=@piddir@/bacula-dir.pid
+PIDFile=@piddir@/bacula-dir.@dir_port@.pid
 # EnvironmentFile=-/etc/sysconfig/bacula-dir
 StandardOutput=syslog
 ExecStart=@sbindir@/bacula-dir -u @dir_user@ -g @dir_group@ -c @sysconfdir@/bacula-dir.conf

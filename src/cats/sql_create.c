@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -656,7 +656,7 @@ int db_create_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
    }
    mdb->db_escape_string(jcr, esc, cr->Counter, strlen(cr->Counter));
    /* Must create it */
-   Mmsg(mdb->cmd, "INSERT INTO Counters (Counter,\"MinValue\",\"MaxValue\",CurrentValue,"
+   Mmsg(mdb->cmd, "INSERT INTO Counters (Counter,Counters.MinValue,Counters.MaxValue,CurrentValue,"
       "WrapCounter) VALUES ('%s','%d','%d','%d','%s')",
         esc, cr->MinValue, cr->MaxValue, cr->CurrentValue,
         cr->WrapCounter);
@@ -1211,7 +1211,7 @@ bool db_create_restore_object_record(JCR *jcr, B_DB *mdb, ROBJECT_DBR *ro)
         "VALUES ('%s','%s','%s',%d,%d,%d,%d,%d,%d,%u)",
         mdb->esc_name, esc_plug_name, mdb->esc_obj,
         ro->object_len, ro->object_full_len, ro->object_index, 
-        FT_RESTORE_FIRST, ro->object_compression, ro->FileIndex, ro->JobId);
+        ro->FileType, ro->object_compression, ro->FileIndex, ro->JobId);
 
    ro->RestoreObjectId = sql_insert_autokey_record(mdb, mdb->cmd, NT_("RestoreObject"));
    if (ro->RestoreObjectId == 0) {

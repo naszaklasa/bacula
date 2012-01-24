@@ -4,6 +4,7 @@ These are the steps to complete for making a new release.
 1. Ensure that the previous release had a tag pushed. If
    not create one at the prior release point and push it
    to the repos.
+   git push <remote> tag <tag-name>
 
 2. Update the ChangeLog using release/git2changelog.pl Release-5.2.x..HEAD >1
 
@@ -53,6 +54,9 @@ These are the steps to complete for making a new release.
 
 16. push the tags (once pushed they can be corrected but it is more
     complicated than simply re-running the ./makeall script)
+    ./pushtags   which does in all repos
+
+     git push <remote> tag <tag-name>
 
 17. Upload the release files to Source Forge.
 
@@ -62,3 +66,6 @@ These are the steps to complete for making a new release.
 
 20. Send the release announcement to the users, devel, and announce 
     mailing lists.
+
+21. Update the link to the release version in the "Current Release" 
+    in the menu (inc/header.php).

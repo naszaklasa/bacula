@@ -62,7 +62,6 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
    BSOCK *dir = jcr->dir_bsock;
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
-   bool tls_needed;
    bool tls_authenticate;
    int compatible = true;
    char bashed_name[MAX_NAME_LENGTH];
@@ -88,7 +87,6 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
          tls_local_need = BNET_TLS_REQUIRED;
       }
       tls_authenticate = cons->tls_authenticate;
-      tls_needed = cons->tls_enable || cons->tls_authenticate;
       tls_ctx = cons->tls_ctx;
    } else {
       bstrncpy(bashed_name, "*UserAgent*", sizeof(bashed_name));
@@ -106,7 +104,6 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
          tls_local_need = BNET_TLS_REQUIRED;
       }
       tls_authenticate = director->tls_authenticate;
-      tls_needed = director->tls_enable || director->tls_authenticate;
       tls_ctx = director->tls_ctx;
    }
 

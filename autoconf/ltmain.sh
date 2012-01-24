@@ -2428,6 +2428,7 @@ The following components of LINK-COMMAND are treated specially:
   -R[ ]LIBDIR       add LIBDIR to the runtime path of programs and libraries
   -shared           only do dynamic linking of libtool libraries
   -shrext SUFFIX    override the standard shared library file extension
+  -soname SONAME    override the standard shared object name
   -static           do not do any dynamic linking of uninstalled libtool libraries
   -static-libtool-libs
                     do not do any dynamic linking of libtool libraries
@@ -5422,6 +5423,11 @@ func_mode_link ()
 	  prev=
 	  continue
 	  ;;
+        soname)
+	  soname_spec="$arg"
+	  prev=
+	  continue
+	  ;;
 	weak)
 	  func_append weak_libs " $arg"
 	  prev=
@@ -5738,6 +5744,11 @@ func_mode_link ()
 
       -shrext)
 	prev=shrext
+	continue
+	;;
+
+      -soname)
+	prev=soname
 	continue
 	;;
 

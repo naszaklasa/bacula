@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,8 +29,6 @@
  * Authenticate caller
  *
  *   Kern Sibbald, October 2000
- *
- *   Version $Id$
  *
  */
 
@@ -84,8 +82,9 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
    director = NULL;
    unbash_spaces(dirname);
    foreach_res(director, rcode) {
-      if (strcmp(director->hdr.name, dirname) == 0)
+      if (strcmp(director->hdr.name, dirname) == 0) {
          break;
+      }
    }
    if (!director) {
       Dmsg2(dbglvl, "Connection from unknown Director %s at %s rejected.\n",
@@ -230,10 +229,10 @@ int authenticate_filed(JCR *jcr)
        /* Respond to his challenge */
        auth_success = cram_md5_respond(fd, jcr->sd_auth_key, &tls_remote_need, &compatible);
        if (!auth_success) {
-          Dmsg1(dbglvl, "cram-get-auth failed with %s\n", fd->who());
+          Dmsg1(dbglvl, "Respond cram-get-auth failed with %s\n", fd->who());
        }
    } else {
-      Dmsg1(dbglvl, "cram-auth failed with %s\n", fd->who());
+      Dmsg1(dbglvl, "Challenge cram-auth failed with %s\n", fd->who());
    }
 
    if (!auth_success) {

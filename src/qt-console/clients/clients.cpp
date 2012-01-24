@@ -67,7 +67,7 @@ Clients::~Clients()
 }
 
 /*
- * The main meat of the class!!  The function that querries the director and 
+ * The main meat of the class!!  The function that queries the director and 
  * creates the widgets with appropriate values.
  */
 void Clients::populateTable()

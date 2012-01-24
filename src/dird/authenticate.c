@@ -290,7 +290,6 @@ int authenticate_user_agent(UAContext *uac)
    char name[MAX_NAME_LENGTH];
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
-   bool need_tls;
    bool tls_authenticate;
    int compatible = true;
    CONRES *cons = NULL;
@@ -324,7 +323,6 @@ int authenticate_user_agent(UAContext *uac)
       }
 
       tls_authenticate = director->tls_authenticate;
-      need_tls = director->tls_enable || tls_authenticate;
 
       if (tls_authenticate) {
          tls_local_need = BNET_TLS_REQUIRED;
@@ -351,7 +349,6 @@ int authenticate_user_agent(UAContext *uac)
          }
 
          tls_authenticate = cons->tls_authenticate;
-         need_tls = cons->tls_enable || tls_authenticate;
 
          if (tls_authenticate) {
             tls_local_need = BNET_TLS_REQUIRED;

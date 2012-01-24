@@ -56,12 +56,13 @@
  * find last Job start time Incremental and Differential saves.
  *
  *  StartTime is returned in stime
+ *  Job name is returned in job (MAX_NAME_LENGTH)
  *
  * Returns: 0 on failure
- *          1 on success, jr is unchanged, but stime is set
+ *          1 on success, jr is unchanged, but stime and job are set
  */
 bool
-db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
+db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime, char *job)
 {
    SQL_ROW row;
    char ed1[50], ed2[50];
@@ -70,11 +71,13 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
    db_lock(mdb);
    mdb->db_escape_string(jcr, esc_name, jr->Name, strlen(jr->Name));
    pm_strcpy(stime, "0000-00-00 00:00:00");   /* default */
+   job[0] = 0;
+
    /* If no Id given, we must find corresponding job */
    if (jr->JobId == 0) {
       /* Differential is since last Full backup */
       Mmsg(mdb->cmd,
-"SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
+"SELECT StartTime, Job FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
 "Level='%c' AND Name='%s' AND ClientId=%s AND FileSetId=%s "
 "ORDER BY StartTime DESC LIMIT 1",
            jr->JobType, L_FULL, esc_name, 
@@ -104,7 +107,7 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
          sql_free_result(mdb);
          /* Now edit SQL command for Incremental Job */
          Mmsg(mdb->cmd,
-"SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
+"SELECT StartTime, Job FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
 "Level IN ('%c','%c','%c') AND Name='%s' AND ClientId=%s "
 "AND FileSetId=%s ORDER BY StartTime DESC LIMIT 1",
             jr->JobType, L_INCREMENTAL, L_DIFFERENTIAL, L_FULL, esc_name,
@@ -115,7 +118,7 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
       }
    } else {
       Dmsg1(100, "Submitting: %s\n", mdb->cmd);
-      Mmsg(mdb->cmd, "SELECT StartTime FROM Job WHERE Job.JobId=%s", 
+      Mmsg(mdb->cmd, "SELECT StartTime, Job FROM Job WHERE Job.JobId=%s", 
            edit_int64(jr->JobId, ed1));
    }
 
@@ -132,8 +135,9 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
       sql_free_result(mdb);
       goto bail_out;
    }
-   Dmsg1(100, "Got start time: %s\n", row[0]);
+   Dmsg2(100, "Got start time: %s, job: %s\n", row[0], row[1]);
    pm_strcpy(stime, row[0]);
+   bstrncpy(job, row[1], MAX_NAME_LENGTH);
 
    sql_free_result(mdb);
 
@@ -150,12 +154,14 @@ bail_out:
  * Find the last job start time for the specified JobLevel
  *
  *  StartTime is returned in stime
+ *  Job name is returned in job (MAX_NAME_LENGTH)
  *
  * Returns: false on failure
- *          true  on success, jr is unchanged, but stime is set
+ *          true  on success, jr is unchanged, but stime and job are set
  */
 bool
-db_find_last_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime, int JobLevel)
+db_find_last_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, 
+                            POOLMEM **stime, char *job, int JobLevel)
 {
    SQL_ROW row;
    char ed1[50], ed2[50];
@@ -164,9 +170,10 @@ db_find_last_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime, i
    db_lock(mdb);
    mdb->db_escape_string(jcr, esc_name, jr->Name, strlen(jr->Name));
    pm_strcpy(stime, "0000-00-00 00:00:00");   /* default */
+   job[0] = 0;
 
    Mmsg(mdb->cmd,
-"SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
+"SELECT StartTime, Job FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
 "Level='%c' AND Name='%s' AND ClientId=%s AND FileSetId=%s "
 "ORDER BY StartTime DESC LIMIT 1",
       jr->JobType, JobLevel, esc_name, 
@@ -183,6 +190,8 @@ db_find_last_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime, i
    }
    Dmsg1(100, "Got start time: %s\n", row[0]);
    pm_strcpy(stime, row[0]);
+   bstrncpy(job, row[1], MAX_NAME_LENGTH);
+
    sql_free_result(mdb);
    db_unlock(mdb);
    return true;

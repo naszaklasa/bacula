@@ -115,6 +115,7 @@ struct findFOPTS {
    char VerifyOpts[MAX_FOPTS];        /* verify options */
    char AccurateOpts[MAX_FOPTS];      /* accurate mode options */
    char BaseJobOpts[MAX_FOPTS];       /* basejob mode options */
+   char *plugin;                      /* Plugin that handle this section */
    alist regex;                       /* regex string(s) */
    alist regexdir;                    /* regex string(s) for directories */
    alist regexfile;                   /* regex string(s) for files */
@@ -164,6 +165,7 @@ struct FF_PKT {
    char *link;                        /* link if file linked */
    char *object_name;                 /* Object name */
    char *object;                      /* restore object */
+   char *plugin;                      /* Current Options{Plugin=} name */
    POOLMEM *sys_fname;                /* system filename */
    POOLMEM *fname_save;               /* save when stripping path */
    POOLMEM *link_save;                /* save when stripping path */
@@ -182,6 +184,7 @@ struct FF_PKT {
    int ff_errno;                      /* errno */
    BFILE bfd;                         /* Bacula file descriptor */
    time_t save_time;                  /* start of incremental time */
+   bool accurate_found;               /* Found in the accurate hash (valid after check_changes()) */
    bool dereference;                  /* follow links (not implemented) */
    bool null_output_device;           /* using null output device */
    bool incremental;                  /* incremental save */
@@ -202,6 +205,7 @@ struct FF_PKT {
    int Compress_level;                /* compression level */
    int strip_path;                    /* strip path count */
    bool cmd_plugin;                   /* set if we have a command plugin */
+   bool opt_plugin;                   /* set if we have an option plugin */
    alist fstypes;                     /* allowed file system types */
    alist drivetypes;                  /* allowed drive types */
 

@@ -566,11 +566,8 @@
 /* Define to 1 if you have the `lstat' function. */
 #undef HAVE_LSTAT
 
-/* Define to 1 if you have the <lzo/lzo1x.h> header file. */
-#undef HAVE_LZO_LZO1X_H
-
-/* Define to 1 if you have the <lzo/lzoconf.h> header file. */
-#undef HAVE_LZO_LZOCONF_H
+/* Define to 1 if you have LZO compression */
+#undef HAVE_LZO
 
 /* Define to 1 if you have the <malloc.h> header file. */
 #undef HAVE_MALLOC_H

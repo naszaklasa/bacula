@@ -33,6 +33,8 @@
  *  Kern Sibbald, February 2007
  */
 
+#include <sys/types.h>
+
 #include <QtGui>
 #include "pages.h"
 #include "ui_runrestore.h"

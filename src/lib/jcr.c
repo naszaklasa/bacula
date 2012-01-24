@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2012 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -86,6 +86,8 @@ static pthread_mutex_t last_jobs_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t jcr_key;         /* Pointer to jcr for each thread */
 
 pthread_once_t key_once = PTHREAD_ONCE_INIT; 
+
+static char Job_status[]     = "Status Job=%s JobStatus=%d\n";
 
 
 void lock_jobs()
@@ -862,6 +864,34 @@ static int get_status_priority(int JobStatus)
    }
    return priority;
 }
+
+/*
+ * Send Job status to Director
+ */
+bool JCR::sendJobStatus()
+{
+   JCR *jcr = this;
+   if (jcr->dir_bsock) {
+      return jcr->dir_bsock->fsend(Job_status, jcr->Job, jcr->JobStatus);
+   }
+   return true; 
+}
+
+/*
+ * Set and send Job status to Director
+ */
+bool JCR::sendJobStatus(int newJobStatus)
+{
+   JCR *jcr = this;
+   if (!jcr->is_JobStatus(newJobStatus)) {
+      setJobStatus(newJobStatus);
+      if (jcr->dir_bsock) {
+         return jcr->dir_bsock->fsend(Job_status, jcr->Job, jcr->JobStatus);
+      }
+   }
+   return true; 
+}
+
 
 void JCR::setJobStatus(int newJobStatus)
 {

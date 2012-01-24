@@ -26,6 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 
+extern const char CATS_IMP_EXP *get_restore_objects;
 extern const char CATS_IMP_EXP *fill_jobhisto;
 extern const char CATS_IMP_EXP *client_backups;
 extern const char CATS_IMP_EXP *list_pool;

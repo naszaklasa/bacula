@@ -280,7 +280,6 @@ static int add_cmd(UAContext *ua, const char *cmd)
    POOL_DBR pr;
    MEDIA_DBR mr;
    int num, i, max, startnum;
-   int first_id = 0;
    char name[MAX_NAME_LENGTH];
    STORE *store;
    int Slot = 0, InChanger = 0;
@@ -405,9 +404,6 @@ static int add_cmd(UAContext *ua, const char *cmd)
       if (!db_create_media_record(ua->jcr, ua->db, &mr)) {
          ua->error_msg("%s", db_strerror(ua->db));
          return 1;
-      }
-      if (i == startnum) {
-         first_id = mr.PoolId;
       }
    }
    pr.NumVols += num;

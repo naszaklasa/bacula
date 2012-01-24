@@ -281,14 +281,14 @@ static struct s_fs_opt FS_options[] = {
  */
 static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
 {
-   int token, i;
+   int i;
    char option[3];
    int lcopts = lc->options;
 
    option[0] = 0;                     /* default option = none */
    option[2] = 0;                     /* terminate options */
    lc->options |= LOPT_STRING;        /* force string */
-   token = lex_get_token(lc, T_STRING);          /* expect at least one option */
+   lex_get_token(lc, T_STRING);       /* expect at least one option */
    if (keyword == INC_KW_VERIFY) { /* special case */
       /* ***FIXME**** ensure these are in permitted set */
       bstrncat(opts, "V", optlen);         /* indicate Verify */
@@ -339,7 +339,7 @@ static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
 
    /* If option terminated by comma, eat it */
    if (lc->ch == ',') {
-      token = lex_get_token(lc, T_ALL);      /* yes, eat comma */
+      lex_get_token(lc, T_ALL);      /* yes, eat comma */
    }
 }
 
@@ -491,9 +491,8 @@ static void store_regex(LEX *lc, RES_ITEM *item, int index, int pass)
 /* Store Base info */
 static void store_base(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token;
 
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    if (pass == 1) {
       /*
        * Pickup Base Job Name
@@ -506,9 +505,8 @@ static void store_base(LEX *lc, RES_ITEM *item, int index, int pass)
 /* Store reader info */
 static void store_plugin(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token;
 
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    if (pass == 1) {
       /*
        * Pickup plugin command
@@ -590,13 +588,12 @@ static void store_fstype(LEX *lc, RES_ITEM *item, int index, int pass)
 /* Store exclude directory containing  info */
 static void store_excludedir(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude)
 {
-   int token;
 
    if (exclude) {
       scan_err0(lc, _("ExcludeDirContaining directive not permitted in Exclude.\n"));
       /* NOT REACHED */
    }
-   token = lex_get_token(lc, T_NAME);
+   lex_get_token(lc, T_NAME);
    if (pass == 1) {
       res_incexe.ignoredir = bstrdup(lc->str);
    }

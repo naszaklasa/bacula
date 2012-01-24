@@ -34,6 +34,7 @@
  */
 #include "bacula.h"
 #include "fd_plugins.h"
+#include "lib/ini.h"
 #include <wchar.h>
 
 #undef malloc
@@ -51,8 +52,8 @@ static const int dbglvl = 000;
 
 #define PLUGIN_LICENSE      "Bacula AGPLv3"
 #define PLUGIN_AUTHOR       "Kern Sibbald"
-#define PLUGIN_DATE         "March 2011"
-#define PLUGIN_VERSION      "2"
+#define PLUGIN_DATE         "May 2011"
+#define PLUGIN_VERSION      "3"
 #define PLUGIN_DESCRIPTION  "Bacula Test File Daemon Plugin"
 
 /* Forward referenced functions */
@@ -105,13 +106,23 @@ static pFuncs pluginFuncs = {
    setFileAttributes
 };
 
+static struct ini_items test_items[] = {
+   // name       handler         comment            required
+   { "string1",  ini_store_str,  "Special String",    1},
+   { "string2",  ini_store_str,  "2nd String",        0},
+   { "ok",       ini_store_bool, "boolean",           0},
+
+// We can also use the ITEMS_DEFAULT  
+// { "ok",       ini_store_bool, "boolean",           0, ITEMS_DEFAULT},
+   { NULL,       NULL,           NULL,                0}
+};
+
 /*
  * Plugin private context
  */
 struct plugin_ctx {
    boffset_t offset;
    FILE *fd;                          /* pipe file descriptor */
-   bool backup;                       /* set for backup (not needed) */
    char *cmd;                         /* plugin command line */
    char *fname;                       /* filename to "backup/restore" */
    char *reader;                      /* reader program for backup */
@@ -119,6 +130,9 @@ struct plugin_ctx {
 
    char where[512];
    int replace;
+
+   int nb_obj;                        /* Number of objects created */
+   POOLMEM *buf;                      /* store ConfigFile */
 };
 
 /*
@@ -176,11 +190,14 @@ static bRC freePlugin(bpContext *ctx)
    if (!p_ctx) {
       return bRC_Error;
    }
+   if (p_ctx->buf) {
+      free_pool_memory(p_ctx->buf);
+   }
    if (p_ctx->cmd) {
       free(p_ctx->cmd);                  /* free any allocated command string */
    }
    free(p_ctx);                          /* free our private context */
-   p_ctx = NULL;
+   ctx->pContext = NULL;
    return bRC_OK;
 }
 
@@ -247,12 +264,29 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
       }
       rop = (restore_object_pkt *)value;
       bfuncs->DebugMessage(ctx, fi, li, dbglvl, 
-                        "Get RestoreObject len=%d JobId=%d oname=%s data=%s\n",
-                        rop->object_len, rop->JobId, rop->object_name, 
-                        rop->object);
+                           "Get RestoreObject len=%d JobId=%d oname=%s type=%d data=%s\n",
+                           rop->object_len, rop->JobId, rop->object_name, rop->object_type,
+                           rop->object);
+
+      if (!strcmp(rop->object_name, INI_RESTORE_OBJECT_NAME)) {
+         ConfigFile ini;
+         if (ini.dump_string(rop->object, rop->object_len)) {
+            break;
+         }
+         ini.register_items(test_items, sizeof(struct ini_items));
+         if (ini.parse(ini.out_fname)) {
+            bfuncs->JobMessage(ctx, fi, li, M_INFO, 0, "string1 = %s\n", 
+                               ini.items[0].val.strval);
+         } else {
+            bfuncs->JobMessage(ctx, fi, li, M_ERROR, 0, "Can't parse config\n");
+         }
+      }
+
       break;
    /* Plugin command e.g. plugin = <plugin-name>:<name-space>:read command:write command */
    case bEventRestoreCommand:
+      /* Fall-through wanted */
+   case bEventEstimateCommand:
       /* Fall-through wanted */
    case bEventBackupCommand:
       char *p;
@@ -282,7 +316,10 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
       printf("test-plugin-fd: plugin=%s fname=%s reader=%s writer=%s\n", 
           p_ctx->cmd, p_ctx->fname, p_ctx->reader, p_ctx->writer);
       break;
-
+   case bEventPluginCommand:
+      break;
+   case bEventVssBeforeCloseRestore:
+      break;
    default:
       printf("test-plugin-fd: unknown event=%d\n", event->eventType);
       break;
@@ -299,16 +336,32 @@ static bRC startBackupFile(bpContext *ctx, struct save_pkt *sp)
    if (!p_ctx) {
       return bRC_Error;
    }
+
+   if (p_ctx->nb_obj == 0) {
+      sp->object_name = (char *)"james.xml";
+      sp->object = (char *)"This is test data for the restore object. "
+  "garbage=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa."
+  "\0secret";
+      sp->object_len = strlen(sp->object)+1+6+1; /* str + 0 + secret + 0 */
+      sp->type = FT_RESTORE_FIRST;
+   
+   } else if (p_ctx->nb_obj == 1) {
+      ConfigFile ini;
+      p_ctx->buf = get_pool_memory(PM_BSOCK);
+      ini.register_items(test_items, sizeof(struct ini_items));
+
+      sp->object_name = (char*)INI_RESTORE_OBJECT_NAME;
+      sp->object_len = ini.serialize(&p_ctx->buf);
+      sp->object = p_ctx->buf;
+      sp->type = FT_PLUGIN_CONFIG;
+
+      Dmsg1(0, "RestoreOptions=<%s>\n", p_ctx->buf);
+   } 
+
    time_t now = time(NULL);
-   sp->object_name = (char *)"james.xml";
-   sp->object = (char *)"This is test data for the restore object. "
-   "garbage=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa."
-   "\0secret";
-   sp->object_len = strlen(sp->object)+1+6+1; /* str + 0 + secret + 0 */
-   sp->index = 2;
-   sp->type = FT_RESTORE_FIRST;
+   sp->index = ++p_ctx->nb_obj;
    sp->statp.st_mode = 0700 | S_IFREG;
    sp->statp.st_ctime = now;
    sp->statp.st_mtime = now;
@@ -319,7 +372,7 @@ static bRC startBackupFile(bpContext *ctx, struct save_pkt *sp)
    bfuncs->DebugMessage(ctx, fi, li, dbglvl,
                         "Creating RestoreObject len=%d oname=%s data=%s\n", 
                         sp->object_len, sp->object_name, sp->object);
-   p_ctx->backup = true;
+
    printf("test-plugin-fd: startBackupFile\n");
    return bRC_OK;
 }

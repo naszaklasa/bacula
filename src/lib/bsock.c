@@ -811,6 +811,13 @@ int BSOCK::set_blocking()
 #endif
 }
 
+void BSOCK::set_killable(bool killable)
+{
+   if (m_jcr) {
+      m_jcr->set_killable(killable);
+   }
+}
+
 /*
  * Restores socket flags
  */
@@ -1035,7 +1042,7 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
       return false;
    }
 
-  dir->stop_timer();
+   dir->stop_timer();
    Dmsg1(10, "<dird: %s", dir->msg);
    if (strncmp(dir->msg, OKhello, sizeof(OKhello)-1) != 0) {
       bsnprintf(response, response_len, _("Director at \"%s:%d\" rejected Hello command\n"),
