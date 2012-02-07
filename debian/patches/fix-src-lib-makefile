@@ -1,6 +1,6 @@
 --- a/src/lib/Makefile.in
 +++ b/src/lib/Makefile.in
-@@ -147,56 +147,56 @@
+@@ -147,7 +147,7 @@
  lockmgr_test: Makefile
  	rm -f lockmgr.o
  	$(CXX) -D _TEST_IT $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) lockmgr.c
@@ -9,6 +9,7 @@
  	rm -f lockmgr.o
  	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) lockmgr.c
  
+@@ -161,49 +161,49 @@
  rwlock_test: Makefile
  	rm -f rwlock.o
  	$(CXX) -DTEST_RWLOCK $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) rwlock.c
@@ -27,7 +28,7 @@
  
  htable_test: Makefile
  	rm -f htable.o
- 	$(CXX) -DTEST_SMALL_HTABLE -DTEST_NON_CHAR -DTEST_PROGRAM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) htable.c
+ 	$(CXX) -DTEST_SMALL_HTABLE -DTEST_NON_CHAR -DTEST_PROGRAM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)	$(CFLAGS) htable.c
 -	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ htable.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
 +	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ htable.o $(DLIB) -lbac -ldl -lm $(LIBS) $(OPENSSL_LIBS)
  	rm -f htable.o
