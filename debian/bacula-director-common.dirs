@@ -1,4 +1,5 @@
 usr/lib/bacula
 var/lib/bacula
+var/lib/bacula/working
 var/log/bacula
 usr/share/bacula-director

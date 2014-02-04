@@ -37,7 +37,7 @@ CONF_ALL	= --enable-smartalloc \
 	--sharedstatedir=/var/lib/bacula \
 	--localstatedir=/var/lib/bacula \
 	--with-pid-dir=/var/run/bacula --with-smtp-host=localhost \
-	--with-working-dir=/var/lib/bacula \
+	--with-working-dir=/var/lib/bacula/working \
 	--with-subsys-dir=/var/lock \
 	--with-sqlite3 \
 	--with-mysql \
