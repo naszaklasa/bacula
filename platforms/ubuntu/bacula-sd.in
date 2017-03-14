@@ -1,7 +1,7 @@
 #! /bin/sh
 #
 # bacula  This shell script takes care of starting and stopping
-#	  the bacula Director daemon on Debian/Ubuntu/Kubuntu 
+#	  the bacula Storage daemon on Debian/Ubuntu/Kubuntu 
 #	  systems. 
 #
 #   Kern E. Sibbald - 21 March 2008
